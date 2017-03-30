@@ -1,0 +1,11 @@
+string iddev
+uint8 mac
+uint32 maxBitRate
+float32 trTimeMean
+float32 trTimeSd
+float32 prTime
+float32 prTimeIncPerMeter
+float32 minPktErrorRate
+float32 pktErrorRateIncPerMeter
+---
+bool res

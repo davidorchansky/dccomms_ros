@@ -1,0 +1,56 @@
+#include <iostream>
+#include <cstdio>
+#include  <cstdio>
+#include  <sys/types.h>
+#include  <signal.h>
+
+#include <dccomms_ros/ROSCommsSimulator.h>
+
+//ROS
+#include <ros/ros.h>
+//end ROS
+
+using namespace dccomms;
+using namespace dccomms_ros;
+using namespace std;
+
+ROSCommsSimulator * sim;
+
+void SIGINT_handler (int sig)
+{
+        printf("Received %d signal\n",sig);
+        printf("Log messages flushed.\n");
+        exit(0);
+}
+
+void setSignals()
+{
+    if (signal(SIGINT, SIGINT_handler) == SIG_ERR) {
+         printf("SIGINT install error\n");
+         exit(1);
+    }
+}
+
+int main(int argc, char ** argv)
+{
+    setSignals();
+
+    //// GET PARAMS
+    ros::init(argc, argv, "dccomms_netsim");
+    ros::NodeHandle nh("~");
+
+    sim = new ROSCommsSimulator(nh);
+    sim->SetLogName ("netsim");
+    sim->LogToFile ("netsim_log");
+
+    sim->Start();
+
+    ros::Rate loop_rate(30);
+    while(ros::ok())
+    {
+        loop_rate.sleep();
+        ros::spinOnce();
+    }
+
+}
+
