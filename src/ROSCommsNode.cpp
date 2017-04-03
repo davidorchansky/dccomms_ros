@@ -42,6 +42,78 @@ std::string ROSCommsDevice::GetName()
     return _name;
 }
 
+void ROSCommsDevice::SetMaxBitRate(int mbr)
+{
+    _maxBitRate = mbr;
+}
+
+int  ROSCommsDevice::GetMaxBitRate ()
+{
+    return _maxBitRate;
+}
+
+void ROSCommsDevice::SetTrTime(float mean, float sd)
+{
+    _trTimeMean = mean;
+    _trTimeSd = sd;
+}
+
+void ROSCommsDevice::GetTrTime(float &mean, float &sd)
+{
+    mean = _trTimeMean;
+    sd = _trTimeSd;
+}
+
+void ROSCommsDevice::SetMinPrTime(float prTime)
+{
+    _minPrTime = prTime;
+}
+
+float ROSCommsDevice::GetMinPrTime ()
+{
+    return _minPrTime;
+}
+
+void ROSCommsDevice::SetPrTimeInc(float inc)
+{
+    _prTimeIncPerMeter = inc;
+}
+
+float ROSCommsDevice::GetPrTimeInc ()
+{
+    return _prTimeIncPerMeter;
+}
+
+void ROSCommsDevice::SetMinPktErrorRate(float minPktErrorRate)
+{
+    _minPktErrorRate = minPktErrorRate;
+}
+
+float ROSCommsDevice::GetMinPktErrorRate ()
+{
+    return _minPktErrorRate;
+}
+
+void ROSCommsDevice::SetPktErrorRateInc(float inc)
+{
+    _pktErrorRateIncPerMeter = inc;
+}
+
+float ROSCommsDevice::GetPktErrorRateInc ()
+{
+    return _pktErrorRateIncPerMeter;
+}
+
+void ROSCommsDevice::SetMac(int mac)
+{
+    _mac = mac;
+}
+
+int ROSCommsDevice::GetMac ()
+{
+    return _mac;
+}
+
 void ROSCommsDevice::_TxWork ()
 {
     _device->WaitForFramesFromRxFifo();

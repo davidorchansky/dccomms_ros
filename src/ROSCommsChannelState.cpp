@@ -59,4 +59,22 @@ void CommsChannelState::SetTtDist(double mean, double sd)
 {
     _ttDist = ttDist(mean, sd);
 }
+
+void CommsChannelState::SetTxNode(CommsNodePtr node)
+{
+    _txDev = node;
+}
+CommsNodePtr CommsChannelState::GetTxNode()
+{
+    return _txDev;
+}
+
+void CommsChannelState::SetRxNode(CommsNodePtr node)
+{
+    _rxDev = node;
+}
+CommsNodePtr CommsChannelState::GetRxNode()
+{
+    return _rxDev;
+}
 }

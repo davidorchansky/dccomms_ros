@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <random>
+#include <dccomms_ros/ROSCommsNode.h>
 
 using namespace std;
 
@@ -36,12 +37,19 @@ public:
     ttDist GetTtDist();
     void SetTtDist(double mean, double sd);
 
+    void SetTxNode(CommsNodePtr dev);
+    void SetRxNode(CommsNodePtr dev);
+
+    CommsNodePtr GetTxNode();
+    CommsNodePtr GetRxNode();
+
 private:
     int _maxBitRate;
     int _delay; //ms
     bool _linkOk;
     ttDist _ttDist;
     ttGenerator _ttGenerator;
+    CommsNodePtr _txDev, _rxDev;
 };
 }
 

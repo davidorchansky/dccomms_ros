@@ -43,6 +43,23 @@ public:
     virtual void FlushLogOn(LogLevel);
     virtual void LogToConsole(bool);
     virtual void LogToFile(const string &filename);
+
+    void SetMaxBitRate(int maxBitRate);
+    void SetTrTime(float trTimeMean, float trTimeSd = 0);
+    void SetMinPrTime(float prTime);
+    void SetPrTimeInc(float inc);
+    void SetMinPktErrorRate(float minPktErrorRate);
+    void SetPktErrorRateInc(float pktErrorRateInc);
+    void SetMac(int mac);
+
+    int GetMaxBitRate();
+    void GetTrTime(float & trTimeMean, float & trTimeSd);
+    float GetMinPrTime();
+    float GetPrTimeInc();
+    float GetMinPktErrorRate();
+    float GetPktErrorRateInc();
+    int GetMac();
+
 private:
     std::mutex _receiveFrameMutex;
     CommsDeviceServicePtr _device;
@@ -50,6 +67,12 @@ private:
     ServiceThread<ROSCommsDevice> _txserv;
     DataLinkFramePtr _txdlf;
     std::string _name;
+    int _mac;
+    int _maxBitRate;
+    float _trTimeMean, _trTimeSd,
+      _minPrTime, _prTimeIncPerMeter,
+      _minPktErrorRate,
+      _pktErrorRateIncPerMeter;
 
     void _TxWork();
 };

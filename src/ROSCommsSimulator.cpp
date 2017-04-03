@@ -23,8 +23,8 @@ void ROSCommsSimulator::TransmitFrame(DataLinkFramePtr dlf)
     std::string channelKey =
             std::to_string (srcdir) + std::string("_") + std::to_string (dstdir);
 
-    auto channelProperties = _channels[channelKey];
-    auto bitRate = channelProperties->GetMaxBitRate ();
+    auto channelState = _channels[channelKey];
+    auto bitRate = channelState->GetMaxBitRate ();
 
     //Simulate transmission time
     auto byteTransmissionTime =  1000./( bitRate/ 8.);
@@ -32,10 +32,10 @@ void ROSCommsSimulator::TransmitFrame(DataLinkFramePtr dlf)
     unsigned int frameTransmissionTime = ceil(frameSize * byteTransmissionTime);
     auto txtrp = TransportPDU::BuildTransportPDU (0);
     txtrp->UpdateBuffer (dlf->GetPayloadBuffer ());
-    auto delay = channelProperties->GetDelay ();
+    auto delay = channelState->GetDelay ();
 
     //Simulate total delay (transmission + propagation + reception)
-    auto trRate = channelProperties->GetNextTt();
+    auto trRate = channelState->GetNextTt();
     auto trTime = trRate * frameSize;
     int totalTime = ceil(delay + trTime);
     Log->debug("TX {}->{}: R: {} ms/byte ; TT: {} ms ; D: {} ms (Seq: {}) (FS: {}).",
@@ -98,7 +98,7 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
     auto maxBitRate              = req.maxBitRate;
     auto trTimeMean              = req.trTimeMean;
     auto trTimeSd                = req.trTimeSd;
-    auto prTime                  = req.prTime;
+    auto prTime                  = req.minPrTime;
     auto prTimeIncPerMeter       = req.prTimeIncPerMeter;
     auto minPktErrorRate         = req.minPktErrorRate;
     auto pktErrorRateIncPerMeter = req.pktErrorRateIncPerMeter;
@@ -106,9 +106,9 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
     Log->info("\nAdding new net device:\n"
               "\tID ........................ {}\n"
               "\tMAC ....................... {}\n"
-              "\tMax. bits/s .................. {}\n"
+              "\tMax. bits/s ............... {}\n"
               "\tTransmission time ......... {} ms/byte (std = {} ms/byte)\n"
-              "\tMin. propagation time ..... {} ms/m\n"
+              "\tMin. propagation time ..... {} ms\n"
               "\tPropagation time inc. ..... {} ms/m\n"
               "\tPacket Error Rate ......... {}%\n"
               "\tPacket Error Rate inc. .... {}% per meter\n",
@@ -147,6 +147,9 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
             txChannel->SetMaxBitRate (maxBitRate);
             txChannel->SetTtDist (trTimeMean, trTimeSd);
 
+            txChannel->SetTxNode(node);
+            txChannel->SetRxNode(pair.second);
+
             _channels[txChannelKey] = txChannel;
 
             //Build rx channel
@@ -154,11 +157,20 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
             ss << remoteMac << "_" << mac;
             std::string rxChannelKey = ss.str();
 
+            auto rxNode = pair.second;
+
             auto rxChannel = CommsChannelState::BuildCommsChannelState ();
-            rxChannel->SetDelay (prTime);
+            rxChannel->SetDelay (rxNode->GetMinPrTime ());
             rxChannel->SetLinkOk (true);
-            rxChannel->SetMaxBitRate (maxBitRate);
-            rxChannel->SetTtDist (trTimeMean, trTimeSd);
+            rxChannel->SetMaxBitRate (rxNode->GetMaxBitRate ());
+            float rxTrTimeMean, rxTrTimeSd;
+            rxNode->GetTrTime (rxTrTimeMean, rxTrTimeSd);
+            rxChannel->SetTtDist (rxTrTimeMean, rxTrTimeSd);
+
+            rxChannel->SetTxNode(rxNode);
+            rxChannel->SetRxNode(node);
+
+            _channels[rxChannelKey] = rxChannel;
 
         }
 
