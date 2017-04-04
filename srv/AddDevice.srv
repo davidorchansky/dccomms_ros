@@ -1,4 +1,6 @@
+uint8 devType
 string iddev
+string frameId
 uint8 mac
 uint32 maxBitRate
 float32 trTimeMean

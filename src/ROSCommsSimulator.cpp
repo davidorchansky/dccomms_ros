@@ -3,16 +3,18 @@
 #include <dccomms/CommsDeviceService.h>
 #include <dccomms_ros/AddDevice.h>
 #include <iostream>
+#include <tf/transform_listener.h>
 
 using namespace dccomms;
 
 namespace dccomms_ros
 {
-ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle & rosNode): _rosNode(rosNode)
+ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle & rosNode): _rosNode(rosNode), _linkUpdaterWorker(this)
 {
     SetLogName ("CommsSimulator");
     LogToConsole (true);
     FlushLogOn (cpplogging::Loggable::info);
+    _linkUpdaterWorker.SetWork (&ROSCommsSimulator::_LinkUpdaterWork);
 }
 
 void ROSCommsSimulator::TransmitFrame(DataLinkFramePtr dlf)
@@ -73,7 +75,7 @@ void ROSCommsSimulator::_DeliverFrame (DataLinkFramePtr dlf)
     trs->UpdateBuffer (dlf->GetPayloadBuffer ());
     if(dlf->checkFrame ())
     {
-        CommsNodePtr dstNode = _nodes[dstdir];
+        CommsDevicePtr dstNode = _nodes[dstdir];
         Log->debug("RX {}<-{}: received frame without errors (Seq: {}) (FS: {}).",
                dlf->GetDesDir (),
                dlf->GetSrcDir (),
@@ -102,24 +104,10 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
     auto prTimeIncPerMeter       = req.prTimeIncPerMeter;
     auto minPktErrorRate         = req.minPktErrorRate;
     auto pktErrorRateIncPerMeter = req.pktErrorRateIncPerMeter;
+    auto deviceType              = req.devType;
+    auto frameId                 = req.frameId;
 
-    Log->info("\nAdding new net device:\n"
-              "\tID ........................ {}\n"
-              "\tMAC ....................... {}\n"
-              "\tMax. bits/s ............... {}\n"
-              "\tTransmission time ......... {} ms/byte (std = {} ms/byte)\n"
-              "\tMin. propagation time ..... {} ms\n"
-              "\tPropagation time inc. ..... {} ms/m\n"
-              "\tPacket Error Rate ......... {}%\n"
-              "\tPacket Error Rate inc. .... {}% per meter\n",
-              newDevice,
-              mac,
-              maxBitRate,
-              trTimeMean, trTimeSd,
-              prTime,
-              prTimeIncPerMeter,
-              minPktErrorRate,
-              pktErrorRateIncPerMeter);
+    Log->info("Add device request received");
 
     if(_nodes.find(mac) == _nodes.end())
     {
@@ -129,94 +117,79 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
                     );
 
         commsDeviceService->SetNamespace (newDevice);
-        auto node =  ROSCommsDevice::BuildCommsNode(this, commsDeviceService);
+        auto node =  ROSCommsDevice::BuildCommsDevice(this, commsDeviceService);
         node->SetName(newDevice);
+        node->SetDevType (deviceType);
+        node->SetMac (mac);
+        node->SetMaxBitRate (maxBitRate);
+        node->SetTrTime (trTimeMean, trTimeSd);
+        node->SetMinPrTime (prTime);
+        node->SetPrTimeInc (prTimeIncPerMeter);
+        node->SetMinPktErrorRate (minPktErrorRate);
+        node->SetPktErrorRateInc (pktErrorRateIncPerMeter);
+        node->SetTfFrameId (frameId);
 
-        for(pair<int, CommsNodePtr> pair: _nodes)
+        Log->info("\nAdding new device...:\n{}", node->ToString ());
+
+        for(pair<int, CommsDevicePtr> pair: _nodes)
         {
-            auto remoteMac = pair.first;
-
-            //Build tx channel
-            std::stringstream ss;
-            ss << mac << "_" << remoteMac;
-            std::string txChannelKey = ss.str();
-
-            auto txChannel = CommsChannelState::BuildCommsChannelState ();
-            txChannel->SetDelay (prTime);
-            txChannel->SetLinkOk (true);
-            txChannel->SetMaxBitRate (maxBitRate);
-            txChannel->SetTtDist (trTimeMean, trTimeSd);
-
-            txChannel->SetTxNode(node);
-            txChannel->SetRxNode(pair.second);
-
-            _channels[txChannelKey] = txChannel;
-
-            //Build rx channel
-            ss.str(std::string());
-            ss << remoteMac << "_" << mac;
-            std::string rxChannelKey = ss.str();
-
             auto rxNode = pair.second;
 
-            auto rxChannel = CommsChannelState::BuildCommsChannelState ();
-            rxChannel->SetDelay (rxNode->GetMinPrTime ());
-            rxChannel->SetLinkOk (true);
-            rxChannel->SetMaxBitRate (rxNode->GetMaxBitRate ());
-            float rxTrTimeMean, rxTrTimeSd;
-            rxNode->GetTrTime (rxTrTimeMean, rxTrTimeSd);
-            rxChannel->SetTtDist (rxTrTimeMean, rxTrTimeSd);
+            if(rxNode->GetDevType () == deviceType)
+            {
+                auto remoteMac = pair.first;
 
-            rxChannel->SetTxNode(rxNode);
-            rxChannel->SetRxNode(node);
+                Log->info("Creating a link from MAC {} to MAC {}",
+                          mac, remoteMac);
 
-            _channels[rxChannelKey] = rxChannel;
+                //Build tx channel
+                std::stringstream ss;
+                ss << mac << "_" << remoteMac;
+                std::string txChannelKey = ss.str();
+
+                auto txChannel = CommsChannelState::BuildCommsChannelState ();
+                txChannel->SetDelay (prTime);
+                txChannel->SetLinkOk (true);
+                txChannel->SetMaxBitRate (maxBitRate);
+                txChannel->SetTtDist (trTimeMean, trTimeSd);
+
+                txChannel->SetTxNode(node);
+                txChannel->SetRxNode(pair.second);
+
+                //Build rx channel
+                ss.str(std::string());
+                ss << remoteMac << "_" << mac;
+                std::string rxChannelKey = ss.str();
+
+                auto rxChannel = CommsChannelState::BuildCommsChannelState ();
+                rxChannel->SetDelay (rxNode->GetMinPrTime ());
+                rxChannel->SetLinkOk (true);
+                rxChannel->SetMaxBitRate (rxNode->GetMaxBitRate ());
+                float rxTrTimeMean, rxTrTimeSd;
+                rxNode->GetTrTime (rxTrTimeMean, rxTrTimeSd);
+                rxChannel->SetTtDist (rxTrTimeMean, rxTrTimeSd);
+
+                rxChannel->SetTxNode(rxNode);
+                rxChannel->SetRxNode(node);
+
+                _channels[txChannelKey] = txChannel;
+                _channels[rxChannelKey] = rxChannel;
+
+                DevicesLink devLink(node, rxNode, txChannel, rxChannel);
+
+                _devLinksMutex.lock();
+                _devLinks.push_back (devLink);
+                _devLinksMutex.unlock();
+            }
 
         }
-
-
         _nodes[mac] = node;
     }
     else
     {
-        CommsNodePtr node = _nodes[mac];
+        CommsDevicePtr node = _nodes[mac];
         Log->error("Unable to add the device. A net device with the same MAC already exists: '{}'", node->GetName ());
     }
-
-    /*
-    //make operator comms interface
-    auto operatorComms = dccomms::CommsDeviceService::BuildCommsDeviceService (
-                IPHY_TYPE_PHY,
-                dccomms::DataLinkFrame::crc16
-                );
-    operatorComms->SetNamespace ("operator");
-    nodes[1] = ROSCommsDevice::BuildCommsNode(this, operatorComms);
-    nodes[1]->SetName("operator");
-
-    //make Girona500 comms interface
-    auto g500Comms = dccomms::CommsDeviceService::BuildCommsDeviceService (
-                IPHY_TYPE_PHY,
-                dccomms::DataLinkFrame::crc16
-                );
-    g500Comms->SetNamespace ("camera");
-    nodes[2] = ROSCommsDevice::BuildCommsNode(this, g500Comms);
-    nodes[2]->SetName("g500");
-
-    //Operator -> Girona500
-    auto channel1_2 = CommsChannelState::BuildCommsChannelState ();
-    channel1_2->SetDelay(0);
-    channel1_2->SetMaxBitRate (100);
-
-    //Girona500 -> Operator
-    auto channel2_1 = CommsChannelState::BuildCommsChannelState ();
-    channel2_1->SetDelay(0);
-    channel2_1->SetMaxBitRate (1600);
-
-    channel2_1->SetTtDist(12, 0.1);
-    channel1_2->SetTtDist(30, 0.1);
-    channels["1_2"] = channel1_2;
-    channels["2_1"] = channel2_1;
-    */
 
     res.res = true;
     return true;
@@ -231,7 +204,7 @@ void ROSCommsSimulator::Start()
                 "add_net_device",
                 &ROSCommsSimulator::_AddDevice, this
                 );
-
+    _linkUpdaterWorker.Start();
 
     /*
     //Start device services first
@@ -251,7 +224,7 @@ void ROSCommsSimulator::Start()
 void ROSCommsSimulator::SetLogName(std::string name)
 {
     Loggable::SetLogName(name);
-    for(pair<int, CommsNodePtr> pair: _nodes)
+    for(pair<int, CommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->SetLogName(name + ":Node(" + node->GetName()+")");
@@ -260,7 +233,7 @@ void ROSCommsSimulator::SetLogName(std::string name)
 void ROSCommsSimulator::SetLogLevel(Loggable::LogLevel _level)
 {
     Loggable::SetLogLevel(_level);
-    for(pair<int, CommsNodePtr> pair: _nodes)
+    for(pair<int, CommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->SetLogLevel(_level);
@@ -270,7 +243,7 @@ void ROSCommsSimulator::SetLogLevel(Loggable::LogLevel _level)
 void ROSCommsSimulator::LogToConsole(bool c)
 {
     Loggable::LogToConsole(c);
-    for(pair<int, CommsNodePtr> pair: _nodes)
+    for(pair<int, CommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->LogToConsole(c);
@@ -281,7 +254,7 @@ void ROSCommsSimulator::LogToConsole(bool c)
 void ROSCommsSimulator::LogToFile(const string &filename)
 {
     Loggable::LogToFile(filename);
-    for(pair<int, CommsNodePtr> pair: _nodes)
+    for(pair<int, CommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->LogToFile(filename + "_" + node->GetName () + "_node");
@@ -291,7 +264,7 @@ void ROSCommsSimulator::LogToFile(const string &filename)
 void ROSCommsSimulator::FlushLog()
 {
     Loggable::FlushLog();
-    for(pair<int, CommsNodePtr> pair: _nodes)
+    for(pair<int, CommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->FlushLog ();
@@ -301,10 +274,102 @@ void ROSCommsSimulator::FlushLog()
 void ROSCommsSimulator::FlushLogOn(LogLevel level)
 {
     Loggable::FlushLogOn(level);
-    for(pair<int, CommsNodePtr> pair: _nodes)
+    for(pair<int, CommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->FlushLogOn(level);
     }
+}
+
+void ROSCommsSimulator::_LinkUpdaterWork()
+{
+  tf::TransformListener listener;
+
+  dccomms::Timer  timer;
+  bool showLog = false;
+  unsigned int showLogInterval = 1500;
+  timer.Reset();
+  while(1)
+  {
+    try
+    {
+      ros::Rate loop_rate(20);
+      if(timer.Elapsed () > showLogInterval)
+      {
+        showLog = true;
+      }
+
+      _devLinksMutex.lock();
+
+      tf::StampedTransform transform;
+      for(DevicesLink link : _devLinks)
+      {
+        auto frameId0 = link.device0->GetTfFrameId ();
+        auto frameId1 = link.device1->GetTfFrameId ();
+
+        ros::Time now = ros::Time::now();
+
+        listener.lookupTransform (frameId0, frameId1,
+                                  ros::Time(0),
+                                  transform);
+        auto distance = transform.getOrigin ().distance(tf::Vector3(0,0,0));
+        if(showLog)
+        Log->debug("Range between frame '{}' and '{}': {}",
+                  frameId0,
+                  frameId1,
+                  distance);
+
+        auto chn = link.channel0;
+
+        if(chn)
+        {
+          auto txNode = chn->GetTxNode ();
+          auto rxNode = chn->GetRxNode ();
+          auto minPrTime = txNode->GetMinPrTime ();
+          auto prTimeInc = txNode->GetPrTimeInc () * distance;
+          auto newDelay = minPrTime + prTimeInc;
+          chn->SetDelay (newDelay);
+
+          if(showLog)
+          Log->debug("'{}' -- '{}' delay: {} ms",
+                   txNode->GetTfFrameId (),
+                   rxNode->GetTfFrameId (),
+                   newDelay);
+        }
+
+        chn = link.channel1;
+
+        if(chn)
+        {
+          auto txNode = chn->GetTxNode ();
+          auto rxNode = chn->GetRxNode ();
+          auto minPrTime = txNode->GetMinPrTime ();
+          auto prTimeInc = txNode->GetPrTimeInc () * distance;
+          auto newDelay = minPrTime + prTimeInc;
+          chn->SetDelay (newDelay);
+
+          if(showLog)
+          Log->debug("'{}' -- '{}' delay: {} ms",
+                   txNode->GetTfFrameId (),
+                   rxNode->GetTfFrameId (),
+                   newDelay);
+        }
+
+        if(showLog)
+          {
+            showLog = false;
+            timer.Reset();
+          }
+      }
+
+      _devLinksMutex.unlock();
+      loop_rate.sleep();
+    }
+    catch(std::exception & e)
+    {
+      Log->critical("Han exception has ocurred in the link updater work");
+    }
+  }
+
 }
 }

@@ -7,7 +7,7 @@
 #include <Loggable.h>
 #include <random>
 #include <dccomms_ros/ROSCommsChannelState.h>
-#include <dccomms_ros/ROSCommsNode.h>
+#include <dccomms_ros/ROSCommsDevice.h>
 #include <memory>
 
 //ROS
@@ -21,9 +21,22 @@ using namespace cpplogging;
 namespace dccomms_ros
 {
 
+class DevicesLink
+{
+    public:
+        DevicesLink(CommsDevicePtr dev0, CommsDevicePtr dev1,
+                    CommsChannelStatePtr chn0, CommsChannelStatePtr chn1)
+            : device0(dev0), device1(dev1), channel0(chn0), channel1(chn1){}
+
+        CommsDevicePtr device0, device1;
+        CommsChannelStatePtr channel0, channel1;
+};
+
+typedef std::list<DevicesLink> DevicesLinks;
+
 typedef std::unordered_map<
     int,
-    CommsNodePtr>
+    CommsDevicePtr>
     NodeMap;
 
 
@@ -60,6 +73,13 @@ private:
     ros::NodeHandle & _rosNode;
     NodeMap _nodes;
     ChannelMap _channels;
+
+    std::mutex _devLinksMutex;
+    DevicesLinks _devLinks;
+
+
+    ServiceThread<ROSCommsSimulator> _linkUpdaterWorker;
+    void _LinkUpdaterWork();
 };
 
 }

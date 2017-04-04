@@ -60,20 +60,31 @@ void CommsChannelState::SetTtDist(double mean, double sd)
     _ttDist = ttDist(mean, sd);
 }
 
-void CommsChannelState::SetTxNode(CommsNodePtr node)
+void CommsChannelState::SetTxNode(CommsDevicePtr node)
 {
     _txDev = node;
 }
-CommsNodePtr CommsChannelState::GetTxNode()
+
+void CommsChannelState::SetErrRate(float rate)
+{
+    _errRate = rate;
+}
+
+float CommsChannelState::GetErrRate()
+{
+  return _errRate;
+}
+
+CommsDevicePtr CommsChannelState::GetTxNode()
 {
     return _txDev;
 }
 
-void CommsChannelState::SetRxNode(CommsNodePtr node)
+void CommsChannelState::SetRxNode(CommsDevicePtr node)
 {
     _rxDev = node;
 }
-CommsNodePtr CommsChannelState::GetRxNode()
+CommsDevicePtr CommsChannelState::GetRxNode()
 {
     return _rxDev;
 }

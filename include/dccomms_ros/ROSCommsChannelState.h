@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <random>
-#include <dccomms_ros/ROSCommsNode.h>
+#include <dccomms_ros/ROSCommsDevice.h>
 
 using namespace std;
 
@@ -34,14 +34,16 @@ public:
     void SetLinkOk(bool ok);
     bool LinkOk();
     double GetNextTt();
+    void SetErrRate(float);
+    float GetErrRate();
     ttDist GetTtDist();
     void SetTtDist(double mean, double sd);
 
-    void SetTxNode(CommsNodePtr dev);
-    void SetRxNode(CommsNodePtr dev);
+    void SetTxNode(CommsDevicePtr dev);
+    void SetRxNode(CommsDevicePtr dev);
 
-    CommsNodePtr GetTxNode();
-    CommsNodePtr GetRxNode();
+    CommsDevicePtr GetTxNode();
+    CommsDevicePtr GetRxNode();
 
 private:
     int _maxBitRate;
@@ -49,7 +51,8 @@ private:
     bool _linkOk;
     ttDist _ttDist;
     ttGenerator _ttGenerator;
-    CommsNodePtr _txDev, _rxDev;
+    CommsDevicePtr _txDev, _rxDev;
+    float _errRate;
 };
 }
 

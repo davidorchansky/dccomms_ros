@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 		roslaunch
 		message_generation
                 std_srvs
+                tf
 )
 
 ## System dependencies are found with CMake's conventions
@@ -149,7 +150,7 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 
 SET(${PROJECT_NAME}_INCLUDE_DIRS "include")
 SET(${PROJECT_NAME}_CPP_FILES
-                        src/ROSCommsNode.cpp
+                        src/ROSCommsDevice.cpp
                         src/ROSCommsSimulator.cpp
                         src/ROSCommsChannelState.cpp
         )

@@ -12,7 +12,7 @@ namespace dccomms_ros
 {
 
 class ROSCommsDevice;
-typedef boost::shared_ptr<ROSCommsDevice> CommsNodePtr;
+typedef boost::shared_ptr<ROSCommsDevice> CommsDevicePtr;
 
 class ROSCommsSimulator;
 typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
@@ -20,11 +20,11 @@ typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 class ROSCommsDevice : public virtual Loggable
 {
 public:
-    static CommsNodePtr BuildCommsNode(
+    static CommsDevicePtr BuildCommsDevice(
             ROSCommsSimulator * sim, CommsDeviceServicePtr dev
             )
     {
-            return CommsNodePtr(new ROSCommsDevice(
+            return CommsDevicePtr(new ROSCommsDevice(
                                     sim, dev
                                      ));
     }
@@ -51,6 +51,8 @@ public:
     void SetMinPktErrorRate(float minPktErrorRate);
     void SetPktErrorRateInc(float pktErrorRateInc);
     void SetMac(int mac);
+    void SetDevType(int type);
+    void SetTfFrameId(const std::string &);
 
     int GetMaxBitRate();
     void GetTrTime(float & trTimeMean, float & trTimeSd);
@@ -59,6 +61,10 @@ public:
     float GetMinPktErrorRate();
     float GetPktErrorRateInc();
     int GetMac();
+    int GetDevType();
+    std::string GetTfFrameId();
+
+    std::string ToString();
 
 private:
     std::mutex _receiveFrameMutex;
@@ -66,8 +72,8 @@ private:
     ROSCommsSimulatorPtr _sim;
     ServiceThread<ROSCommsDevice> _txserv;
     DataLinkFramePtr _txdlf;
-    std::string _name;
-    int _mac;
+    std::string _name, _tfFrameId;
+    int _mac, _devType;
     int _maxBitRate;
     float _trTimeMean, _trTimeSd,
       _minPrTime, _prTimeIncPerMeter,

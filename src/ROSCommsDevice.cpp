@@ -1,5 +1,6 @@
-#include <dccomms_ros/ROSCommsNode.h>
+#include <dccomms_ros/ROSCommsDevice.h>
 #include <dccomms_ros/ROSCommsSimulator.h>
+#include <cstdio>
 
 namespace dccomms_ros
 {
@@ -67,6 +68,16 @@ void ROSCommsDevice::GetTrTime(float &mean, float &sd)
 void ROSCommsDevice::SetMinPrTime(float prTime)
 {
     _minPrTime = prTime;
+}
+
+void ROSCommsDevice::SetDevType (int type)
+{
+    _devType = type;
+}
+
+int ROSCommsDevice::GetDevType ()
+{
+    return _devType;
 }
 
 float ROSCommsDevice::GetMinPrTime ()
@@ -175,6 +186,44 @@ void ROSCommsDevice::FlushLogOn(LogLevel level)
 {
     Loggable::FlushLogOn(level);
     _device->FlushLogOn(level);
+}
+
+void ROSCommsDevice::SetTfFrameId(const string & id)
+{
+    _tfFrameId = id;
+}
+
+std::string ROSCommsDevice::GetTfFrameId()
+{
+    return _tfFrameId;
+}
+
+std::string ROSCommsDevice::ToString()
+{
+  int maxBuffSize = 1024;
+  char buff[maxBuffSize];
+  int n = snprintf(buff, maxBuffSize,
+           "\tID ........................ '%s'\n"
+           "\tMAC ....................... %d\n"
+           "\tMax. bits/s ............... %d\n"
+           "\tTransmission time ......... %f ms/byte (std = %f ms/byte)\n"
+           "\tMin. propagation time ..... %f ms\n"
+           "\tPropagation time inc. ..... %f ms/m\n"
+           "\tPacket Error Rate ......... %f%%\n"
+           "\tPacket Error Rate inc. .... %f%% per meter\n"
+           "\tDevice type ............... %d\n"
+           "\tFrame ID: ................. '%s'",
+           _name.c_str (),
+           _mac,
+           _maxBitRate,
+           _trTimeMean, _trTimeSd,
+           _minPrTime,
+           _prTimeIncPerMeter,
+           _minPktErrorRate,
+           _pktErrorRateIncPerMeter,
+           _devType,
+           _tfFrameId.c_str ());
+  return std::string(buff);
 }
 
 }
