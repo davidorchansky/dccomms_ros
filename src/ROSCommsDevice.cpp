@@ -219,8 +219,8 @@ std::string ROSCommsDevice::ToString()
            _trTimeMean, _trTimeSd,
            _minPrTime,
            _prTimeIncPerMeter,
-           _minPktErrorRate,
-           _pktErrorRateIncPerMeter,
+           _minPktErrorRate * 100,
+           _pktErrorRateIncPerMeter * 100,
            _devType,
            _tfFrameId.c_str ());
   return std::string(buff);

@@ -7,7 +7,13 @@ float32 trTimeMean
 float32 trTimeSd
 float32 minPrTime
 float32 prTimeIncPerMeter
-float32 minPktErrorRate
-float32 pktErrorRateIncPerMeter
+
+#Error rate: 0.0 - 1.0
+float64 minPktErrorRate
+float64 pktErrorRateIncPerMeter
+
+#distance in cm
+uint32 maxDistance
+uint32 minDistance
 ---
 bool res

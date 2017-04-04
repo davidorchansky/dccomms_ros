@@ -13,7 +13,10 @@ CommsChannelState::CommsChannelState()
 CommsChannelState::CommsChannelState(
         int maxBitRate,
         int delay
-        ): _maxBitRate(maxBitRate), _delay(delay){}
+        ): _maxBitRate(maxBitRate), _delay(delay), _erDist(0.0,1.0)
+{
+
+}
 
 void CommsChannelState::SetMaxBitRate(int maxBitRate)
 {
@@ -27,12 +30,21 @@ int CommsChannelState::GetMaxBitRate()
 
 int CommsChannelState::SetDelay(int delay)
 {
+    _delayMutex.lock();
     _delay = delay;
+    _delayMutex.unlock();
 }
 
 int CommsChannelState::GetDelay()
 {
-    return _delay;
+  int res;
+
+  _delayMutex.lock();
+  res = _delay;
+  _delayMutex.unlock();
+
+  return res;
+
 }
 
 void CommsChannelState::SetLinkOk(bool ok)
@@ -50,6 +62,12 @@ double CommsChannelState::GetNextTt()
     return _ttDist(_ttGenerator);
 }
 
+bool CommsChannelState::ErrOnNextPkt ()
+{
+    auto rand =  _erDist(_erGenerator);
+    return rand < _errRate;
+}
+
 CommsChannelState::ttDist CommsChannelState::GetTtDist()
 {
     return _ttDist;
@@ -65,14 +83,21 @@ void CommsChannelState::SetTxNode(CommsDevicePtr node)
     _txDev = node;
 }
 
-void CommsChannelState::SetErrRate(float rate)
+void CommsChannelState::SetErrRate(double rate)
 {
+    _errRateMutex.lock();
     _errRate = rate;
+    _errRateMutex.unlock();
 }
 
-float CommsChannelState::GetErrRate()
+double CommsChannelState::GetErrRate()
 {
-  return _errRate;
+  float res;
+  _errRateMutex.lock();
+  res = _errRate;
+  _errRateMutex.unlock();
+
+  return res;
 }
 
 CommsDevicePtr CommsChannelState::GetTxNode()

@@ -281,6 +281,37 @@ void ROSCommsSimulator::FlushLogOn(LogLevel level)
     }
 }
 
+void ROSCommsSimulator::_UpdateChannelStateFromRange(CommsChannelStatePtr chn, double distance, bool log)
+{
+  auto txNode = chn->GetTxNode ();
+  auto rxNode = chn->GetRxNode ();
+
+  auto txFrameId = txNode->GetTfFrameId ();
+  auto rxFrameId = rxNode->GetTfFrameId ();
+
+  auto minPrTime = txNode->GetMinPrTime ();
+  auto prTimeInc = txNode->GetPrTimeInc () * distance;
+  auto newDelay = minPrTime + prTimeInc;
+  chn->SetDelay (newDelay);
+
+  if(log)
+  Log->debug("'{}' ==> '{}' delay: {} ms",
+           txFrameId,
+           rxFrameId,
+           newDelay);
+
+  auto minErrRate = txNode->GetMinPktErrorRate ();
+  auto errRateInc = txNode->GetPktErrorRateInc ();
+  auto newErrRate = minErrRate + errRateInc * distance;
+  chn->SetErrRate (newErrRate);
+
+  if(log)
+  Log->debug("'{}' ==> '{}' packet error rate: {}%",
+           txFrameId,
+           rxFrameId,
+           newErrRate);
+}
+
 void ROSCommsSimulator::_LinkUpdaterWork()
 {
   tf::TransformListener listener;
@@ -289,11 +320,12 @@ void ROSCommsSimulator::_LinkUpdaterWork()
   bool showLog = false;
   unsigned int showLogInterval = 1500;
   timer.Reset();
+
+  ros::Rate loop_rate(20);
   while(1)
   {
     try
     {
-      ros::Rate loop_rate(20);
       if(timer.Elapsed () > showLogInterval)
       {
         showLog = true;
@@ -323,43 +355,21 @@ void ROSCommsSimulator::_LinkUpdaterWork()
 
         if(chn)
         {
-          auto txNode = chn->GetTxNode ();
-          auto rxNode = chn->GetRxNode ();
-          auto minPrTime = txNode->GetMinPrTime ();
-          auto prTimeInc = txNode->GetPrTimeInc () * distance;
-          auto newDelay = minPrTime + prTimeInc;
-          chn->SetDelay (newDelay);
-
-          if(showLog)
-          Log->debug("'{}' -- '{}' delay: {} ms",
-                   txNode->GetTfFrameId (),
-                   rxNode->GetTfFrameId (),
-                   newDelay);
+           _UpdateChannelStateFromRange (chn, distance, showLog);
         }
 
         chn = link.channel1;
 
         if(chn)
         {
-          auto txNode = chn->GetTxNode ();
-          auto rxNode = chn->GetRxNode ();
-          auto minPrTime = txNode->GetMinPrTime ();
-          auto prTimeInc = txNode->GetPrTimeInc () * distance;
-          auto newDelay = minPrTime + prTimeInc;
-          chn->SetDelay (newDelay);
-
-          if(showLog)
-          Log->debug("'{}' -- '{}' delay: {} ms",
-                   txNode->GetTfFrameId (),
-                   rxNode->GetTfFrameId (),
-                   newDelay);
+           _UpdateChannelStateFromRange (chn, distance, showLog);
         }
 
         if(showLog)
-          {
-            showLog = false;
-            timer.Reset();
-          }
+        {
+          showLog = false;
+          timer.Reset();
+        }
       }
 
       _devLinksMutex.unlock();

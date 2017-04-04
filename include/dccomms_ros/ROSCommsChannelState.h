@@ -15,8 +15,11 @@ typedef std::shared_ptr<CommsChannelState> CommsChannelStatePtr;
 
 class CommsChannelState
 {
-    typedef std::normal_distribution<double> ttDist;
-    typedef std::default_random_engine ttGenerator;
+    typedef std::normal_distribution<double> NormalDist;
+    typedef std::default_random_engine RandEngGen;
+
+    typedef std::uniform_real_distribution<double> erDist;
+
 public:
 
     static CommsChannelStatePtr BuildCommsChannelState();
@@ -34,10 +37,11 @@ public:
     void SetLinkOk(bool ok);
     bool LinkOk();
     double GetNextTt();
-    void SetErrRate(float);
-    float GetErrRate();
-    ttDist GetTtDist();
+    void SetErrRate(double);
+    double GetErrRate();
+    NormalDist GetTtDist();
     void SetTtDist(double mean, double sd);
+    bool ErrOnNextPkt();
 
     void SetTxNode(CommsDevicePtr dev);
     void SetRxNode(CommsDevicePtr dev);
@@ -49,10 +53,14 @@ private:
     int _maxBitRate;
     int _delay; //ms
     bool _linkOk;
-    ttDist _ttDist;
-    ttGenerator _ttGenerator;
+    NormalDist _ttDist;
+    erDist _erDist;
+    RandEngGen _ttGenerator,_erGenerator;
+
     CommsDevicePtr _txDev, _rxDev;
-    float _errRate;
+    double _errRate;
+
+    std::mutex _errRateMutex, _delayMutex;
 };
 }
 

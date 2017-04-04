@@ -80,6 +80,7 @@ private:
 
     ServiceThread<ROSCommsSimulator> _linkUpdaterWorker;
     void _LinkUpdaterWork();
+    void _UpdateChannelStateFromRange(CommsChannelStatePtr chn,  double range, bool log = true);
 };
 
 }
