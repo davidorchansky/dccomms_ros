@@ -48,20 +48,24 @@ public:
     void SetTrTime(float trTimeMean, float trTimeSd = 0);
     void SetMinPrTime(float prTime);
     void SetPrTimeInc(float inc);
-    void SetMinPktErrorRate(float minPktErrorRate);
-    void SetPktErrorRateInc(float pktErrorRateInc);
+    void SetMinPktErrorRate(double minPktErrorRate);
+    void SetPktErrorRateInc(double pktErrorRateInc);
     void SetMac(int mac);
     void SetDevType(int type);
     void SetTfFrameId(const std::string &);
+    void SetMaxDistance(uint32_t d);
+    void SetMinDistance(uint32_t d);
 
     int GetMaxBitRate();
     void GetTrTime(float & trTimeMean, float & trTimeSd);
     float GetMinPrTime();
     float GetPrTimeInc();
-    float GetMinPktErrorRate();
-    float GetPktErrorRateInc();
+    double GetMinPktErrorRate();
+    double GetPktErrorRateInc();
     int GetMac();
     int GetDevType();
+    uint32_t GetMaxDistance();
+    uint32_t GetMinDistance();
     std::string GetTfFrameId();
 
     std::string ToString();
@@ -76,9 +80,11 @@ private:
     int _mac, _devType;
     int _maxBitRate;
     float _trTimeMean, _trTimeSd,
-      _minPrTime, _prTimeIncPerMeter,
-      _minPktErrorRate,
+      _minPrTime, _prTimeIncPerMeter;
+    double  _minPktErrorRate,
       _pktErrorRateIncPerMeter;
+
+    uint32_t _maxDistance, _minDistance;
 
     void _TxWork();
 };

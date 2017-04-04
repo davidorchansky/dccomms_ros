@@ -68,14 +68,14 @@ bool CommsChannelState::ErrOnNextPkt ()
     return rand < _errRate;
 }
 
-CommsChannelState::ttDist CommsChannelState::GetTtDist()
+CommsChannelState::NormalDist CommsChannelState::GetTtDist()
 {
     return _ttDist;
 }
 
 void CommsChannelState::SetTtDist(double mean, double sd)
 {
-    _ttDist = ttDist(mean, sd);
+    _ttDist = NormalDist(mean, sd);
 }
 
 void CommsChannelState::SetTxNode(CommsDevicePtr node)

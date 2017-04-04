@@ -26,32 +26,43 @@ void ROSCommsSimulator::TransmitFrame(DataLinkFramePtr dlf)
             std::to_string (srcdir) + std::string("_") + std::to_string (dstdir);
 
     auto channelState = _channels[channelKey];
-    auto bitRate = channelState->GetMaxBitRate ();
+    if(channelState)
+    {
+      auto bitRate = channelState->GetMaxBitRate ();
 
-    //Simulate transmission time
-    auto byteTransmissionTime =  1000./( bitRate/ 8.);
-    auto frameSize = dlf->GetFrameSize ();
-    unsigned int frameTransmissionTime = ceil(frameSize * byteTransmissionTime);
-    auto txtrp = TransportPDU::BuildTransportPDU (0);
-    txtrp->UpdateBuffer (dlf->GetPayloadBuffer ());
-    auto delay = channelState->GetDelay ();
+      //Simulate transmission time
+      auto byteTransmissionTime =  1000./( bitRate/ 8.);
+      auto frameSize = dlf->GetFrameSize ();
+      unsigned int frameTransmissionTime = ceil(frameSize * byteTransmissionTime);
+      auto txtrp = TransportPDU::BuildTransportPDU (0);
+      txtrp->UpdateBuffer (dlf->GetPayloadBuffer ());
+      auto delay = channelState->GetDelay ();
 
-    //Simulate total delay (transmission + propagation + reception)
-    auto trRate = channelState->GetNextTt();
-    auto trTime = trRate * frameSize;
-    int totalTime = ceil(delay + trTime);
-    Log->debug("TX {}->{}: R: {} ms/byte ; TT: {} ms ; D: {} ms (Seq: {}) (FS: {}).",
-               srcdir, dstdir,
-               trRate,
-               totalTime,
-               delay,
-               txtrp->GetSeqNum (),
-               frameSize);
+      //Simulate total delay (transmission + propagation + reception)
+      auto trRate = channelState->GetNextTt();
+      auto trTime = trRate * frameSize;
+      int totalTime = ceil(delay + trTime);
+      Log->debug("TX {}->{}: R: {} ms/byte ; TT: {} ms ; D: {} ms (Seq: {}) (FS: {}).",
+                 srcdir, dstdir,
+                 trRate,
+                 totalTime,
+                 delay,
+                 txtrp->GetSeqNum (),
+                 frameSize);
 
-    _PropagateFrame (dlf, totalTime);
+      if(channelState->LinkOk())
+      {
+        if(channelState->ErrOnNextPkt())
+        {
+          auto pBuffer = dlf->GetPayloadBuffer();
+          *pBuffer = ~*pBuffer;
+        }
+        _PropagateFrame (dlf, totalTime);
+      }
 
-    std::this_thread::sleep_for(
-                std::chrono::milliseconds(frameTransmissionTime));
+      std::this_thread::sleep_for(
+                  std::chrono::milliseconds(frameTransmissionTime));
+   }
 }
 
 void ROSCommsSimulator::_PropagateFrame (DataLinkFramePtr dlf, int delay)
@@ -106,6 +117,8 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
     auto pktErrorRateIncPerMeter = req.pktErrorRateIncPerMeter;
     auto deviceType              = req.devType;
     auto frameId                 = req.frameId;
+    auto maxDistance             = req.maxDistance;
+    auto minDistance             = req.minDistance;
 
     Log->info("Add device request received");
 
@@ -128,6 +141,8 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
         node->SetMinPktErrorRate (minPktErrorRate);
         node->SetPktErrorRateInc (pktErrorRateIncPerMeter);
         node->SetTfFrameId (frameId);
+        node->SetMaxDistance (maxDistance);
+        node->SetMinDistance (minDistance);
 
         Log->info("\nAdding new device...:\n{}", node->ToString ());
 
@@ -184,6 +199,9 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
 
         }
         _nodes[mac] = node;
+
+        node->StartDeviceService ();
+        node->StartNodeWorker ();
     }
     else
     {
@@ -283,33 +301,68 @@ void ROSCommsSimulator::FlushLogOn(LogLevel level)
 
 void ROSCommsSimulator::_UpdateChannelStateFromRange(CommsChannelStatePtr chn, double distance, bool log)
 {
-  auto txNode = chn->GetTxNode ();
-  auto rxNode = chn->GetRxNode ();
+  auto txDev = chn->GetTxNode ();
+  auto rxDev = chn->GetRxNode ();
 
-  auto txFrameId = txNode->GetTfFrameId ();
-  auto rxFrameId = rxNode->GetTfFrameId ();
+  auto txFrameId = txDev->GetTfFrameId ();
+  auto rxFrameId = rxDev->GetTfFrameId ();
 
-  auto minPrTime = txNode->GetMinPrTime ();
-  auto prTimeInc = txNode->GetPrTimeInc () * distance;
+  auto minPrTime = txDev->GetMinPrTime ();
+  auto prTimeInc = txDev->GetPrTimeInc () * distance;
   auto newDelay = minPrTime + prTimeInc;
   chn->SetDelay (newDelay);
 
+  auto linkType = txDev->GetDevType ();
+
+  auto txMac = txDev->GetMac();
+  auto rxMac = rxDev->GetMac();
+
   if(log)
-  Log->debug("'{}' ==> '{}' delay: {} ms",
+  Log->debug("class {}: mac({})frame('{}') ==> mac({})frame('{}') delay: {} ms",
+           linkType,
+           txMac,
            txFrameId,
+           rxMac,
            rxFrameId,
            newDelay);
 
-  auto minErrRate = txNode->GetMinPktErrorRate ();
-  auto errRateInc = txNode->GetPktErrorRateInc ();
+  auto minErrRate = txDev->GetMinPktErrorRate ();
+  auto errRateInc = txDev->GetPktErrorRateInc ();
   auto newErrRate = minErrRate + errRateInc * distance;
   chn->SetErrRate (newErrRate);
 
   if(log)
-  Log->debug("'{}' ==> '{}' packet error rate: {}%",
+  Log->debug("class {}: mac({})frame('{}') ==> mac({})frame('{}') packet error rate: {}%",
+           linkType,
+           txMac,
            txFrameId,
+           rxMac,
            rxFrameId,
-           newErrRate);
+           newErrRate*100);
+
+  double minDistance = txDev->GetMinDistance () / 100.; //cm to meters
+  double maxDistance = txDev->GetMaxDistance () / 100.; //cm to meters
+  if(distance <= maxDistance && distance >= minDistance)
+  {
+     chn->SetLinkOk (true);
+     if(log)Log->debug("class {}: mac({})frame('{}') ==> mac({})frame('{}') link ok",
+              linkType,
+              txMac,
+              txFrameId,
+              rxMac,
+              rxFrameId);
+  }
+  else
+  {
+    chn->SetLinkOk(false);
+    if(log)Log->debug("class {}: mac({})frame('{}') ==> mac({})frame('{}') link down",
+             linkType,
+             txMac,
+             txFrameId,
+             rxMac,
+             rxFrameId);
+  }
+
 }
 
 void ROSCommsSimulator::_LinkUpdaterWork()

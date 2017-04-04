@@ -95,22 +95,22 @@ float ROSCommsDevice::GetPrTimeInc ()
     return _prTimeIncPerMeter;
 }
 
-void ROSCommsDevice::SetMinPktErrorRate(float minPktErrorRate)
+void ROSCommsDevice::SetMinPktErrorRate(double minPktErrorRate)
 {
     _minPktErrorRate = minPktErrorRate;
 }
 
-float ROSCommsDevice::GetMinPktErrorRate ()
+double ROSCommsDevice::GetMinPktErrorRate ()
 {
     return _minPktErrorRate;
 }
 
-void ROSCommsDevice::SetPktErrorRateInc(float inc)
+void ROSCommsDevice::SetPktErrorRateInc(double inc)
 {
     _pktErrorRateIncPerMeter = inc;
 }
 
-float ROSCommsDevice::GetPktErrorRateInc ()
+double ROSCommsDevice::GetPktErrorRateInc ()
 {
     return _pktErrorRateIncPerMeter;
 }
@@ -123,6 +123,26 @@ void ROSCommsDevice::SetMac(int mac)
 int ROSCommsDevice::GetMac ()
 {
     return _mac;
+}
+
+void ROSCommsDevice::SetMaxDistance (uint32_t d)
+{
+    _maxDistance = d;
+}
+
+uint32_t ROSCommsDevice::GetMaxDistance ()
+{
+    return _maxDistance;
+}
+
+void ROSCommsDevice::SetMinDistance (uint32_t d)
+{
+    _minDistance = d;
+}
+
+uint32_t ROSCommsDevice::GetMinDistance ()
+{
+    return _minDistance;
 }
 
 void ROSCommsDevice::_TxWork ()

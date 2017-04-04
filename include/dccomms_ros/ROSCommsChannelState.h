@@ -18,7 +18,7 @@ class CommsChannelState
     typedef std::normal_distribution<double> NormalDist;
     typedef std::default_random_engine RandEngGen;
 
-    typedef std::uniform_real_distribution<double> erDist;
+    typedef std::uniform_real_distribution<double> UniformRealDist;
 
 public:
 
@@ -54,7 +54,7 @@ private:
     int _delay; //ms
     bool _linkOk;
     NormalDist _ttDist;
-    erDist _erDist;
+    UniformRealDist _erDist;
     RandEngGen _ttGenerator,_erGenerator;
 
     CommsDevicePtr _txDev, _rxDev;
