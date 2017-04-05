@@ -159,7 +159,7 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
 
                 //Build tx channel
                 std::stringstream ss;
-                ss << mac << "_" << remoteMac;
+                ss <<  (int)mac << "_" <<  (int)remoteMac;
                 std::string txChannelKey = ss.str();
 
                 auto txChannel = CommsChannelState::BuildCommsChannelState ();
@@ -173,7 +173,7 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
 
                 //Build rx channel
                 ss.str(std::string());
-                ss << remoteMac << "_" << mac;
+                ss << (int)remoteMac << "_" << (int)mac;
                 std::string rxChannelKey = ss.str();
 
                 auto rxChannel = CommsChannelState::BuildCommsChannelState ();
