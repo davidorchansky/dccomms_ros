@@ -4,6 +4,7 @@
 #include <memory>
 #include <random>
 #include <dccomms_ros/ROSCommsDevice.h>
+#include <condition_variable>
 
 using namespace std;
 
@@ -49,10 +50,19 @@ public:
     CommsDevicePtr GetTxNode();
     CommsDevicePtr GetRxNode();
 
+    //void ChannelFree(bool channelFree);
+    //bool ChannelFree();
+
+    //bool WaitForChannelFree();
+
+    void Lock();
+    void Unlock();
+
 private:
     int _maxBitRate;
     int _delay; //ms
     bool _linkOk;
+    bool _channelFree;
     NormalDist _ttDist;
     UniformRealDist _erDist;
     RandEngGen _ttGenerator,_erGenerator;
@@ -60,7 +70,8 @@ private:
     CommsDevicePtr _txDev, _rxDev;
     double _errRate;
 
-    std::mutex _errRateMutex, _delayMutex;
+    std::mutex _errRateMutex, _delayMutex, _channelMutex;
+    //condition_variable _channelFreeCond;
 };
 }
 

@@ -66,8 +66,8 @@ public:
 private:
     bool _AddDevice(dccomms_ros::AddDevice::Request & req,
                     dccomms_ros::AddDevice::Response & res);
-    void _PropagateFrame(DataLinkFramePtr dlf, int delay);
-    void _DeliverFrame(DataLinkFramePtr dlf);
+    void _PropagateFrame(DataLinkFramePtr dlf, int delay, CommsChannelStatePtr channel);
+    void _DeliverFrame(DataLinkFramePtr dlf, CommsChannelStatePtr channel);
 
     ros::ServiceServer _addDevService;
     ros::NodeHandle & _rosNode;

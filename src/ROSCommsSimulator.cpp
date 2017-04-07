@@ -4,6 +4,7 @@
 #include <dccomms_ros/AddDevice.h>
 #include <iostream>
 #include <tf/transform_listener.h>
+#include <dccomms/Utils.h>
 
 using namespace dccomms;
 
@@ -40,6 +41,11 @@ void ROSCommsSimulator::TransmitFrame(DataLinkFramePtr dlf)
 
       //Simulate total delay (transmission + propagation + reception)
       auto trRate = channelState->GetNextTt();
+      if(trRate < 0)
+      {
+          Log->warn("trRate < 0: {} . Changing to its abs({}) value", trRate, trRate);
+          trRate = -trRate;
+      }
       auto trTime = trRate * frameSize;
       int totalTime = ceil(delay + trTime);
       Log->debug("TX {}->{}: R: {} ms/byte ; TT: {} ms ; D: {} ms (Seq: {}) (FS: {}).",
@@ -57,7 +63,7 @@ void ROSCommsSimulator::TransmitFrame(DataLinkFramePtr dlf)
           auto pBuffer = dlf->GetPayloadBuffer();
           *pBuffer = ~*pBuffer;
         }
-        _PropagateFrame (dlf, totalTime);
+        _PropagateFrame (dlf, totalTime, channelState);
       }
 
       std::this_thread::sleep_for(
@@ -65,20 +71,32 @@ void ROSCommsSimulator::TransmitFrame(DataLinkFramePtr dlf)
    }
 }
 
-void ROSCommsSimulator::_PropagateFrame (DataLinkFramePtr dlf, int delay)
+void ROSCommsSimulator::_PropagateFrame (DataLinkFramePtr dlf, int delay, CommsChannelStatePtr channel)
 {
     std::thread task(
-                [this, delay, dlf]()
+                [this, delay, dlf, channel]()
     {
+        dccomms::Timer timer;
+        timer.Reset();
+        channel->Lock();
+
+        if(delay < 0) Log->critical("BUG! delay < 0!!");
+
+        auto elapsed = timer.Elapsed();
+
+        //We don't want to make a pdu arrives before a previous pdu that is still propagating
+        auto delay2 = elapsed < delay ? delay - elapsed : 0;
+
         std::this_thread::sleep_for(
-                    std::chrono::milliseconds(delay)
+                    std::chrono::milliseconds(delay2)
                     );
-        this->_DeliverFrame (dlf);
+        this->_DeliverFrame (dlf, channel);
+        channel->Unlock();
     });
     task.detach ();
 }
 
-void ROSCommsSimulator::_DeliverFrame (DataLinkFramePtr dlf)
+void ROSCommsSimulator::_DeliverFrame (DataLinkFramePtr dlf, CommsChannelStatePtr channel)
 {
     auto dstdir = dlf->GetDesDir ();
 
@@ -96,7 +114,7 @@ void ROSCommsSimulator::_DeliverFrame (DataLinkFramePtr dlf)
     }
     else
     {
-        Log->debug("RX {}<-{}: received frame with errors. Frame will be discarted (Seq: {}) (FS: {}).",
+        Log->warn("RX {}<-{}: received frame with errors. Frame will be discarted (Seq: {}) (FS: {}).",
                dlf->GetDesDir (),
                dlf->GetSrcDir (),
                trs->GetSeqNum (),
@@ -223,22 +241,8 @@ void ROSCommsSimulator::Start()
                 &ROSCommsSimulator::_AddDevice, this
                 );
     _linkUpdaterWorker.Start();
-
-    /*
-    //Start device services first
-    for(pair<int, CommsNodePtr> pair: nodes)
-    {
-        auto node = pair.second;
-        node->StartDeviceService ();
-    }
-    //Start simulated comms
-    for(pair<int, CommsNodePtr> pair: nodes)
-    {
-        auto node = pair.second;
-        node->StartNodeWorker ();
-    }
-    */
 }
+
 void ROSCommsSimulator::SetLogName(std::string name)
 {
     Loggable::SetLogName(name);

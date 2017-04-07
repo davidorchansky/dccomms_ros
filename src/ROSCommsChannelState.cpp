@@ -57,6 +57,39 @@ bool CommsChannelState::LinkOk()
     return _linkOk;
 }
 
+void CommsChannelState::Lock()
+{
+  _channelMutex.lock();
+}
+
+void CommsChannelState::Unlock()
+{
+  _channelMutex.unlock();
+}
+
+/*
+void CommsChannelState::ChannelFree(bool channelFree)
+{
+    _channelFree = channelFree;
+    if(channelFree) _channelFreeCond.notify_one ();
+}
+
+bool CommsChannelState::ChannelFree()
+{
+    return _channelFree;
+}
+
+bool CommsChannelState::WaitForChannelFree()
+{
+    std::unique_lock<std::mutex> lock(_channelMutex);
+    while(_channelFree)
+    {
+            _channelFreeCond.wait(lock);
+    }
+    return true;
+}
+*/
+
 double CommsChannelState::GetNextTt()
 {
     return _ttDist(_ttGenerator);
