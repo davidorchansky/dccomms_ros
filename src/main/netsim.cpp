@@ -14,6 +14,8 @@ using namespace dccomms;
 using namespace dccomms_ros;
 using namespace std;
 
+
+static std::shared_ptr<spd::logger> Log = spd::stdout_color_mt("MERBOTSCommsSimulator");
 ROSCommsSimulator * sim;
 
 void SIGINT_handler (int sig)
@@ -42,6 +44,20 @@ int main(int argc, char ** argv)
     sim = new ROSCommsSimulator(nh);
     sim->SetLogName ("netsim");
     sim->LogToFile ("netsim_log");
+
+
+    Log->set_level(spdlog::level::debug);
+    Log->flush_on(spd::level::info);
+
+    sim->SetTransmitPDUCb ([](dccomms::DataLinkFramePtr dlf){
+        Log->info("Transmitting PDU");
+    });
+    sim->SetReceivePDUCb ([](dccomms::DataLinkFramePtr dlf){
+        Log->info("PDU Received");
+    });
+    sim->SetErrorPDUCb ([](dccomms::DataLinkFramePtr dlf){
+        Log->warn("PDU Received with errors");
+    });
 
     sim->Start();
 
