@@ -1,12 +1,13 @@
 #include <dccomms_ros/ROSCommsSimulator.h>
 #include <dccomms/TransportPDU.h>
 #include <dccomms/CommsDeviceService.h>
-#include <dccomms_ros/AddDevice.h>
+#include <dccomms_ros_msgs/AddDevice.h>
 #include <iostream>
 #include <tf/transform_listener.h>
 #include <dccomms/Utils.h>
 
 using namespace dccomms;
+using namespace dccomms_ros_msgs;
 
 namespace dccomms_ros
 {

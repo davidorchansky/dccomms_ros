@@ -12,7 +12,7 @@
 
 //ROS
 #include <ros/ros.h>
-#include <dccomms_ros/AddDevice.h>
+#include <dccomms_ros_msgs/AddDevice.h>
 //end ROS
 
 using namespace dccomms;
@@ -64,8 +64,8 @@ public:
     virtual void LogToFile(const string &filename);
 
 private:
-    bool _AddDevice(dccomms_ros::AddDevice::Request & req,
-                    dccomms_ros::AddDevice::Response & res);
+    bool _AddDevice(dccomms_ros_msgs::AddDevice::Request & req,
+                    dccomms_ros_msgs::AddDevice::Response & res);
     void _PropagateFrame(DataLinkFramePtr dlf, int delay, CommsChannelStatePtr channel);
     void _DeliverFrame(DataLinkFramePtr dlf, CommsChannelStatePtr channel);
 
