@@ -111,7 +111,7 @@ void CommsChannelState::SetTtDist(double mean, double sd)
     _ttDist = NormalDist(mean, sd);
 }
 
-void CommsChannelState::SetTxNode(CommsDevicePtr node)
+void CommsChannelState::SetTxNode(ROSCommsDevicePtr node)
 {
     _txDev = node;
 }
@@ -133,16 +133,16 @@ double CommsChannelState::GetErrRate()
   return res;
 }
 
-CommsDevicePtr CommsChannelState::GetTxNode()
+ROSCommsDevicePtr CommsChannelState::GetTxNode()
 {
     return _txDev;
 }
 
-void CommsChannelState::SetRxNode(CommsDevicePtr node)
+void CommsChannelState::SetRxNode(ROSCommsDevicePtr node)
 {
     _rxDev = node;
 }
-CommsDevicePtr CommsChannelState::GetRxNode()
+ROSCommsDevicePtr CommsChannelState::GetRxNode()
 {
     return _rxDev;
 }

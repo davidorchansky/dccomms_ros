@@ -44,11 +44,11 @@ public:
     void SetTtDist(double mean, double sd);
     bool ErrOnNextPkt();
 
-    void SetTxNode(CommsDevicePtr dev);
-    void SetRxNode(CommsDevicePtr dev);
+    void SetTxNode(ROSCommsDevicePtr dev);
+    void SetRxNode(ROSCommsDevicePtr dev);
 
-    CommsDevicePtr GetTxNode();
-    CommsDevicePtr GetRxNode();
+    ROSCommsDevicePtr GetTxNode();
+    ROSCommsDevicePtr GetRxNode();
 
     //void ChannelFree(bool channelFree);
     //bool ChannelFree();
@@ -67,7 +67,7 @@ private:
     UniformRealDist _erDist;
     RandEngGen _ttGenerator,_erGenerator;
 
-    CommsDevicePtr _txDev, _rxDev;
+    ROSCommsDevicePtr _txDev, _rxDev;
     double _errRate;
 
     std::mutex _errRateMutex, _delayMutex, _channelMutex;

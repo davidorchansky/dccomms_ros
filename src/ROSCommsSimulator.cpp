@@ -17,6 +17,29 @@ ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle & rosNode): _rosNode(rosNod
     LogToConsole (true);
     FlushLogOn (cpplogging::Loggable::info);
     _linkUpdaterWorker.SetWork (&ROSCommsSimulator::_LinkUpdaterWork);
+    _Init();
+}
+
+void ROSCommsSimulator::SetTransmitPDUCb (std::function<void (DataLinkFramePtr)> cb)
+{
+  _TransmitPDUCb = cb;
+}
+
+void ROSCommsSimulator::SetReceivePDUCb (std::function<void (DataLinkFramePtr)> cb)
+{
+  _ReceivePDUCb = cb;
+}
+
+void ROSCommsSimulator::SetErrorPDUCb (std::function<void (DataLinkFramePtr)> cb)
+{
+  _ErrorPDUCb = cb;
+}
+
+void ROSCommsSimulator::_Init()
+{
+  _TransmitPDUCb = [](DataLinkFramePtr pdu){};
+  _ReceivePDUCb = [](DataLinkFramePtr pdu){};
+  _ErrorPDUCb = [](DataLinkFramePtr pdu){};
 }
 
 void ROSCommsSimulator::TransmitFrame(DataLinkFramePtr dlf)
@@ -49,6 +72,7 @@ void ROSCommsSimulator::TransmitFrame(DataLinkFramePtr dlf)
       }
       auto trTime = trRate * frameSize;
       int totalTime = ceil(delay + trTime);
+      _TransmitPDUCb(dlf);
       Log->debug("TX {}->{}: R: {} ms/byte ; TT: {} ms ; D: {} ms (Seq: {}) (FS: {}).",
                  srcdir, dstdir,
                  trRate,
@@ -105,7 +129,8 @@ void ROSCommsSimulator::_DeliverFrame (DataLinkFramePtr dlf, CommsChannelStatePt
     trs->UpdateBuffer (dlf->GetPayloadBuffer ());
     if(dlf->checkFrame ())
     {
-        CommsDevicePtr dstNode = _nodes[dstdir];
+        ROSCommsDevicePtr dstNode = _nodes[dstdir];
+        _ReceivePDUCb(dlf);
         Log->debug("RX {}<-{}: received frame without errors (Seq: {}) (FS: {}).",
                dlf->GetDesDir (),
                dlf->GetSrcDir (),
@@ -115,6 +140,7 @@ void ROSCommsSimulator::_DeliverFrame (DataLinkFramePtr dlf, CommsChannelStatePt
     }
     else
     {
+        _ErrorPDUCb(dlf);
         Log->warn("RX {}<-{}: received frame with errors. Frame will be discarted (Seq: {}) (FS: {}).",
                dlf->GetDesDir (),
                dlf->GetSrcDir (),
@@ -165,7 +191,7 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
 
         Log->info("\nAdding new device...:\n{}", node->ToString ());
 
-        for(pair<int, CommsDevicePtr> pair: _nodes)
+        for(pair<int, ROSCommsDevicePtr> pair: _nodes)
         {
             auto rxNode = pair.second;
 
@@ -219,12 +245,18 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
         }
         _nodes[mac] = node;
 
-        node->StartDeviceService ();
-        node->StartNodeWorker ();
+        auto starterWork = [](ROSCommsDevicePtr _node)
+        {
+          _node->StartDeviceService ();
+          _node->StartNodeWorker ();
+        };
+
+        std::thread starter(starterWork, node);
+        starter.detach ();
     }
     else
     {
-        CommsDevicePtr node = _nodes[mac];
+        ROSCommsDevicePtr node = _nodes[mac];
         Log->error("Unable to add the device. A net device with the same MAC already exists: '{}'", node->GetName ());
     }
 
@@ -247,7 +279,7 @@ void ROSCommsSimulator::Start()
 void ROSCommsSimulator::SetLogName(std::string name)
 {
     Loggable::SetLogName(name);
-    for(pair<int, CommsDevicePtr> pair: _nodes)
+    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->SetLogName(name + ":Node(" + node->GetName()+")");
@@ -256,7 +288,7 @@ void ROSCommsSimulator::SetLogName(std::string name)
 void ROSCommsSimulator::SetLogLevel(Loggable::LogLevel _level)
 {
     Loggable::SetLogLevel(_level);
-    for(pair<int, CommsDevicePtr> pair: _nodes)
+    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->SetLogLevel(_level);
@@ -266,7 +298,7 @@ void ROSCommsSimulator::SetLogLevel(Loggable::LogLevel _level)
 void ROSCommsSimulator::LogToConsole(bool c)
 {
     Loggable::LogToConsole(c);
-    for(pair<int, CommsDevicePtr> pair: _nodes)
+    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->LogToConsole(c);
@@ -277,7 +309,7 @@ void ROSCommsSimulator::LogToConsole(bool c)
 void ROSCommsSimulator::LogToFile(const string &filename)
 {
     Loggable::LogToFile(filename);
-    for(pair<int, CommsDevicePtr> pair: _nodes)
+    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->LogToFile(filename + "_" + node->GetName () + "_node");
@@ -287,7 +319,7 @@ void ROSCommsSimulator::LogToFile(const string &filename)
 void ROSCommsSimulator::FlushLog()
 {
     Loggable::FlushLog();
-    for(pair<int, CommsDevicePtr> pair: _nodes)
+    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->FlushLog ();
@@ -297,7 +329,7 @@ void ROSCommsSimulator::FlushLog()
 void ROSCommsSimulator::FlushLogOn(LogLevel level)
 {
     Loggable::FlushLogOn(level);
-    for(pair<int, CommsDevicePtr> pair: _nodes)
+    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
     {
         auto node = pair.second;
         node->FlushLogOn(level);
@@ -380,62 +412,64 @@ void ROSCommsSimulator::_LinkUpdaterWork()
   timer.Reset();
 
   ros::Rate loop_rate(20);
+
+  std::string frameId0, frameId1;
   while(1)
   {
-    try
+
+    if(timer.Elapsed () > showLogInterval)
     {
-      if(timer.Elapsed () > showLogInterval)
-      {
-        showLog = true;
-      }
-
-      _devLinksMutex.lock();
-
-      tf::StampedTransform transform;
-      for(DevicesLink link : _devLinks)
-      {
-        auto frameId0 = link.device0->GetTfFrameId ();
-        auto frameId1 = link.device1->GetTfFrameId ();
-
-        ros::Time now = ros::Time::now();
-
-        listener.lookupTransform (frameId0, frameId1,
-                                  ros::Time(0),
-                                  transform);
-        auto distance = transform.getOrigin ().distance(tf::Vector3(0,0,0));
-        if(showLog)
-        Log->debug("Range between frame '{}' and '{}': {}",
-                  frameId0,
-                  frameId1,
-                  distance);
-
-        auto chn = link.channel0;
-
-        if(chn)
-        {
-           _UpdateChannelStateFromRange (chn, distance, showLog);
-        }
-
-        chn = link.channel1;
-
-        if(chn)
-        {
-           _UpdateChannelStateFromRange (chn, distance, showLog);
-        }
-
-        if(showLog)
-        {
-          showLog = false;
-          timer.Reset();
-        }
-      }
-
-      _devLinksMutex.unlock();
-      loop_rate.sleep();
+      showLog = true;
     }
-    catch(std::exception & e)
+
+    _devLinksMutex.lock();
+    tf::StampedTransform transform;
+    for(DevicesLink link : _devLinks)
     {
-      Log->critical("Han exception has ocurred in the link updater work");
+        try
+        {
+          frameId0 = link.device0->GetTfFrameId ();
+          frameId1 = link.device1->GetTfFrameId ();
+
+          ros::Time now = ros::Time::now();
+
+          listener.lookupTransform (frameId0, frameId1,
+                                    ros::Time(0),
+                                    transform);
+          auto distance = transform.getOrigin ().distance(tf::Vector3(0,0,0));
+          if(showLog)
+          Log->debug("Range between frame '{}' and '{}': {}",
+                    frameId0,
+                    frameId1,
+                    distance);
+
+          auto chn = link.channel0;
+
+          if(chn)
+          {
+             _UpdateChannelStateFromRange (chn, distance, showLog);
+          }
+
+          chn = link.channel1;
+
+          if(chn)
+          {
+             _UpdateChannelStateFromRange (chn, distance, showLog);
+          }
+       }
+      catch(std::exception & e)
+      {
+        if(showLog)
+          Log->critical("Han exception has ocurred in the link updater work: frames {}-{}", frameId0, frameId1);
+      }
+    }
+    _devLinksMutex.unlock();
+    loop_rate.sleep();
+
+    if(showLog)
+    {
+      showLog = false;
+      timer.Reset();
     }
   }
 

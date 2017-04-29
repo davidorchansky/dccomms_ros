@@ -12,7 +12,7 @@ namespace dccomms_ros
 {
 
 class ROSCommsDevice;
-typedef boost::shared_ptr<ROSCommsDevice> CommsDevicePtr;
+typedef boost::shared_ptr<ROSCommsDevice> ROSCommsDevicePtr;
 
 class ROSCommsSimulator;
 typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
@@ -20,11 +20,11 @@ typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 class ROSCommsDevice : public virtual Loggable
 {
 public:
-    static CommsDevicePtr BuildCommsDevice(
+    static ROSCommsDevicePtr BuildCommsDevice(
             ROSCommsSimulator * sim, CommsDeviceServicePtr dev
             )
     {
-            return CommsDevicePtr(new ROSCommsDevice(
+            return ROSCommsDevicePtr(new ROSCommsDevice(
                                     sim, dev
                                      ));
     }

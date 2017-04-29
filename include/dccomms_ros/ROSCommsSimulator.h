@@ -9,6 +9,7 @@
 #include <dccomms_ros/ROSCommsChannelState.h>
 #include <dccomms_ros/ROSCommsDevice.h>
 #include <memory>
+#include <functional>
 
 //ROS
 #include <ros/ros.h>
@@ -24,11 +25,11 @@ namespace dccomms_ros
 class DevicesLink
 {
     public:
-        DevicesLink(CommsDevicePtr dev0, CommsDevicePtr dev1,
+        DevicesLink(ROSCommsDevicePtr dev0, ROSCommsDevicePtr dev1,
                     CommsChannelStatePtr chn0, CommsChannelStatePtr chn1)
             : device0(dev0), device1(dev1), channel0(chn0), channel1(chn1){}
 
-        CommsDevicePtr device0, device1;
+        ROSCommsDevicePtr device0, device1;
         CommsChannelStatePtr channel0, channel1;
 };
 
@@ -36,7 +37,7 @@ typedef std::list<DevicesLink> DevicesLinks;
 
 typedef std::unordered_map<
     int,
-    CommsDevicePtr>
+    ROSCommsDevicePtr>
     NodeMap;
 
 
@@ -63,7 +64,13 @@ public:
     virtual void LogToConsole(bool);
     virtual void LogToFile(const string &filename);
 
+    void SetTransmitPDUCb(std::function<void(dccomms::DataLinkFramePtr)> cb);
+    void SetReceivePDUCb(std::function<void(dccomms::DataLinkFramePtr)> cb);
+    void SetErrorPDUCb(std::function<void(dccomms::DataLinkFramePtr)> cb);
+
 private:
+    void _Init();
+    std::function<void(dccomms::DataLinkFramePtr)> _TransmitPDUCb, _ReceivePDUCb, _ErrorPDUCb;
     bool _AddDevice(dccomms_ros_msgs::AddDevice::Request & req,
                     dccomms_ros_msgs::AddDevice::Response & res);
     void _PropagateFrame(DataLinkFramePtr dlf, int delay, CommsChannelStatePtr channel);
