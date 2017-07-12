@@ -78,13 +78,13 @@ public:
     virtual void LogToConsole(bool);
     virtual void LogToFile(const string &filename);
 
-    void SetTransmitPDUCb(std::function<void(dccomms::DataLinkFramePtr)> cb);
-    void SetReceivePDUCb(std::function<void(dccomms::DataLinkFramePtr)> cb);
-    void SetErrorPDUCb(std::function<void(dccomms::DataLinkFramePtr)> cb);
+    void SetTransmitPDUCb(std::function<void(int linkType, dccomms::DataLinkFramePtr)> cb);
+    void SetReceivePDUCb(std::function<void(int linkType, dccomms::DataLinkFramePtr)> cb);
+    void SetErrorPDUCb(std::function<void(int linkType, dccomms::DataLinkFramePtr)> cb);
 
 private:
     void _Init();
-    std::function<void(dccomms::DataLinkFramePtr)> _TransmitPDUCb, _ReceivePDUCb, _ErrorPDUCb;
+    std::function<void(int, dccomms::DataLinkFramePtr)> _TransmitPDUCb, _ReceivePDUCb, _ErrorPDUCb;
     bool _AddDevice(dccomms_ros_msgs::AddDevice::Request & req,
                     dccomms_ros_msgs::AddDevice::Response & res);
     bool _CheckDevice(dccomms_ros_msgs::CheckDevice::Request & req,

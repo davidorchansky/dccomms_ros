@@ -23,26 +23,26 @@ ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle & rosNode): _rosNode(rosNod
     _Init();
 }
 
-void ROSCommsSimulator::SetTransmitPDUCb (std::function<void (DataLinkFramePtr)> cb)
+void ROSCommsSimulator::SetTransmitPDUCb (std::function<void (int, DataLinkFramePtr)> cb)
 {
   _TransmitPDUCb = cb;
 }
 
-void ROSCommsSimulator::SetReceivePDUCb (std::function<void (DataLinkFramePtr)> cb)
+void ROSCommsSimulator::SetReceivePDUCb (std::function<void (int, DataLinkFramePtr)> cb)
 {
   _ReceivePDUCb = cb;
 }
 
-void ROSCommsSimulator::SetErrorPDUCb (std::function<void (DataLinkFramePtr)> cb)
+void ROSCommsSimulator::SetErrorPDUCb (std::function<void (int, DataLinkFramePtr)> cb)
 {
   _ErrorPDUCb = cb;
 }
 
 void ROSCommsSimulator::_Init()
 {
-  _TransmitPDUCb = [](DataLinkFramePtr pdu){};
-  _ReceivePDUCb = [](DataLinkFramePtr pdu){};
-  _ErrorPDUCb = [](DataLinkFramePtr pdu){};
+  _TransmitPDUCb = [](int linkType, DataLinkFramePtr pdu){};
+  _ReceivePDUCb = [](int linkType, DataLinkFramePtr pdu){};
+  _ErrorPDUCb = [](int linkType, DataLinkFramePtr pdu){};
 }
 
 void ROSCommsSimulator::_AddDeviceToSet(std::string iddev, ROSCommsDevicePtr dev)
@@ -104,7 +104,7 @@ void ROSCommsSimulator::TransmitFrame(int linkType, DataLinkFramePtr dlf)
       }
       auto trTime = trRate * frameSize;
       int totalTime = ceil(delay + trTime);
-      _TransmitPDUCb(dlf);
+      _TransmitPDUCb(linkType, dlf);
       Log->debug("TX {}->{}: R: {} ms/byte ; TT: {} ms ; D: {} ms (Seq: {}) (FS: {}).",
                  srcdir, dstdir,
                  trRate,
@@ -164,7 +164,7 @@ void ROSCommsSimulator::_DeliverFrame (DataLinkFramePtr dlf, CommsChannelStatePt
     if(dlf->checkFrame ())
     {
         ROSCommsDevicePtr dstNode = (*_nodes[devType])[dstdir];
-        _ReceivePDUCb(dlf);
+        _ReceivePDUCb(devType, dlf);
         Log->debug("RX {}<-{}: received frame without errors (Seq: {}) (FS: {}).",
                dlf->GetDesDir (),
                dlf->GetSrcDir (),
@@ -174,7 +174,7 @@ void ROSCommsSimulator::_DeliverFrame (DataLinkFramePtr dlf, CommsChannelStatePt
     }
     else
     {
-        _ErrorPDUCb(dlf);
+        _ErrorPDUCb(devType, dlf);
         Log->warn("RX {}<-{}: received frame with errors. Frame will be discarted (Seq: {}) (FS: {}).",
                dlf->GetDesDir (),
                dlf->GetSrcDir (),

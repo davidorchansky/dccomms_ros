@@ -49,13 +49,13 @@ int main(int argc, char ** argv)
     Log->set_level(spdlog::level::debug);
     Log->flush_on(spd::level::info);
 
-    sim->SetTransmitPDUCb ([](dccomms::DataLinkFramePtr dlf){
+    sim->SetTransmitPDUCb ([](int linkType, dccomms::DataLinkFramePtr dlf){
         Log->info("Transmitting PDU");
     });
-    sim->SetReceivePDUCb ([](dccomms::DataLinkFramePtr dlf){
+    sim->SetReceivePDUCb ([](int linkType, dccomms::DataLinkFramePtr dlf){
         Log->info("PDU Received");
     });
-    sim->SetErrorPDUCb ([](dccomms::DataLinkFramePtr dlf){
+    sim->SetErrorPDUCb ([](int linkType, dccomms::DataLinkFramePtr dlf){
         Log->warn("PDU Received with errors");
     });
 
