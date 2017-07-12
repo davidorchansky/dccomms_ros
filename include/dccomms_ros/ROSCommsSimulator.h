@@ -14,6 +14,8 @@
 //ROS
 #include <ros/ros.h>
 #include <dccomms_ros_msgs/AddDevice.h>
+#include <dccomms_ros_msgs/CheckDevice.h>
+#include <dccomms_ros_msgs/RemoveDevice.h>
 //end ROS
 
 using namespace dccomms;
@@ -40,11 +42,23 @@ typedef std::unordered_map<
     ROSCommsDevicePtr>
     NodeMap;
 
+typedef std::shared_ptr<NodeMap> NodeMapPtr;
 
 typedef std::unordered_map<
-    std::string, //"txdir rxdir"
+    int,
+    NodeMapPtr>
+    NodeTypeMap;
+
+typedef std::unordered_map<
+    std::string, //"class_txdir_rxdir"
     CommsChannelStatePtr>
     ChannelMap;
+
+typedef std::unordered_map<
+  std::string,
+  ROSCommsDevicePtr>
+  IdDevMap;
+
 
 class ROSCommsSimulator;
 
@@ -54,7 +68,7 @@ class ROSCommsSimulator : public virtual Loggable
 {
 public:
     ROSCommsSimulator(ros::NodeHandle & rosnode);
-    void TransmitFrame(DataLinkFramePtr dlf);
+    void TransmitFrame(int linkType, DataLinkFramePtr dlf);
     void Start();
 
     virtual void SetLogName(std::string name);
@@ -73,15 +87,29 @@ private:
     std::function<void(dccomms::DataLinkFramePtr)> _TransmitPDUCb, _ReceivePDUCb, _ErrorPDUCb;
     bool _AddDevice(dccomms_ros_msgs::AddDevice::Request & req,
                     dccomms_ros_msgs::AddDevice::Response & res);
+    bool _CheckDevice(dccomms_ros_msgs::CheckDevice::Request & req,
+                      dccomms_ros_msgs::CheckDevice::Response & res);
+    bool _RemoveDevice(dccomms_ros_msgs::RemoveDevice::Request & req,
+                       dccomms_ros_msgs::RemoveDevice::Response & res);
     void _PropagateFrame(DataLinkFramePtr dlf, int delay, CommsChannelStatePtr channel);
     void _DeliverFrame(DataLinkFramePtr dlf, CommsChannelStatePtr channel);
 
-    ros::ServiceServer _addDevService;
-    ros::NodeHandle & _rosNode;
-    NodeMap _nodes;
-    ChannelMap _channels;
+    void _AddDeviceToSet(std::string iddev, ROSCommsDevicePtr dev);
+    bool _DeviceExists(std::string iddev);
+    void _RemoveDeviceFromSet(std::string iddev);
 
-    std::mutex _devLinksMutex;
+    void _RemoveChannel(std::string channelKey);
+
+    ROSCommsDevicePtr _GetDevice(std::string iddev);
+    CommsChannelStatePtr _GetChannel(std::string channelKey);
+
+    ros::ServiceServer _addDevService, _checkDevService, _removeDevService;
+    ros::NodeHandle & _rosNode;
+    NodeTypeMap _nodes;
+    ChannelMap _channels;
+    IdDevMap _idDevMap;
+
+    std::mutex _devLinksMutex, _idDevMapMutex, _channelsMutex;
     DevicesLinks _devLinks;
 
 

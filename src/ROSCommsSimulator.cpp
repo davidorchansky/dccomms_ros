@@ -2,9 +2,12 @@
 #include <dccomms/TransportPDU.h>
 #include <dccomms/CommsDeviceService.h>
 #include <dccomms_ros_msgs/AddDevice.h>
+#include <dccomms_ros_msgs/CheckDevice.h>
 #include <iostream>
 #include <tf/transform_listener.h>
 #include <dccomms/Utils.h>
+#include <regex>
+#include <list>
 
 using namespace dccomms;
 using namespace dccomms_ros_msgs;
@@ -42,15 +45,44 @@ void ROSCommsSimulator::_Init()
   _ErrorPDUCb = [](DataLinkFramePtr pdu){};
 }
 
-void ROSCommsSimulator::TransmitFrame(DataLinkFramePtr dlf)
+void ROSCommsSimulator::_AddDeviceToSet(std::string iddev, ROSCommsDevicePtr dev)
+{
+  _idDevMapMutex.lock();
+  _idDevMap[iddev] = dev;
+  _idDevMapMutex.unlock();
+}
+
+void ROSCommsSimulator::_RemoveDeviceFromSet (std::string iddev)
+{
+  _idDevMapMutex.lock();
+  auto iter = _idDevMap.find (iddev);
+  if(iter != _idDevMap.end())
+  {
+    _idDevMap.erase (iter);
+  }
+  _idDevMapMutex.unlock();
+}
+
+CommsChannelStatePtr ROSCommsSimulator::_GetChannel(std::string channelKey)
+{
+  CommsChannelStatePtr res;
+  _channelsMutex.lock();
+  res = _channels[channelKey];
+  _channelsMutex.unlock();
+  return res;
+}
+
+void ROSCommsSimulator::TransmitFrame(int linkType, DataLinkFramePtr dlf)
 {
     auto srcdir = dlf->GetSrcDir ();
     auto dstdir = dlf->GetDesDir ();
 
-    std::string channelKey =
-            std::to_string (srcdir) + std::string("_") + std::to_string (dstdir);
+    //Build channel key
+    std::stringstream ss;
+    ss <<  (int)linkType << "_" << (int)srcdir << "_" <<  (int)dstdir;
+    std::string channelKey = ss.str();
 
-    auto channelState = _channels[channelKey];
+    auto channelState = _GetChannel(channelKey);
     if(channelState)
     {
       auto bitRate = channelState->GetMaxBitRate ();
@@ -127,9 +159,11 @@ void ROSCommsSimulator::_DeliverFrame (DataLinkFramePtr dlf, CommsChannelStatePt
 
     auto trs = TransportPDU::BuildTransportPDU (0);
     trs->UpdateBuffer (dlf->GetPayloadBuffer ());
+    auto rxNode = channel->GetRxNode ();
+    auto devType = rxNode->GetDevType ();
     if(dlf->checkFrame ())
     {
-        ROSCommsDevicePtr dstNode = _nodes[dstdir];
+        ROSCommsDevicePtr dstNode = (*_nodes[devType])[dstdir];
         _ReceivePDUCb(dlf);
         Log->debug("RX {}<-{}: received frame without errors (Seq: {}) (FS: {}).",
                dlf->GetDesDir (),
@@ -147,6 +181,105 @@ void ROSCommsSimulator::_DeliverFrame (DataLinkFramePtr dlf, CommsChannelStatePt
                trs->GetSeqNum (),
                dlf->GetFrameSize());
     }
+}
+
+bool ROSCommsSimulator::_CheckDevice(CheckDevice::Request &req, CheckDevice::Response &res)
+{
+  auto iddev = req.iddev;
+  res.exists = _DeviceExists(iddev);
+  return true;
+}
+
+bool ROSCommsSimulator::_DeviceExists (std::string iddev)
+{
+  bool exists;
+  _idDevMapMutex.lock();
+  exists = _idDevMap.find(iddev) != _idDevMap.end();
+  _idDevMapMutex.unlock();
+  return exists;
+}
+
+ROSCommsDevicePtr ROSCommsSimulator::_GetDevice(std::string iddev)
+{
+  ROSCommsDevicePtr dev;
+  _idDevMapMutex.lock();
+  auto iterator = _idDevMap.find(iddev);
+  if(iterator != _idDevMap.end())
+  {
+    dev = iterator->second;
+    _idDevMap.erase(iterator);
+  }
+  _idDevMapMutex.unlock();
+  return dev;
+}
+
+bool ROSCommsSimulator::_RemoveDevice(RemoveDevice::Request &req, RemoveDevice::Response &res)
+{
+  auto iddev = req.iddev;
+  auto exists = _DeviceExists(iddev);
+
+  if(exists)
+  {
+    auto dev = _GetDevice (iddev);
+    auto mac = dev->GetMac ();
+    auto devType = dev->GetDevType ();
+
+    _RemoveDeviceFromSet (iddev);
+
+    std::stringstream ss;
+    ss <<  (int)devType << "_" << (int)mac << "_(\\d*)";
+    std::string txChannelPattern = ss.str();
+
+    ss.str(std::string());
+    ss <<  (int)devType << "_(\\d*)_" << (int)mac;
+    std::string rxChannelPattern = ss.str();
+
+    ss.str(std::string());
+    ss << "^((" << txChannelPattern << ")|(" << rxChannelPattern << "))$";
+    std::string channelPattern = ss.str();
+
+    std::regex channelReg(channelPattern);
+
+    std::list<std::string> channelKeys;
+
+    for(auto pair : _channels)
+    {
+      auto key = pair.first;
+      bool match = std::regex_match(key, channelReg);
+      if(match)
+      {
+        channelKeys.push_back (key);
+      }
+    }
+
+    for(auto key: channelKeys)
+    {
+      _RemoveChannel (key);
+    }
+
+    _devLinksMutex.lock();
+    _devLinks.remove_if([iddev](DevicesLink devLink){
+      return devLink.device0->GetName () == iddev ||
+             devLink.device1->GetName () == iddev;
+    });
+    _devLinksMutex.unlock();
+
+    _nodes[devType]->erase(mac);
+
+    res.removed = true;
+  }
+  else
+  {
+    res.removed = false;
+  }
+  return true;
+}
+
+void ROSCommsSimulator::_RemoveChannel (std::string channelKey)
+{
+  _channelsMutex.lock();
+  _channels.erase(channelKey);
+  _channelsMutex.unlock();
 }
 
 bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response &res)
@@ -167,7 +300,24 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
 
     Log->info("Add device request received");
 
-    if(_nodes.find(mac) == _nodes.end())
+    bool exists = false;
+    auto nodeMapIt = _nodes.find(deviceType);
+    if(nodeMapIt != _nodes.end())
+    {
+        NodeMapPtr nodeMap = nodeMapIt->second;
+        auto nodeIt = nodeMap->find(mac);
+        if(nodeIt != nodeMap->end())
+        {
+          exists = true;
+        }
+    }
+    else
+    {
+        NodeMapPtr nodeMap(new NodeMap());
+        _nodes[deviceType] = nodeMap;
+    }
+
+    if(!exists)
     {
         auto commsDeviceService = dccomms::CommsDeviceService::BuildCommsDeviceService (
                     IPHY_TYPE_PHY,
@@ -191,59 +341,57 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
 
         Log->info("\nAdding new device...:\n{}", node->ToString ());
 
-        for(pair<int, ROSCommsDevicePtr> pair: _nodes)
+        NodeMapPtr nodes = _nodes.find(deviceType)->second;
+        for(pair<int, ROSCommsDevicePtr> pair: *nodes)
         {
             auto rxNode = pair.second;
 
-            if(rxNode->GetDevType () == deviceType)
-            {
-                auto remoteMac = pair.first;
+            auto remoteMac = pair.first;
 
-                Log->info("Creating a link from MAC {} to MAC {}",
-                          mac, remoteMac);
+            Log->info("Creating a link from MAC {} to MAC {}",
+                      mac, remoteMac);
 
-                //Build tx channel
-                std::stringstream ss;
-                ss <<  (int)mac << "_" <<  (int)remoteMac;
-                std::string txChannelKey = ss.str();
+            //Build tx channel
+            std::stringstream ss;
+            ss <<  (int)deviceType << "_" << (int)mac << "_" <<  (int)remoteMac;
+            std::string txChannelKey = ss.str();
 
-                auto txChannel = CommsChannelState::BuildCommsChannelState ();
-                txChannel->SetDelay (prTime);
-                txChannel->SetLinkOk (true);
-                txChannel->SetMaxBitRate (maxBitRate);
-                txChannel->SetTtDist (trTimeMean, trTimeSd);
+            auto txChannel = CommsChannelState::BuildCommsChannelState ();
+            txChannel->SetDelay (prTime);
+            txChannel->SetLinkOk (true);
+            txChannel->SetMaxBitRate (maxBitRate);
+            txChannel->SetTtDist (trTimeMean, trTimeSd);
 
-                txChannel->SetTxNode(node);
-                txChannel->SetRxNode(pair.second);
+            txChannel->SetTxNode(node);
+            txChannel->SetRxNode(pair.second);
 
-                //Build rx channel
-                ss.str(std::string());
-                ss << (int)remoteMac << "_" << (int)mac;
-                std::string rxChannelKey = ss.str();
+            //Build rx channel
+            ss.str(std::string());
+            ss << (int)deviceType << "_" << (int)remoteMac << "_" << (int)mac;
+            std::string rxChannelKey = ss.str();
 
-                auto rxChannel = CommsChannelState::BuildCommsChannelState ();
-                rxChannel->SetDelay (rxNode->GetMinPrTime ());
-                rxChannel->SetLinkOk (true);
-                rxChannel->SetMaxBitRate (rxNode->GetMaxBitRate ());
-                float rxTrTimeMean, rxTrTimeSd;
-                rxNode->GetTrTime (rxTrTimeMean, rxTrTimeSd);
-                rxChannel->SetTtDist (rxTrTimeMean, rxTrTimeSd);
+            auto rxChannel = CommsChannelState::BuildCommsChannelState ();
+            rxChannel->SetDelay (rxNode->GetMinPrTime ());
+            rxChannel->SetLinkOk (true);
+            rxChannel->SetMaxBitRate (rxNode->GetMaxBitRate ());
+            float rxTrTimeMean, rxTrTimeSd;
+            rxNode->GetTrTime (rxTrTimeMean, rxTrTimeSd);
+            rxChannel->SetTtDist (rxTrTimeMean, rxTrTimeSd);
 
-                rxChannel->SetTxNode(rxNode);
-                rxChannel->SetRxNode(node);
+            rxChannel->SetTxNode(rxNode);
+            rxChannel->SetRxNode(node);
 
-                _channels[txChannelKey] = txChannel;
-                _channels[rxChannelKey] = rxChannel;
+            _channels[txChannelKey] = txChannel;
+            _channels[rxChannelKey] = rxChannel;
 
-                DevicesLink devLink(node, rxNode, txChannel, rxChannel);
+            DevicesLink devLink(node, rxNode, txChannel, rxChannel);
 
-                _devLinksMutex.lock();
-                _devLinks.push_back (devLink);
-                _devLinksMutex.unlock();
-            }
+            _devLinksMutex.lock();
+            _devLinks.push_back (devLink);
+            _devLinksMutex.unlock();
 
         }
-        _nodes[mac] = node;
+        (*nodes)[mac] = node;
 
         auto starterWork = [](ROSCommsDevicePtr _node)
         {
@@ -251,17 +399,21 @@ bool ROSCommsSimulator::_AddDevice (AddDevice::Request &req, AddDevice::Response
           _node->StartNodeWorker ();
         };
 
+       _AddDeviceToSet (newDevice, node);
+
         std::thread starter(starterWork, node);
         starter.detach ();
+        res.res = true;
+
     }
     else
     {
-        ROSCommsDevicePtr node = _nodes[mac];
-        Log->error("Unable to add the device. A net device with the same MAC already exists: '{}'", node->GetName ());
+      res.res = false;
+        //ROSCommsDevicePtr node = _nodes[mac];
+        //Log->error("Unable to add the device. A net device with the same MAC already exists: '{}'", node->GetName ());
     }
 
-    res.res = true;
-    return true;
+    return res.res;
 }
 
 void ROSCommsSimulator::Start()
@@ -273,66 +425,98 @@ void ROSCommsSimulator::Start()
                 "add_net_device",
                 &ROSCommsSimulator::_AddDevice, this
                 );
+    _checkDevService = _rosNode.advertiseService(
+                "check_net_device",
+                &ROSCommsSimulator::_CheckDevice, this
+                );
+    _removeDevService = _rosNode.advertiseService(
+                "remove_net_device",
+                &ROSCommsSimulator::_RemoveDevice, this
+                );
     _linkUpdaterWorker.Start();
 }
 
 void ROSCommsSimulator::SetLogName(std::string name)
 {
     Loggable::SetLogName(name);
-    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
+    for(pair<int, NodeMapPtr> tPair: _nodes)
     {
-        auto node = pair.second;
-        node->SetLogName(name + ":Node(" + node->GetName()+")");
+      NodeMapPtr nodes = tPair.second;
+      for(pair<int, ROSCommsDevicePtr> pair: *nodes)
+      {
+          auto node = pair.second;
+          node->SetLogName(name + ":Node(" + node->GetName()+")");
+      }
     }
 }
+
 void ROSCommsSimulator::SetLogLevel(Loggable::LogLevel _level)
 {
     Loggable::SetLogLevel(_level);
-    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
+    for(pair<int, NodeMapPtr> tPair: _nodes)
     {
-        auto node = pair.second;
-        node->SetLogLevel(_level);
+      NodeMapPtr nodes = tPair.second;
+      for(pair<int, ROSCommsDevicePtr> pair: *nodes)
+      {
+          auto node = pair.second;
+          node->SetLogLevel(_level);
+      }
     }
 }
 
 void ROSCommsSimulator::LogToConsole(bool c)
 {
     Loggable::LogToConsole(c);
-    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
+    for(pair<int, NodeMapPtr> tPair: _nodes)
     {
-        auto node = pair.second;
-        node->LogToConsole(c);
+      NodeMapPtr nodes = tPair.second;
+      for(pair<int, ROSCommsDevicePtr> pair: *nodes)
+      {
+          auto node = pair.second;
+          node->LogToConsole(c);
+      }
     }
-
 }
 
 void ROSCommsSimulator::LogToFile(const string &filename)
 {
     Loggable::LogToFile(filename);
-    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
+    for(pair<int, NodeMapPtr> tPair: _nodes)
     {
-        auto node = pair.second;
-        node->LogToFile(filename + "_" + node->GetName () + "_node");
+      NodeMapPtr nodes = tPair.second;
+      for(pair<int, ROSCommsDevicePtr> pair: *nodes)
+      {
+          auto node = pair.second;
+          node->LogToFile(filename + "_" + node->GetName () + "_node");
+      }
     }
 }
 
 void ROSCommsSimulator::FlushLog()
 {
     Loggable::FlushLog();
-    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
+    for(pair<int, NodeMapPtr> tPair: _nodes)
     {
+      NodeMapPtr nodes = tPair.second;
+      for(pair<int, ROSCommsDevicePtr> pair: *nodes)
+      {
         auto node = pair.second;
         node->FlushLog ();
+      }
     }
 }
 
 void ROSCommsSimulator::FlushLogOn(LogLevel level)
 {
     Loggable::FlushLogOn(level);
-    for(pair<int, ROSCommsDevicePtr> pair: _nodes)
+    for(pair<int, NodeMapPtr> tPair: _nodes)
     {
-        auto node = pair.second;
-        node->FlushLogOn(level);
+      NodeMapPtr nodes = tPair.second;
+      for(pair<int, ROSCommsDevicePtr> pair: *nodes)
+      {
+          auto node = pair.second;
+          node->FlushLogOn(level);
+      }
     }
 }
 

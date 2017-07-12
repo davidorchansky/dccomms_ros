@@ -12,7 +12,7 @@ namespace dccomms_ros
 {
 
 class ROSCommsDevice;
-typedef boost::shared_ptr<ROSCommsDevice> ROSCommsDevicePtr;
+typedef std::shared_ptr<ROSCommsDevice> ROSCommsDevicePtr;
 
 class ROSCommsSimulator;
 typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
