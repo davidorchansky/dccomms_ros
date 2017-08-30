@@ -6,8 +6,8 @@
 #include <unordered_map>
 #include <Loggable.h>
 #include <random>
-#include <dccomms_ros/ROSCommsChannelState.h>
-#include <dccomms_ros/ROSCommsDevice.h>
+#include <dccomms_ros/simulator/ROSCommsChannelState.h>
+#include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <memory>
 #include <functional>
 

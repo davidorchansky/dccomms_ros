@@ -1,4 +1,4 @@
-#include <dccomms_ros/ROSCommsChannelState.h>
+#include <dccomms_ros/simulator/ROSCommsChannelState.h>
 
 namespace dccomms_ros
 {

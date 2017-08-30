@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <random>
-#include <dccomms_ros/ROSCommsDevice.h>
+#include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <condition_variable>
 
 using namespace std;

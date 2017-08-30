@@ -1,4 +1,4 @@
-#include <dccomms_ros/ROSCommsSimulator.h>
+#include <dccomms_ros/simulator/ROSCommsSimulator.h>
 #include <dccomms/TransportPDU.h>
 #include <dccomms/CommsDeviceService.h>
 #include <dccomms_ros_msgs/AddDevice.h>

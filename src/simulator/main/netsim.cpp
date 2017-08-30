@@ -4,7 +4,7 @@
 #include  <sys/types.h>
 #include  <signal.h>
 
-#include <dccomms_ros/ROSCommsSimulator.h>
+#include <dccomms_ros/simulator/ROSCommsSimulator.h>
 
 //ROS
 #include <ros/ros.h>

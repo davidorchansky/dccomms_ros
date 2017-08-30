@@ -1,5 +1,5 @@
-#include <dccomms_ros/ROSCommsDevice.h>
-#include <dccomms_ros/ROSCommsSimulator.h>
+#include <dccomms_ros/simulator/ROSCommsDevice.h>
+#include <dccomms_ros/simulator/ROSCommsSimulator.h>
 #include <cstdio>
 
 namespace dccomms_ros

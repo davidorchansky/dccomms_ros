@@ -151,9 +151,9 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 
 SET(${PROJECT_NAME}_INCLUDE_DIRS "include")
 SET(${PROJECT_NAME}_CPP_FILES
-                        src/ROSCommsDevice.cpp
-                        src/ROSCommsSimulator.cpp
-                        src/ROSCommsChannelState.cpp
+                        src/simulator/ROSCommsDevice.cpp
+                        src/simulator/ROSCommsSimulator.cpp
+                        src/simulator/ROSCommsChannelState.cpp
         )
 
 ## Specify additional locations of header files
@@ -168,10 +168,10 @@ add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} cpplogging dccomms ${catkin_LIBRARIES})
 
-SET(MAINPROG netsim)
-add_executable (${MAINPROG} src/main/netsim.cpp)
-target_include_directories(${MAINPROG} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${MAINPROG} ${PROJECT_NAME} cpplogging dccomms ${catkin_LIBRARIES})
+SET(SIM netsim)
+add_executable (${SIM} src/simulator/main/netsim.cpp)
+target_include_directories(${SIM} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(${SIM} ${PROJECT_NAME} cpplogging dccomms ${catkin_LIBRARIES})
 
 ## Declare a C++ library
 # add_library(dccomms_ros
