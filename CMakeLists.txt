@@ -124,6 +124,7 @@ roslaunch_add_file_check(launch)
 #http://stackoverflow.com/questions/7787823/cmake-how-to-get-the-name-of-all-subdirectories-of-a-directory
 function(GETPROJECTS result curdir)
   FILE(GLOB children RELATIVE ${curdir} ${curdir}/*/CMakeLists.txt)
+  SET(dirlist "")
   FOREACH(file ${children})
         get_filename_component(subdir ${file} DIRECTORY)
         LIST(APPEND dirlist ${subdir})
