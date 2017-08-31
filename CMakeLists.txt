@@ -121,30 +121,32 @@ catkin_package(
 
 roslaunch_add_file_check(launch)
 
-MACRO(SUBDIRLIST result curdir)
-  FILE(GLOB children RELATIVE ${curdir} ${curdir}/*)
-  SET(dirlist "")
-  FOREACH(child ${children})
-    IF(IS_DIRECTORY ${curdir}/${child})
-        LIST(APPEND dirlist ${child})
-    ENDIF()
+#http://stackoverflow.com/questions/7787823/cmake-how-to-get-the-name-of-all-subdirectories-of-a-directory
+function(GETPROJECTS result curdir)
+  FILE(GLOB children RELATIVE ${curdir} ${curdir}/*/CMakeLists.txt)
+  FOREACH(file ${children})
+        get_filename_component(subdir ${file} DIRECTORY)
+        LIST(APPEND dirlist ${subdir})
   ENDFOREACH()
-  SET(${result} ${dirlist})
-ENDMACRO()
+  SET(${result} ${dirlist} PARENT_SCOPE)
+endfunction()
+
+
+###########
+## Build ##
+###########
+
 ####### HANDLE DEPENDENCIES ######
 
 SET(${PROJECT_NAME}_DEPS_DIR "modules")
-SUBDIRLIST(${PROJECT_NAME}_DEPS ${CMAKE_CURRENT_SOURCE_DIR}/${${PROJECT_NAME}_DEPS_DIR})
-message(STATUS "Dependencies found: ${${PROJECT_NAME}_DEPS}")
+SET(${PROJECT_NAME}_TMP0 ${CMAKE_CURRENT_SOURCE_DIR}/${${PROJECT_NAME}_DEPS_DIR})
+GETPROJECTS(${PROJECT_NAME}_DEPS ${${PROJECT_NAME}_TMP0})
+message(STATUS "Dependencies found in ${${PROJECT_NAME}_TMP0}: ${${PROJECT_NAME}_DEPS}")
 FOREACH(subdir ${${PROJECT_NAME}_DEPS})
 if (NOT TARGET ${subdir})
         add_subdirectory(${${PROJECT_NAME}_DEPS_DIR}/${subdir})
 endif()
 ENDFOREACH()
-
-###########
-## Build ##
-###########
 
 SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++11")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
@@ -172,6 +174,12 @@ SET(SIM netsim)
 add_executable (${SIM} src/simulator/main/netsim.cpp)
 target_include_directories(${SIM} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${SIM} ${PROJECT_NAME} cpplogging dccomms ${catkin_LIBRARIES})
+
+SET(S100BRIDGE s100_bridge)
+add_executable(${S100BRIDGE} src/bridges/s100/s100_main.cpp)
+target_include_directories(${S100BRIDGE} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(${S100BRIDGE} ${PROJECT_NAME} cpplogging dccomms_utils ${catkin_LIBRARIES})
+
 
 ## Declare a C++ library
 # add_library(dccomms_ros
