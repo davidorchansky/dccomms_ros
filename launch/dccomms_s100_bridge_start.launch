@@ -1,0 +1,14 @@
+<launch>
+	<arg name="namespace" default="/merbots/whrov"/>
+
+	<arg name="modemPort" default="/dev/ttyUSB0" />
+	<arg name="modemBaudrate" default="1200" />
+	<arg name="dccommsNs" default="" />
+	<arg name="nodeName" default="s100_bridge" />
+
+	<node pkg="dccomms_ros" name="$(arg nodeName)" type="s100_bridge" respawn="false" ns="$(arg namespace)" output="screen">
+		<param name="modemPort" type="str" value="$(arg modemPort)"/>
+		<param name="modemBaudrate" type="int" value="$(arg modemBaudrate)"/>
+		<param name="ns" type="str" value="$(arg dccommsNs)"/>
+	</node>
+</launch>
