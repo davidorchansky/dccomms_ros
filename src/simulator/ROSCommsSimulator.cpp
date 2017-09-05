@@ -644,7 +644,7 @@ void ROSCommsSimulator::_LinkUpdaterWork()
       catch(std::exception & e)
       {
         if(showLog)
-          Log->critical("An exception has ocurred in the link updater work: frames {}-{}: {}", frameId0, frameId1, std::string(e.what ()));
+          Log->warn("An exception has ocurred in the link updater work: frames {}-{}: {}", frameId0, frameId1, std::string(e.what ()));
       }
     }
     _devLinksMutex.unlock();
