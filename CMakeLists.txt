@@ -144,9 +144,7 @@ SET(${PROJECT_NAME}_TMP0 ${CMAKE_CURRENT_SOURCE_DIR}/${${PROJECT_NAME}_DEPS_DIR}
 GETPROJECTS(${PROJECT_NAME}_DEPS ${${PROJECT_NAME}_TMP0})
 message(STATUS "Dependencies found in ${${PROJECT_NAME}_TMP0}: ${${PROJECT_NAME}_DEPS}")
 FOREACH(subdir ${${PROJECT_NAME}_DEPS})
-if (NOT TARGET ${subdir})
         add_subdirectory(${${PROJECT_NAME}_DEPS_DIR}/${subdir})
-endif()
 ENDFOREACH()
 
 SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++11")
@@ -169,17 +167,17 @@ include_directories(
 
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} cpplogging dccomms ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 
 SET(SIM netsim)
 add_executable (${SIM} src/simulator/main/netsim.cpp)
 target_include_directories(${SIM} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${SIM} ${PROJECT_NAME} cpplogging dccomms ${catkin_LIBRARIES})
+target_link_libraries(${SIM} ${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 
 SET(S100BRIDGE s100_bridge)
 add_executable(${S100BRIDGE} src/bridges/s100/s100_main.cpp)
 target_include_directories(${S100BRIDGE} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${S100BRIDGE} ${PROJECT_NAME} cpplogging dccomms_utils ${catkin_LIBRARIES})
+target_link_libraries(${S100BRIDGE} ${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 
 
 ## Declare a C++ library
@@ -251,3 +249,5 @@ target_link_libraries(${S100BRIDGE} ${PROJECT_NAME} cpplogging dccomms_utils ${c
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
+
+message("End ${PROJECT_NAME_ORIG}")
