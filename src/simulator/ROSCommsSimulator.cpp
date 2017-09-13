@@ -522,6 +522,9 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
     _devLinksMutex.lock();
     tf::StampedTransform transform;
     for (DevicesLink link : _devLinks) {
+      auto chn0 = link.channel0;
+      auto chn1 = link.channel1;
+      double distance = 0;
       try {
         frameId0 = link.device0->GetTfFrameId();
         frameId1 = link.device1->GetTfFrameId();
@@ -529,27 +532,23 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
         ros::Time now = ros::Time::now();
 
         listener.lookupTransform(frameId0, frameId1, ros::Time(0), transform);
-        auto distance = transform.getOrigin().distance(tf::Vector3(0, 0, 0));
+        distance = transform.getOrigin().distance(tf::Vector3(0, 0, 0));
         if (showLog)
           Log->debug("Range between frame '{}' and '{}': {}", frameId0,
                      frameId1, distance);
-
-        auto chn = link.channel0;
-
-        if (chn) {
-          _UpdateChannelStateFromRange(chn, distance, showLog);
-        }
-
-        chn = link.channel1;
-
-        if (chn) {
-          _UpdateChannelStateFromRange(chn, distance, showLog);
-        }
       } catch (std::exception &e) {
+        distance = 0;
         if (showLog)
           Log->warn("An exception has ocurred in the link updater work: frames "
                     "{}-{}: {}",
                     frameId0, frameId1, std::string(e.what()));
+      }
+
+      if (chn0) {
+        _UpdateChannelStateFromRange(chn0, distance, showLog);
+      }
+      if (chn1) {
+        _UpdateChannelStateFromRange(chn1, distance, showLog);
       }
     }
     _devLinksMutex.unlock();
