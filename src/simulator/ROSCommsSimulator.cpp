@@ -84,8 +84,7 @@ void ROSCommsSimulator::TransmitFrame(int linkType, DataLinkFramePtr dlf) {
     auto byteTransmissionTime = 1000. / (bitRate / 8.);
     auto frameSize = dlf->GetFrameSize();
     unsigned int frameTransmissionTime = ceil(frameSize * byteTransmissionTime);
-    auto txtrp = TransportPDU::BuildTransportPDU(0);
-    txtrp->UpdateBuffer(dlf->GetPayloadBuffer());
+    auto txtrp = TransportPDU::BuildTransportPDU(dlf->GetPayloadBuffer());
     auto delay = channelState->GetDelay();
 
     // Simulate total delay (transmission + propagation + reception)
@@ -143,8 +142,7 @@ void ROSCommsSimulator::_DeliverFrame(DataLinkFramePtr dlf,
                                       CommsChannelStatePtr channel) {
   auto dstdir = dlf->GetDesDir();
 
-  auto trs = TransportPDU::BuildTransportPDU(0);
-  trs->UpdateBuffer(dlf->GetPayloadBuffer());
+  auto trs = TransportPDU::BuildTransportPDU(dlf->GetPayloadBuffer());
   auto rxNode = channel->GetRxNode();
   auto devType = rxNode->GetDevType();
   if (dlf->checkFrame()) {
