@@ -38,7 +38,6 @@ public:
   virtual void LogToConsole(bool);
   virtual void LogToFile(const string &filename);
 
-  void SetMaxBitRate(int maxBitRate);
   void SetTrTime(float trTimeMean, float trTimeSd = 0);
   void SetMinPrTime(float prTime);
   void SetPrTimeInc(float inc);
@@ -50,7 +49,6 @@ public:
   void SetMaxDistance(uint32_t d);
   void SetMinDistance(uint32_t d);
 
-  int GetMaxBitRate();
   void GetTrTime(float &trTimeMean, float &trTimeSd);
   float GetMinPrTime();
   float GetPrTimeInc();
@@ -72,7 +70,6 @@ private:
   DataLinkFramePtr _txdlf;
   std::string _name, _tfFrameId;
   int _mac, _devType;
-  int _maxBitRate;
   float _trTimeMean, _trTimeSd, _minPrTime, _prTimeIncPerMeter;
   double _minPktErrorRate, _pktErrorRateIncPerMeter;
 

@@ -7,14 +7,8 @@ CommsChannelStatePtr CommsChannelState::BuildCommsChannelState() {
 
 CommsChannelState::CommsChannelState() {}
 
-CommsChannelState::CommsChannelState(int maxBitRate, int delay)
-    : _maxBitRate(maxBitRate), _delay(delay), _erDist(0.0, 1.0) {}
-
-void CommsChannelState::SetMaxBitRate(int maxBitRate) {
-  _maxBitRate = maxBitRate;
-}
-
-int CommsChannelState::GetMaxBitRate() { return _maxBitRate; }
+CommsChannelState::CommsChannelState(int delay)
+    : _delay(delay), _erDist(0.0, 1.0) {}
 
 int CommsChannelState::SetDelay(int delay) {
   _delayMutex.lock();

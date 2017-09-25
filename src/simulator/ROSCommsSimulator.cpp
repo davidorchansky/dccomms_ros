@@ -78,12 +78,8 @@ void ROSCommsSimulator::TransmitFrame(int linkType, DataLinkFramePtr dlf) {
 
   auto channelState = _GetChannel(channelKey);
   if (channelState) {
-    auto bitRate = channelState->GetMaxBitRate();
-
-    // Simulate transmission time
-    auto byteTransmissionTime = 1000. / (bitRate / 8.);
     auto frameSize = dlf->GetFrameSize();
-    unsigned int frameTransmissionTime = ceil(frameSize * byteTransmissionTime);
+
     auto txtrp = TransportPDU::BuildTransportPDU(dlf->GetPayloadBuffer());
     auto delay = channelState->GetDelay();
 
@@ -110,8 +106,7 @@ void ROSCommsSimulator::TransmitFrame(int linkType, DataLinkFramePtr dlf) {
       _PropagateFrame(dlf, totalTime, channelState);
     }
 
-    std::this_thread::sleep_for(
-        std::chrono::milliseconds(frameTransmissionTime));
+    std::this_thread::sleep_for(std::chrono::milliseconds((int)round(trTime)));
   }
 }
 
@@ -254,7 +249,6 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
                                    AddDevice::Response &res) {
   auto newDevice = req.iddev;
   auto mac = req.mac;
-  auto maxBitRate = req.maxBitRate;
   auto trTimeMean = req.trTimeMean;
   auto trTimeSd = req.trTimeSd;
   auto prTime = req.minPrTime;
@@ -291,7 +285,6 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
     node->SetName(newDevice);
     node->SetDevType(deviceType);
     node->SetMac(mac);
-    node->SetMaxBitRate(maxBitRate);
     node->SetTrTime(trTimeMean, trTimeSd);
     node->SetMinPrTime(prTime);
     node->SetPrTimeInc(prTimeIncPerMeter);
@@ -319,7 +312,6 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
       auto txChannel = CommsChannelState::BuildCommsChannelState();
       txChannel->SetDelay(prTime);
       txChannel->SetLinkOk(true);
-      txChannel->SetMaxBitRate(maxBitRate);
       txChannel->SetTtDist(trTimeMean, trTimeSd);
 
       txChannel->SetTxNode(node);
@@ -333,7 +325,6 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
       auto rxChannel = CommsChannelState::BuildCommsChannelState();
       rxChannel->SetDelay(rxNode->GetMinPrTime());
       rxChannel->SetLinkOk(true);
-      rxChannel->SetMaxBitRate(rxNode->GetMaxBitRate());
       float rxTrTimeMean, rxTrTimeSd;
       rxNode->GetTrTime(rxTrTimeMean, rxTrTimeSd);
       rxChannel->SetTtDist(rxTrTimeMean, rxTrTimeSd);

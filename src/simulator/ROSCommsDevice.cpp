@@ -28,10 +28,6 @@ void ROSCommsDevice::SetName(const std::string name) { _name = name; }
 
 std::string ROSCommsDevice::GetName() { return _name; }
 
-void ROSCommsDevice::SetMaxBitRate(int mbr) { _maxBitRate = mbr; }
-
-int ROSCommsDevice::GetMaxBitRate() { return _maxBitRate; }
-
 void ROSCommsDevice::SetTrTime(float mean, float sd) {
   _trTimeMean = mean;
   _trTimeSd = sd;
@@ -140,7 +136,6 @@ std::string ROSCommsDevice::ToString() {
       snprintf(buff, maxBuffSize,
                "\tID ........................ '%s'\n"
                "\tMAC ....................... %d\n"
-               "\tMax. bits/s ............... %d\n"
                "\tTransmission time ......... %f ms/byte (std = %f ms/byte)\n"
                "\tMin. propagation time ..... %f ms\n"
                "\tPropagation time inc. ..... %f ms/m\n"
@@ -148,8 +143,8 @@ std::string ROSCommsDevice::ToString() {
                "\tPacket Error Rate inc. .... %f%% per meter\n"
                "\tDevice type ............... %d\n"
                "\tFrame ID: ................. '%s'",
-               _name.c_str(), _mac, _maxBitRate, _trTimeMean, _trTimeSd,
-               _minPrTime, _prTimeIncPerMeter, _minPktErrorRate * 100,
+               _name.c_str(), _mac, _trTimeMean, _trTimeSd, _minPrTime,
+               _prTimeIncPerMeter, _minPktErrorRate * 100,
                _pktErrorRateIncPerMeter * 100, _devType, _tfFrameId.c_str());
   return std::string(buff);
 }
