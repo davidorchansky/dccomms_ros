@@ -147,10 +147,12 @@ FOREACH(subdir ${${PROJECT_NAME}_DEPS})
         add_subdirectory(${${PROJECT_NAME}_DEPS_DIR}/${subdir})
 ENDFOREACH()
 
-SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++11")
+SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++14 ")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 
-SET(${PROJECT_NAME}_INCLUDE_DIRS "include")
+SET(${PROJECT_NAME}_INCLUDE_DIRS
+    "include"
+    "modules/ns-3-dev/build")
 SET(${PROJECT_NAME}_CPP_FILES
                         src/simulator/ROSCommsDevice.cpp
                         src/simulator/ROSCommsSimulator.cpp
@@ -169,15 +171,31 @@ add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 
+find_library(NS3_CORE_LIB libns3-dev-core-debug.so HINTS "modules/ns-3-dev/build")
+
 SET(SIM netsim)
 add_executable (${SIM} src/simulator/main/netsim.cpp)
 target_include_directories(${SIM} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${SIM} ${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
+target_link_libraries(${SIM} ${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES}
+     ${NS3_CORE_LIB})
 
 SET(S100BRIDGE s100_bridge)
 add_executable(${S100BRIDGE} src/bridges/s100/s100_main.cpp)
 target_include_directories(${S100BRIDGE} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${S100BRIDGE} ${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
+
+
+
+
+
+add_executable (pruebas src/simulator/main/pruebas.cpp)
+#target_compile_options(pruebas PUBLIC "")
+#https://cmake.org/cmake/help/v3.4/command/find_library.html
+#https://stackoverflow.com/questions/31438916/cmake-cannot-find-library-using-link-directories
+
+target_link_libraries(pruebas ${NS3_CORE_LIB} ${PROJECT_NAME})
+target_include_directories(pruebas PUBLIC modules/ns-3-dev/build)
+
 
 
 ## Declare a C++ library
