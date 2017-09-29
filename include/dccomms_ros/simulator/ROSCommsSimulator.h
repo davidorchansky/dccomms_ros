@@ -96,7 +96,7 @@ private:
 
   ros::ServiceServer _addDevService, _checkDevService, _removeDevService;
   ros::NodeHandle &_rosNode;
-  NodeTypeMap _nodes;
+  NodeTypeMap _nodeTypeMap;
   ChannelMap _channels;
   IdDevMap _idDevMap;
 

@@ -9,6 +9,10 @@
 #include <regex>
 #include <tf/transform_listener.h>
 
+#include <ns3/core-module.h>
+#include <ns3/simulator.h>
+
+using namespace ns3;
 using namespace dccomms;
 using namespace dccomms_ros_msgs;
 
@@ -41,6 +45,8 @@ void ROSCommsSimulator::_Init() {
   _TransmitPDUCb = [](int linkType, DataLinkFramePtr pdu) {};
   _ReceivePDUCb = [](int linkType, DataLinkFramePtr pdu) {};
   _ErrorPDUCb = [](int linkType, DataLinkFramePtr pdu) {};
+  GlobalValue::Bind("SimulatorImplementationType",
+                    StringValue("ns3::RealtimeSimulatorImpl"));
 }
 
 void ROSCommsSimulator::_AddDeviceToSet(std::string iddev,
@@ -112,25 +118,10 @@ void ROSCommsSimulator::TransmitFrame(int linkType, DataLinkFramePtr dlf) {
 
 void ROSCommsSimulator::_PropagateFrame(DataLinkFramePtr dlf, int delay,
                                         CommsChannelStatePtr channel) {
-  std::thread task([this, delay, dlf, channel]() {
-    dccomms::Timer timer;
-    timer.Reset();
-    channel->Lock();
 
-    if (delay < 0)
-      Log->critical("BUG! delay < 0!!");
-
-    auto elapsed = timer.Elapsed();
-
-    // We don't want to make a pdu arrives before a previous pdu that is still
-    // propagating
-    auto delay2 = elapsed < delay ? delay - elapsed : 0;
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(delay2));
-    this->_DeliverFrame(dlf, channel);
-    channel->Unlock();
-  });
-  task.detach();
+  Simulator::Schedule(
+      MilliSeconds(delay),
+      MakeEvent(&ROSCommsSimulator::_DeliverFrame, this, dlf, channel));
 }
 
 void ROSCommsSimulator::_DeliverFrame(DataLinkFramePtr dlf,
@@ -141,7 +132,7 @@ void ROSCommsSimulator::_DeliverFrame(DataLinkFramePtr dlf,
   auto rxNode = channel->GetRxNode();
   auto devType = rxNode->GetDevType();
   if (dlf->checkFrame()) {
-    ROSCommsDevicePtr dstNode = (*_nodes[devType])[dstdir];
+    ROSCommsDevicePtr dstNode = (*_nodeTypeMap[devType])[dstdir];
     _ReceivePDUCb(devType, dlf);
     Log->debug("RX {}<-{}: received frame without errors (Seq: {}) (FS: {}).",
                dlf->GetDesDir(), dlf->GetSrcDir(), trs->GetSeqNum(),
@@ -230,7 +221,7 @@ bool ROSCommsSimulator::_RemoveDevice(RemoveDevice::Request &req,
     });
     _devLinksMutex.unlock();
 
-    _nodes[devType]->erase(mac);
+    _nodeTypeMap[devType]->erase(mac);
 
     res.removed = true;
   } else {
@@ -263,8 +254,8 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
   Log->info("Add device request received");
 
   bool exists = false;
-  auto nodeMapIt = _nodes.find(deviceType);
-  if (nodeMapIt != _nodes.end()) {
+  auto nodeMapIt = _nodeTypeMap.find(deviceType);
+  if (nodeMapIt != _nodeTypeMap.end()) {
     NodeMapPtr nodeMap = nodeMapIt->second;
     auto nodeIt = nodeMap->find(mac);
     if (nodeIt != nodeMap->end()) {
@@ -272,7 +263,7 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
     }
   } else {
     NodeMapPtr nodeMap(new NodeMap());
-    _nodes[deviceType] = nodeMap;
+    _nodeTypeMap[deviceType] = nodeMap;
   }
 
   if (!exists) {
@@ -296,7 +287,7 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
 
     Log->info("\nAdding new device...:\n{}", node->ToString());
 
-    NodeMapPtr nodes = _nodes.find(deviceType)->second;
+    NodeMapPtr nodes = _nodeTypeMap.find(deviceType)->second;
     for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
       auto rxNode = pair.second;
 
@@ -375,11 +366,13 @@ void ROSCommsSimulator::Start() {
   _removeDevService = _rosNode.advertiseService(
       "remove_net_device", &ROSCommsSimulator::_RemoveDevice, this);
   _linkUpdaterWorker.Start();
+  std::thread task([]() { Simulator::Run(); });
+  task.detach();
 }
 
 void ROSCommsSimulator::SetLogName(std::string name) {
   Loggable::SetLogName(name);
-  for (pair<int, NodeMapPtr> tPair : _nodes) {
+  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
     NodeMapPtr nodes = tPair.second;
     for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
       auto node = pair.second;
@@ -390,7 +383,7 @@ void ROSCommsSimulator::SetLogName(std::string name) {
 
 void ROSCommsSimulator::SetLogLevel(cpplogging::LogLevel _level) {
   Loggable::SetLogLevel(_level);
-  for (pair<int, NodeMapPtr> tPair : _nodes) {
+  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
     NodeMapPtr nodes = tPair.second;
     for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
       auto node = pair.second;
@@ -401,7 +394,7 @@ void ROSCommsSimulator::SetLogLevel(cpplogging::LogLevel _level) {
 
 void ROSCommsSimulator::LogToConsole(bool c) {
   Loggable::LogToConsole(c);
-  for (pair<int, NodeMapPtr> tPair : _nodes) {
+  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
     NodeMapPtr nodes = tPair.second;
     for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
       auto node = pair.second;
@@ -412,7 +405,7 @@ void ROSCommsSimulator::LogToConsole(bool c) {
 
 void ROSCommsSimulator::LogToFile(const string &filename) {
   Loggable::LogToFile(filename);
-  for (pair<int, NodeMapPtr> tPair : _nodes) {
+  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
     NodeMapPtr nodes = tPair.second;
     for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
       auto node = pair.second;
@@ -423,7 +416,7 @@ void ROSCommsSimulator::LogToFile(const string &filename) {
 
 void ROSCommsSimulator::FlushLog() {
   Loggable::FlushLog();
-  for (pair<int, NodeMapPtr> tPair : _nodes) {
+  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
     NodeMapPtr nodes = tPair.second;
     for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
       auto node = pair.second;
@@ -432,9 +425,9 @@ void ROSCommsSimulator::FlushLog() {
   }
 }
 
-void ROSCommsSimulator::FlushLogOn(LogLevel level) {
+void ROSCommsSimulator::FlushLogOn(cpplogging::LogLevel level) {
   Loggable::FlushLogOn(level);
-  for (pair<int, NodeMapPtr> tPair : _nodes) {
+  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
     NodeMapPtr nodes = tPair.second;
     for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
       auto node = pair.second;

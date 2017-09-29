@@ -120,7 +120,7 @@ void ROSCommsDevice::FlushLog() {
   _device->FlushLog();
 }
 
-void ROSCommsDevice::FlushLogOn(LogLevel level) {
+void ROSCommsDevice::FlushLogOn(cpplogging::LogLevel level) {
   Loggable::FlushLogOn(level);
   _device->FlushLogOn(level);
 }
