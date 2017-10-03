@@ -72,6 +72,21 @@ int main(int argc, char **argv) {
     ROS_INFO("namespace: %s", ns.c_str());
   }
 
+  std::string logToFile;
+  bool logToFileEnabled;
+  if (!nh.getParam("logToFile", logToFile)) {
+    ROS_ERROR("Failed to get param 'logToFile'");
+    return 1;
+  } else {
+    if (logToFile == "") {
+      ROS_INFO("Do not log to file");
+      logToFileEnabled = false;
+    } else {
+      ROS_INFO("logging to file: %s", logToFile.c_str());
+      logToFileEnabled = true;
+    }
+  }
+
   setSignals();
 
   auto portBaudrate = SerialPortStream::BAUD_2400;
@@ -84,13 +99,15 @@ int main(int argc, char **argv) {
   stream->SetLogName(comms->GetLogName() + ":S100Stream");
 
   comms->FlushLogOn(cpplogging::LogLevel::info);
-  comms->LogToFile("s100_comms_bridge_log");
+  if (logToFileEnabled)
+    comms->LogToFile(logToFile);
 
   stream->FlushLogOn(cpplogging::LogLevel::info);
-  stream->LogToFile("s100_comms_bridge_device_log");
+  if (logToFileEnabled)
+    stream->LogToFile("device_" + logToFile);
 
   comms->Start();
   while (1) {
-    Utils::Sleep(1000);
+    Utils::Sleep(10000);
   }
 }
