@@ -153,125 +153,57 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 SET(${PROJECT_NAME}_INCLUDE_DIRS
     "include"
     "modules/ns-3-dev/build")
-SET(${PROJECT_NAME}_CPP_FILES
-                        src/simulator/ROSCommsDevice.cpp
-                        src/simulator/ROSCommsSimulator.cpp
-                        src/simulator/ROSCommsChannelState.cpp
-        )
 
-## Specify additional locations of header files
-## Your package locations should be listed before other locations
-# include_directories(include)
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
 )
 
-add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
-
-SET(NS3_BUILD "modules/ns-3-dev/build")
-find_library(NS3_CORE_LIB libns3-dev-core-debug.so HINTS ${NS3_BUILD})
-find_library(NS3_NETWORK_LIB libns3-dev-network-debug.so HINTS ${NS3_BUILD})
-SET(NS3_LIBS
-    ${NS3_CORE_LIB}
-    ${NS3_NETWORK_LIB}
-    )
-
-SET(SIM netsim)
-add_executable (${SIM} src/simulator/main/netsim.cpp)
-target_include_directories(${SIM} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${SIM} ${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES}
-     ${NS3_LIBS})
 
 SET(S100BRIDGE s100_bridge)
 add_executable(${S100BRIDGE} src/bridges/s100/s100_main.cpp)
 target_include_directories(${S100BRIDGE} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${S100BRIDGE} ${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
+target_link_libraries(${S100BRIDGE} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 
+###############################################
+####### UNCOMMENT THE FOLLOWING BLOCK #########
+#######     TO ENABLE netsim BUILD    #########
+###############################################
 
+#SET(${PROJECT_NAME}_CPP_FILES
+#	src/simulator/ROSCommsDevice.cpp
+#	src/simulator/ROSCommsSimulator.cpp
+#	src/simulator/ROSCommsChannelState.cpp
+#)
+#
+#add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
+#target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+#target_link_libraries(${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
+#
+#SET(NS3_BUILD "modules/ns-3-dev/build")
+#find_library(NS3_CORE_LIB libns3-dev-core-debug.so HINTS ${NS3_BUILD})
+#find_library(NS3_NETWORK_LIB libns3-dev-network-debug.so HINTS ${NS3_BUILD})
+#SET(NS3_LIBS
+#    ${NS3_CORE_LIB}
+#    ${NS3_NETWORK_LIB}
+#    )
+#
+#SET(SIM netsim)
+#add_executable (${SIM} src/simulator/main/netsim.cpp)
+#target_include_directories(${SIM} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+#target_link_libraries(${SIM} ${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES}
+#     ${NS3_LIBS})
+#
+#add_executable (pruebas src/simulator/main/pruebas.cpp)
+##target_compile_options(pruebas PUBLIC "")
+##https://cmake.org/cmake/help/v3.4/command/find_library.html
+##https://stackoverflow.com/questions/31438916/cmake-cannot-find-library-using-link-directories
+#
+#target_link_libraries(pruebas ${NS3_LIBS} ${PROJECT_NAME})
+#target_include_directories(pruebas PUBLIC modules/ns-3-dev/build)
 
-
-
-add_executable (pruebas src/simulator/main/pruebas.cpp)
-#target_compile_options(pruebas PUBLIC "")
-#https://cmake.org/cmake/help/v3.4/command/find_library.html
-#https://stackoverflow.com/questions/31438916/cmake-cannot-find-library-using-link-directories
-
-target_link_libraries(pruebas ${NS3_LIBS} ${PROJECT_NAME})
-target_include_directories(pruebas PUBLIC modules/ns-3-dev/build)
-
-
-
-## Declare a C++ library
-# add_library(dccomms_ros
-#   src/${PROJECT_NAME}/dccomms_ros.cpp
-# )
-
-## Add cmake target dependencies of the library
-## as an example, code may need to be generated before libraries
-## either from message generation or dynamic reconfigure
-# add_dependencies(dccomms_ros ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-## Declare a C++ executable
-# add_executable(dccomms_ros_node src/dccomms_ros_node.cpp)
-
-## Add cmake target dependencies of the executable
-## same as for the library above
-# add_dependencies(dccomms_ros_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-## Specify libraries to link a library or executable target against
-# target_link_libraries(dccomms_ros_node
-#   ${catkin_LIBRARIES}
-# )
-
-#############
-## Install ##
-#############
-
-# all install targets should use catkin DESTINATION variables
-# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
-
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# install(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark executables and/or libraries for installation
-# install(TARGETS dccomms_ros dccomms_ros_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
-
-## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
-
-#############
-## Testing ##
-#############
-
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_dccomms_ros.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
-
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)
+###############################################
+############ END netsim BUILD #################
+###############################################
 
 message("End ${PROJECT_NAME_ORIG}")
