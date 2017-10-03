@@ -19,11 +19,15 @@
 #include "ros/ros.h"
 // end ROS
 
+#include <cpplogging/cpplogging.h>
+
 using namespace std;
 using namespace dccomms;
 using namespace dccomms_utils;
+using namespace cpplogging;
 CommsBridge *comms;
 S100Stream *stream;
+LoggerPtr Log;
 
 void SIGINT_handler(int sig) {
   printf("Received %d signal\nClosing device socket...\n", sig);
@@ -47,44 +51,51 @@ void setSignals() {
 int main(int argc, char **argv) {
   ros::init(argc, argv, "dccomms_S100_bridge");
   ros::NodeHandle nh("~");
+  Log = CreateLogger("S100Bridge");
+  Log->SetLogName(Log->GetLogName() + ":Main");
+  Log->SetLogLevel(cpplogging::LogLevel::debug);
+
+  std::string logPrefix;
+  bool logToFileEnabled;
+  if (!nh.getParam("logPrefix", logPrefix)) {
+    Log->Error("Failed to get param 'logPrefix'");
+    return 1;
+  } else {
+    if (logPrefix == "") {
+      Log->Info("Do not log to file");
+      logToFileEnabled = false;
+    } else {
+      Log->Info("Log prefix: {}", logPrefix);
+      logToFileEnabled = true;
+    }
+  }
+
+  if (logToFileEnabled) {
+    Log->LogToFile(logPrefix + "_main");
+  }
 
   std::string modemPort;
   if (!nh.getParam("modemPort", modemPort)) {
-    ROS_ERROR("Failed to get param 'modemPort'");
+    Log->Error("Failed to get param 'modemPort'");
     return 1;
   } else {
-    ROS_INFO("modem port: %s", modemPort.c_str());
+    Log->Info("modem port: {}", modemPort);
   }
 
   int modemBaudrate;
   if (!nh.getParam("modemBaudrate", modemBaudrate)) {
-    ROS_ERROR("Failed to get param 'modemBaudrate'");
+    Log->Error("Failed to get param 'modemBaudrate'");
     return 1;
   } else {
-    ROS_INFO("modem baudrate: %d", modemBaudrate);
+    Log->Info("modem baudrate: {}", modemBaudrate);
   }
 
   std::string ns;
   if (!nh.getParam("ns", ns)) {
-    ROS_ERROR("Failed to get param 'ns'");
+    Log->Error("Failed to get param 'ns'");
     return 1;
   } else {
-    ROS_INFO("namespace: %s", ns.c_str());
-  }
-
-  std::string logToFile;
-  bool logToFileEnabled;
-  if (!nh.getParam("logToFile", logToFile)) {
-    ROS_ERROR("Failed to get param 'logToFile'");
-    return 1;
-  } else {
-    if (logToFile == "") {
-      ROS_INFO("Do not log to file");
-      logToFileEnabled = false;
-    } else {
-      ROS_INFO("logging to file: %s", logToFile.c_str());
-      logToFileEnabled = true;
-    }
+    Log->Info("namespace: {}", ns);
   }
 
   setSignals();
@@ -97,14 +108,15 @@ int main(int argc, char **argv) {
   comms->SetNamespace(ns);
   comms->SetLogName("S100Bridge");
   stream->SetLogName(comms->GetLogName() + ":S100Stream");
-
   comms->FlushLogOn(cpplogging::LogLevel::info);
-  if (logToFileEnabled)
-    comms->LogToFile(logToFile);
-
   stream->FlushLogOn(cpplogging::LogLevel::info);
-  if (logToFileEnabled)
-    stream->LogToFile("device_" + logToFile);
+
+  if (logToFileEnabled) {
+
+    comms->LogToFile(logPrefix);
+    stream->LogToFile(logPrefix + "_device");
+  }
+  stream->LogConfig();
 
   comms->Start();
   while (1) {

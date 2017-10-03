@@ -5,12 +5,12 @@
 	<arg name="modemBaudrate" default="700" />
 	<arg name="dccommsNs" default="" />
 	<arg name="nodeName" default="s100_bridge" />
-	<arg name="logToFile" default="" />
+	<arg name="logPrefix" default="" />
 
 	<node pkg="dccomms_ros" name="$(arg nodeName)" type="s100_bridge" respawn="false" ns="$(arg namespace)" output="screen">
 		<param name="modemPort" type="str" value="$(arg modemPort)"/>
 		<param name="modemBaudrate" type="int" value="$(arg modemBaudrate)"/>
 		<param name="ns" type="str" value="$(arg dccommsNs)"/>
-		<param name="logToFile" type="str" value="$(arg logToFile)"/>
+		<param name="logPrefix" type="str" value="$(arg logPrefix)"/>
 	</node>
 </launch>
