@@ -2,9 +2,9 @@
 //#include <iostream>
 
 //#include <cpplogging/Loggable.h>
-#include <dccomms_ros/ns3-testing.h>
 #include <ns3/core-module.h>
 #include <ns3/node-container.h>
+#include <testing/simulator/ns3-testing.h>
 
 using namespace ns3;
 

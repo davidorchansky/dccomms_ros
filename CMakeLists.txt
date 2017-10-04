@@ -194,16 +194,45 @@ target_link_libraries(${S100BRIDGE} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 #target_link_libraries(${SIM} ${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES}
 #     ${NS3_LIBS})
 #
-#add_executable (ns3-testing src/testing/ns3-testing.cpp)
+#add_executable (ns3-testing testing/simulator/ns3-testing.cpp)
 ##target_compile_options(pruebas PUBLIC "")
 ##https://cmake.org/cmake/help/v3.4/command/find_library.html
 ##https://stackoverflow.com/questions/31438916/cmake-cannot-find-library-using-link-directories
 #
 #target_link_libraries(ns3-testing ${NS3_LIBS} ${PROJECT_NAME})
-#target_include_directories(ns3-testing PUBLIC modules/ns-3-dev/build)
-#
+#target_include_directories(ns3-testing PUBLIC
+#    modules/ns-3-dev/build
+#    ${CMAKE_CURRENT_SOURCE_DIR}
+#    )
+
 ###############################################
 ############ END netsim BUILD #################
+###############################################
+
+
+###############################################
+####### UNCOMMENT THE FOLLOWING BLOCK #########
+#######  TO ENABLE comms tests BUILD  #########
+###############################################
+add_executable (test_op testing/comms/op.cpp)
+target_link_libraries(test_op
+    ${DCCOMMS_UTILS_GIT}
+    ${catkin_LIBRARIES}
+    )
+target_include_directories(test_op PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+add_executable (test_rov testing/comms/rov.cpp)
+target_link_libraries(test_rov
+    ${DCCOMMS_UTILS_GIT}
+    ${catkin_LIBRARIES}
+    )
+target_include_directories(test_rov PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+###############################################
+########### END comms tests BUILD #############
 ###############################################
 
 message("End ${PROJECT_NAME_ORIG}")
