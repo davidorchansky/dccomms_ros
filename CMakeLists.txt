@@ -171,9 +171,9 @@ target_link_libraries(${S100BRIDGE} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 ###############################################
 
 #SET(${PROJECT_NAME}_CPP_FILES
-#	src/simulator/ROSCommsDevice.cpp
-#	src/simulator/ROSCommsSimulator.cpp
-#	src/simulator/ROSCommsChannelState.cpp
+#        src/simulator/ROSCommsDevice.cpp
+#        src/simulator/ROSCommsSimulator.cpp
+#        src/simulator/ROSCommsChannelState.cpp
 #)
 #
 #add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
@@ -194,14 +194,14 @@ target_link_libraries(${S100BRIDGE} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 #target_link_libraries(${SIM} ${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES}
 #     ${NS3_LIBS})
 #
-#add_executable (pruebas src/simulator/main/pruebas.cpp)
+#add_executable (ns3-testing src/testing/ns3-testing.cpp)
 ##target_compile_options(pruebas PUBLIC "")
 ##https://cmake.org/cmake/help/v3.4/command/find_library.html
 ##https://stackoverflow.com/questions/31438916/cmake-cannot-find-library-using-link-directories
 #
-#target_link_libraries(pruebas ${NS3_LIBS} ${PROJECT_NAME})
-#target_include_directories(pruebas PUBLIC modules/ns-3-dev/build)
-
+#target_link_libraries(ns3-testing ${NS3_LIBS} ${PROJECT_NAME})
+#target_include_directories(ns3-testing PUBLIC modules/ns-3-dev/build)
+#
 ###############################################
 ############ END netsim BUILD #################
 ###############################################

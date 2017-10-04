@@ -2,7 +2,7 @@
 //#include <iostream>
 
 //#include <cpplogging/Loggable.h>
-#include <dccomms_ros/pruebas.h>
+#include <dccomms_ros/ns3-testing.h>
 #include <ns3/core-module.h>
 #include <ns3/node-container.h>
 
