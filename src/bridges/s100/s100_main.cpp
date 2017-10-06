@@ -122,6 +122,16 @@ int main(int argc, char **argv) {
   }
   stream->LogConfig();
 
+  comms->SetReceivedPacketWithErrorsCb(
+      [](const PacketPtr pkt) { Log->Warn("Received packet with errors!"); });
+
+  comms->SetReceivedPacketWithErrorsCb(
+      [](const PacketPtr pkt) { Log->Warn("Received packet with errors!"); });
+
+  comms->SetReceivedPacketWithoutErrorsCb([](const PacketPtr pkt) {
+    Log->Info("Received packet without errors!");
+  });
+
   comms->Start();
   while (1) {
     Utils::Sleep(10000);
