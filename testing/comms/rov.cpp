@@ -13,8 +13,10 @@ int main(int argc, char **argv) {
   ros::init(argc, argv, "test_rov");
   ros::NodeHandle nh("~");
 
+  auto logLevel = info;
+
   Log = CreateLogger("ROVMain");
-  Log->SetLogLevel(debug);
+  Log->SetLogLevel(logLevel);
 
   std::string logPrefix;
   bool logToFileEnabled;

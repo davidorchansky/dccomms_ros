@@ -214,7 +214,9 @@ target_link_libraries(${S100BRIDGE} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 ####### UNCOMMENT THE FOLLOWING BLOCK #########
 #######  TO ENABLE comms tests BUILD  #########
 ###############################################
-add_executable (test_op testing/comms/op.cpp)
+add_executable (test_op
+    testing/comms/op.cpp
+)
 target_link_libraries(test_op
     ${DCCOMMS_UTILS_GIT}
     ${catkin_LIBRARIES}
@@ -223,7 +225,9 @@ target_include_directories(test_op PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
     )
 
-add_executable (test_rov testing/comms/rov.cpp)
+add_executable (test_rov
+    testing/comms/op.cpp
+ )
 target_link_libraries(test_rov
     ${DCCOMMS_UTILS_GIT}
     ${catkin_LIBRARIES}
