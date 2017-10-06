@@ -52,9 +52,12 @@ void setSignals() {
 int main(int argc, char **argv) {
   ros::init(argc, argv, "dccomms_S100_bridge");
   ros::NodeHandle nh("~");
+
+  auto logLevel = info;
+
   Log = CreateLogger("S100Bridge");
   Log->SetLogName(Log->GetLogName() + ":Main");
-  Log->SetLogLevel(cpplogging::LogLevel::debug);
+  Log->SetLogLevel(logLevel);
 
   std::string logPrefix;
   bool logToFileEnabled;
@@ -108,12 +111,14 @@ int main(int argc, char **argv) {
 
   comms = new CommsBridge(stream, pb, pb, 0);
 
-  comms->SetLogLevel(cpplogging::LogLevel::debug);
+  comms->SetLogLevel(logLevel);
+  stream->SetLogLevel(logLevel);
+  comms->FlushLogOn(logLevel);
+  stream->FlushLogOn(logLevel);
+
   comms->SetCommsDeviceId(ns);
   comms->SetLogName("S100Bridge");
   stream->SetLogName(comms->GetLogName() + ":S100Stream");
-  comms->FlushLogOn(cpplogging::LogLevel::info);
-  stream->FlushLogOn(cpplogging::LogLevel::info);
 
   if (logToFileEnabled) {
 
@@ -122,14 +127,24 @@ int main(int argc, char **argv) {
   }
   stream->LogConfig();
 
-  comms->SetReceivedPacketWithErrorsCb(
-      [](const PacketPtr pkt) { Log->Warn("Received packet with errors!"); });
+  auto txtr = CreateObject<TransportPDU>();
+  auto txpkt = comms->GetTxPacket();
+  txtr->SetBuffer(txpkt->GetPayloadBuffer());
 
-  comms->SetReceivedPacketWithErrorsCb(
-      [](const PacketPtr pkt) { Log->Warn("Received packet with errors!"); });
+  comms->SetTransmitingPacketCb([txtr](const PacketPtr pkt) {
+    Log->Info("(Seq: {}) Transmitting packet!", txtr->GetSeqNum());
+  });
 
-  comms->SetReceivedPacketWithoutErrorsCb([](const PacketPtr pkt) {
-    Log->Info("Received packet without errors!");
+  auto rxtr = CreateObject<TransportPDU>();
+  auto rxpkt = comms->GetRxPacket();
+  rxtr->SetBuffer(rxpkt->GetPayloadBuffer());
+
+  comms->SetReceivedPacketWithErrorsCb([rxtr](const PacketPtr pkt) {
+    Log->Warn("(Seq: {}) Received packet with errors!", rxtr->GetSeqNum());
+  });
+
+  comms->SetReceivedPacketWithoutErrorsCb([rxtr](const PacketPtr pkt) {
+    Log->Info("(Seq: {}) Received packet without errors!", rxtr->GetSeqNum());
   });
 
   comms->Start();
