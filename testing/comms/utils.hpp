@@ -16,20 +16,30 @@ public:
 
   bool PacketIsOk();
 
+  void UpdateFCS();
+
 private:
+  uint8_t *_pre;
   uint8_t *_order;
+  uint8_t *_fcs;
   int _packetSize;
   void _Init();
+  const static int PRE_SIZE = 1, CODE_SIZE = 1, FCS_SIZE = 1;
+
+  bool _CheckFCS();
 };
 
 MasterPacket::MasterPacket() {
-  _AllocBuffer(1);
+  _packetSize = PRE_SIZE + CODE_SIZE + FCS_SIZE;
+  _AllocBuffer(_packetSize);
   _Init();
 }
 
 void MasterPacket::_Init() {
-  _order = GetBuffer();
-  _packetSize = 1;
+  _pre = GetBuffer();
+  _order = _pre + PRE_SIZE;
+  _fcs = _order + FCS_SIZE;
+  memset(_pre, 0x55, PRE_SIZE);
 }
 
 void MasterPacket::CopyFromRawBuffer(void *buffer) {
@@ -44,10 +54,16 @@ inline uint32_t MasterPacket::GetPayloadSize() { return _packetSize; }
 inline int MasterPacket::GetPacketSize() { return _packetSize; }
 
 void MasterPacket::Read(IStream *stream) {
-  stream->Read(_order, _packetSize);
+  stream->WaitFor(_pre, PRE_SIZE);
+  stream->Read(_order, CODE_SIZE);
+  stream->Read(_fcs, FCS_SIZE);
 }
 
-bool MasterPacket::PacketIsOk() { return true; }
+void MasterPacket::UpdateFCS() { *_fcs = ~*_order; }
+bool MasterPacket::_CheckFCS() {
+    return (uint8_t) *_order == (uint8_t) ~*_fcs;
+}
+bool MasterPacket::PacketIsOk() { return _CheckFCS(); }
 
 class SlavePacket : public Packet {
 public:
@@ -61,7 +77,9 @@ public:
   bool PacketIsOk();
 
   void GetPayload(void *copy);
-  void SetPayload(void *data, int size = PAYLOAD_SIZE);
+  void SetPayload(const void *data, int size = PAYLOAD_SIZE);
+
+  void UpdateFCS();
 
 private:
   static const int PRE_SIZE = 1, PAYLOAD_SIZE = 20, FCS_SIZE = 2;
@@ -71,7 +89,6 @@ private:
   uint8_t *_fcs;
   int _packetSize;
   void _Init();
-  void _SetFCS();
   bool _CheckFCS();
 };
 
@@ -104,14 +121,16 @@ void SlavePacket::Read(IStream *stream) {
   stream->Read(_payload, PAYLOAD_SIZE + FCS_SIZE);
 }
 
-void SlavePacket::GetPayload(void *copy) { memcpy(copy, _payload, PAYLOAD_SIZE); }
+void SlavePacket::GetPayload(void *copy) {
+  memcpy(copy, _payload, PAYLOAD_SIZE);
+}
 
-void SlavePacket::SetPayload(void *data, int size) {
+void SlavePacket::SetPayload(const void *data, int size) {
   memset(_payload, 0, PAYLOAD_SIZE);
   memcpy(_payload, data, size);
 }
 
-void SlavePacket::_SetFCS() {
+void SlavePacket::UpdateFCS() {
   uint16_t crc = Checksum::crc16(_payload, PAYLOAD_SIZE);
   *_fcs = (uint8_t)(crc >> 8);
   *(_fcs + 1) = (uint8_t)(crc & 0xff);
@@ -123,16 +142,14 @@ bool SlavePacket::_CheckFCS() {
 }
 bool SlavePacket::PacketIsOk() { return _CheckFCS(); }
 
-class ROVPacketBuilder : public IPacketBuilder {
+class SlavePacketBuilder : public IPacketBuilder {
 public:
   PacketPtr CreateFromBuffer(void *buffer) {
     auto pkt = CreateObject<SlavePacket>();
     pkt->CopyFromRawBuffer(buffer);
     return pkt;
   }
-  PacketPtr Create(){
-      return CreateObject<SlavePacket>();
-  }
+  PacketPtr Create() { return CreateObject<SlavePacket>(); }
 };
 
 class MasterPacketBuilder : public IPacketBuilder {
@@ -142,9 +159,7 @@ public:
     pkt->CopyFromRawBuffer(buffer);
     return pkt;
   }
-  PacketPtr Create(){
-      return CreateObject<MasterPacket>();
-  }
+  PacketPtr Create() { return CreateObject<MasterPacket>(); }
 };
 }
 #endif

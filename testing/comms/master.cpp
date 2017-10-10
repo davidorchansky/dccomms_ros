@@ -15,12 +15,12 @@ using namespace teleop1;
 LoggerPtr Log;
 
 int main(int argc, char **argv) {
-  ros::init(argc, argv, "test_op");
+  ros::init(argc, argv, "master");
   ros::NodeHandle nh("~");
 
   auto logLevel = info;
 
-  Log = CreateLogger("S100TeleopTest1");
+  Log = CreateLogger("S100Master");
   Log->SetLogName(Log->GetLogName() + ":Main");
   Log->SetLogLevel(logLevel);
 
@@ -59,14 +59,6 @@ int main(int argc, char **argv) {
     Log->Info("modem baudrate: {}", modemBaudrate);
   }
 
-  std::string ns;
-  if (!nh.getParam("ns", ns)) {
-    Log->Error("Failed to get param 'ns'");
-    return 1;
-  } else {
-    Log->Info("namespace: {}", ns);
-  }
-
   auto portBaudrate = SerialPortStream::BAUD_2400;
 
   Ptr<S100Stream> stream =
@@ -83,16 +75,19 @@ int main(int argc, char **argv) {
   stream->LogConfig();
 
   Ptr<SlavePacket> rxpkt = CreateObject<SlavePacket>();
-  auto txpkt = CreateObject<MasterPacket>();
+  Ptr<MasterPacket> txpkt = CreateObject<MasterPacket>();
 
   stream->Open();
   std::thread txwork([txpkt, stream]() {
     int i = 0;
     while (1) {
-      *txpkt->GetBuffer() = 'a' + i;
-      Log->Info("Transmitting packet '{}'...", (char)*txpkt->GetBuffer());
+      *txpkt->GetPayloadBuffer() = '0' + i;
+      txpkt->UpdateFCS();
+      Log->Info("Transmitting Heartbeat '{}'",
+                (char)*txpkt->GetPayloadBuffer());
       *stream << txpkt;
       i = (i + 1) % 10;
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
   });
 
@@ -100,7 +95,7 @@ int main(int argc, char **argv) {
     while (1) {
       *stream >> rxpkt;
       if (rxpkt->PacketIsOk()) {
-        Log->Info("Packet received!");
+        Log->Info("Data received: '{}'", (char *)rxpkt->GetPayloadBuffer());
       } else {
         Log->Warn("Packet received with errors");
       }
