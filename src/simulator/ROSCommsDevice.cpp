@@ -5,6 +5,7 @@
 namespace dccomms_ros {
 ROSCommsDevice::ROSCommsDevice(ROSCommsSimulator *s, CommsDeviceServicePtr d)
     : _sim(s), _device(d), _txserv(this) {
+  auto packetBuilder = s->GetPacketBuilder();
   _txdlf = DataLinkFrame::BuildDataLinkFrame(DataLinkFrame::crc16);
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
   _name = "node";
@@ -18,7 +19,7 @@ void ROSCommsDevice::StartDeviceService() {
 
 void ROSCommsDevice::StartNodeWorker() { _txserv.Start(); }
 
-void ROSCommsDevice::ReceiveFrame(DataLinkFramePtr dlf) {
+void ROSCommsDevice::ReceiveFrame(PacketPtr dlf) {
   _receiveFrameMutex.lock();
   *_device << dlf;
   _receiveFrameMutex.unlock();
@@ -79,12 +80,12 @@ void ROSCommsDevice::_TxWork() {
   _device->SetPhyLayerState(CommsDeviceService::BUSY);
   do {
     *_device >> _txdlf;
-    auto txdlf = DataLinkFrame::Copy(_txdlf);
-    if (txdlf->checkFrame()) {
+    PacketPtr txdlf =
+        _sim->GetPacketBuilder()->CreateFromBuffer(_txdlf->GetBuffer());
+    if (txdlf->PacketIsOk()) {
       // PACKET OK
       // std::this_thread::sleep_for(std::chrono::milliseconds(2000));
       _sim->TransmitFrame(_devType, txdlf);
-
     } else {
       // PACKET WITH ERRORS
       // Log->critical("TX: INTERNAL ERROR: frame received with errors from the

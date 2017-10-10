@@ -2,8 +2,7 @@
 #define WHROVSIMULATOR_H
 
 #include <cpplogging/Loggable.h>
-#include <dccomms/CommsDeviceService.h>
-#include <dccomms/Utils.h>
+#include <dccomms/dccomms.h>
 #include <dccomms_ros/simulator/ROSCommsChannelState.h>
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <functional>
@@ -53,8 +52,8 @@ typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 
 class ROSCommsSimulator : public virtual Loggable {
 public:
-  ROSCommsSimulator(ros::NodeHandle &rosnode);
-  void TransmitFrame(int linkType, DataLinkFramePtr dlf);
+  ROSCommsSimulator(ros::NodeHandle &rosnode, PacketBuilderPtr packetBuilder);
+  void TransmitFrame(int linkType, PacketPtr dlf);
   void Start();
 
   virtual void SetLogName(std::string name);
@@ -64,26 +63,26 @@ public:
   virtual void LogToConsole(bool);
   virtual void LogToFile(const string &filename);
 
-  void SetTransmitPDUCb(
-      std::function<void(int linkType, dccomms::DataLinkFramePtr)> cb);
-  void SetReceivePDUCb(
-      std::function<void(int linkType, dccomms::DataLinkFramePtr)> cb);
-  void SetErrorPDUCb(
-      std::function<void(int linkType, dccomms::DataLinkFramePtr)> cb);
+  PacketBuilderPtr GetPacketBuilder();
+
+  void
+  SetTransmitPDUCb(std::function<void(int linkType, dccomms::PacketPtr)> cb);
+  void
+  SetReceivePDUCb(std::function<void(int linkType, dccomms::PacketPtr)> cb);
+  void SetErrorPDUCb(std::function<void(int linkType, dccomms::PacketPtr)> cb);
 
 private:
   void _Init();
-  std::function<void(int, dccomms::DataLinkFramePtr)> _TransmitPDUCb,
-      _ReceivePDUCb, _ErrorPDUCb;
+  std::function<void(int, dccomms::PacketPtr)> _TransmitPDUCb, _ReceivePDUCb,
+      _ErrorPDUCb;
   bool _AddDevice(dccomms_ros_msgs::AddDevice::Request &req,
                   dccomms_ros_msgs::AddDevice::Response &res);
   bool _CheckDevice(dccomms_ros_msgs::CheckDevice::Request &req,
                     dccomms_ros_msgs::CheckDevice::Response &res);
   bool _RemoveDevice(dccomms_ros_msgs::RemoveDevice::Request &req,
                      dccomms_ros_msgs::RemoveDevice::Response &res);
-  void _PropagateFrame(DataLinkFramePtr dlf, int delay,
-                       CommsChannelStatePtr channel);
-  void _DeliverFrame(DataLinkFramePtr dlf, CommsChannelStatePtr channel);
+  void _PropagateFrame(PacketPtr dlf, int delay, CommsChannelStatePtr channel);
+  void _DeliverFrame(PacketPtr dlf, CommsChannelStatePtr channel);
 
   void _AddDeviceToSet(std::string iddev, ROSCommsDevicePtr dev);
   bool _DeviceExists(std::string iddev);
@@ -103,6 +102,7 @@ private:
   std::mutex _devLinksMutex, _idDevMapMutex, _channelsMutex;
   DevicesLinks _devLinks;
 
+  PacketBuilderPtr _packetBuilder;
   ServiceThread<ROSCommsSimulator> _linkUpdaterWorker;
   void _LinkUpdaterWork();
   void _UpdateChannelStateFromRange(CommsChannelStatePtr chn, double range,

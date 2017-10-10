@@ -25,7 +25,7 @@ public:
   ROSCommsDevice(ROSCommsSimulator *, CommsDeviceServicePtr);
 
   CommsDeviceServicePtr GetService();
-  void ReceiveFrame(DataLinkFramePtr);
+  void ReceiveFrame(PacketPtr);
   void StartDeviceService();
   void StartNodeWorker();
   std::string GetName();
@@ -36,7 +36,7 @@ public:
   virtual void FlushLog();
   virtual void FlushLogOn(LogLevel);
   virtual void LogToConsole(bool);
-  virtual void LogToFile(const string &filename);
+  virtual void LogToFile(const std::string &filename);
 
   void SetTrTime(float trTimeMean, float trTimeSd = 0);
   void SetMinPrTime(float prTime);
@@ -67,7 +67,7 @@ private:
   CommsDeviceServicePtr _device;
   ROSCommsSimulatorPtr _sim;
   ServiceThread<ROSCommsDevice> _txserv;
-  DataLinkFramePtr _txdlf;
+  PacketPtr _txdlf;
   std::string _name, _tfFrameId;
   int _mac, _devType;
   float _trTimeMean, _trTimeSd, _minPrTime, _prTimeIncPerMeter;

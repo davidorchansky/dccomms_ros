@@ -17,8 +17,10 @@ using namespace dccomms;
 using namespace dccomms_ros_msgs;
 
 namespace dccomms_ros {
-ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle &rosNode)
+ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle &rosNode,
+                                     PacketBuilderPtr packetBuilder)
     : _rosNode(rosNode), _linkUpdaterWorker(this) {
+  _packetBuilder = packetBuilder;
   SetLogName("CommsSimulator");
   LogToConsole(true);
   FlushLogOn(cpplogging::LogLevel::info);
@@ -26,25 +28,28 @@ ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle &rosNode)
   _Init();
 }
 
+PacketBuilderPtr ROSCommsSimulator::GetPacketBuilder() {
+  return _packetBuilder;
+}
+
 void ROSCommsSimulator::SetTransmitPDUCb(
-    std::function<void(int, DataLinkFramePtr)> cb) {
+    std::function<void(int, PacketPtr)> cb) {
   _TransmitPDUCb = cb;
 }
 
 void ROSCommsSimulator::SetReceivePDUCb(
-    std::function<void(int, DataLinkFramePtr)> cb) {
+    std::function<void(int, PacketPtr)> cb) {
   _ReceivePDUCb = cb;
 }
 
-void ROSCommsSimulator::SetErrorPDUCb(
-    std::function<void(int, DataLinkFramePtr)> cb) {
+void ROSCommsSimulator::SetErrorPDUCb(std::function<void(int, PacketPtr)> cb) {
   _ErrorPDUCb = cb;
 }
 
 void ROSCommsSimulator::_Init() {
-  _TransmitPDUCb = [](int linkType, DataLinkFramePtr pdu) {};
-  _ReceivePDUCb = [](int linkType, DataLinkFramePtr pdu) {};
-  _ErrorPDUCb = [](int linkType, DataLinkFramePtr pdu) {};
+  _TransmitPDUCb = [](int linkType, PacketPtr pdu) {};
+  _ReceivePDUCb = [](int linkType, PacketPtr pdu) {};
+  _ErrorPDUCb = [](int linkType, PacketPtr pdu) {};
   GlobalValue::Bind("SimulatorImplementationType",
                     StringValue("ns3::RealtimeSimulatorImpl"));
 }
@@ -73,9 +78,9 @@ CommsChannelStatePtr ROSCommsSimulator::_GetChannel(std::string channelKey) {
   return res;
 }
 
-void ROSCommsSimulator::TransmitFrame(int linkType, DataLinkFramePtr dlf) {
-  auto srcdir = dlf->GetSrcDir();
-  auto dstdir = dlf->GetDesDir();
+void ROSCommsSimulator::TransmitFrame(int linkType, PacketPtr dlf) {
+  auto srcdir = 0;
+  auto dstdir = 1;
 
   // Build channel key
   std::stringstream ss;
@@ -84,9 +89,7 @@ void ROSCommsSimulator::TransmitFrame(int linkType, DataLinkFramePtr dlf) {
 
   auto channelState = _GetChannel(channelKey);
   if (channelState) {
-    auto frameSize = dlf->GetFrameSize();
-
-    auto txtrp = TransportPDU::BuildTransportPDU(dlf->GetPayloadBuffer());
+    auto frameSize = dlf->GetPacketSize();
     auto delay = channelState->GetDelay();
 
     // Simulate total delay (transmission + propagation + reception)
@@ -99,10 +102,6 @@ void ROSCommsSimulator::TransmitFrame(int linkType, DataLinkFramePtr dlf) {
     auto trTime = trRate * frameSize;
     int totalTime = ceil(delay + trTime);
     _TransmitPDUCb(linkType, dlf);
-    Log->debug(
-        "TX {}->{}: R: {} ms/byte ; TT: {} ms ; D: {} ms (Seq: {}) (FS: {}).",
-        srcdir, dstdir, trRate, totalTime, delay, txtrp->GetSeqNum(),
-        frameSize);
 
     if (channelState->LinkOk()) {
       if (channelState->ErrOnNextPkt()) {
@@ -116,7 +115,7 @@ void ROSCommsSimulator::TransmitFrame(int linkType, DataLinkFramePtr dlf) {
   }
 }
 
-void ROSCommsSimulator::_PropagateFrame(DataLinkFramePtr dlf, int delay,
+void ROSCommsSimulator::_PropagateFrame(PacketPtr dlf, int delay,
                                         CommsChannelStatePtr channel) {
 
   Simulator::Schedule(
@@ -124,26 +123,18 @@ void ROSCommsSimulator::_PropagateFrame(DataLinkFramePtr dlf, int delay,
       MakeEvent(&ROSCommsSimulator::_DeliverFrame, this, dlf, channel));
 }
 
-void ROSCommsSimulator::_DeliverFrame(DataLinkFramePtr dlf,
+void ROSCommsSimulator::_DeliverFrame(PacketPtr dlf,
                                       CommsChannelStatePtr channel) {
-  auto dstdir = dlf->GetDesDir();
+  auto dstdir = 1;
 
-  auto trs = TransportPDU::BuildTransportPDU(dlf->GetPayloadBuffer());
   auto rxNode = channel->GetRxNode();
   auto devType = rxNode->GetDevType();
-  if (dlf->checkFrame()) {
+  if (dlf->PacketIsOk()) {
     ROSCommsDevicePtr dstNode = (*_nodeTypeMap[devType])[dstdir];
     _ReceivePDUCb(devType, dlf);
-    Log->debug("RX {}<-{}: received frame without errors (Seq: {}) (FS: {}).",
-               dlf->GetDesDir(), dlf->GetSrcDir(), trs->GetSeqNum(),
-               dlf->GetFrameSize());
     dstNode->ReceiveFrame(dlf);
   } else {
     _ErrorPDUCb(devType, dlf);
-    Log->warn("RX {}<-{}: received frame with errors. Frame will be discarted "
-              "(Seq: {}) (FS: {}).",
-              dlf->GetDesDir(), dlf->GetSrcDir(), trs->GetSeqNum(),
-              dlf->GetFrameSize());
   }
 }
 
@@ -268,8 +259,8 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
 
   if (!exists) {
     auto commsDeviceService =
-        dccomms::CommsDeviceService::BuildCommsDeviceService(
-            IPHY_TYPE_PHY, dccomms::DataLinkFrame::crc16);
+        dccomms::CommsDeviceService::BuildCommsDeviceService(_packetBuilder,
+                                                             IPHY_TYPE_PHY);
 
     commsDeviceService->SetCommsDeviceId(newDevice);
     auto node = ROSCommsDevice::BuildCommsDevice(this, commsDeviceService);

@@ -15,7 +15,7 @@ using namespace dccomms_ros;
 using namespace std;
 
 static std::shared_ptr<spd::logger> Log =
-    spd::stdout_color_mt("MERBOTSCommsSimulator");
+    spd::stdout_color_mt("CommsSimulatorTest");
 ROSCommsSimulator *sim;
 
 void SIGINT_handler(int sig) {
@@ -38,20 +38,22 @@ int main(int argc, char **argv) {
   ros::init(argc, argv, "dccomms_netsim");
   ros::NodeHandle nh("~");
 
-  sim = new ROSCommsSimulator(nh);
+  auto packetBuilder =
+      CreateObject<DataLinkFramePacketBuilder>(DataLinkFrame::crc16);
+
+  auto sim = CreateObject<ROSCommsSimulator>(nh, packetBuilder);
   sim->SetLogName("netsim");
   sim->LogToFile("netsim_log");
 
   Log->set_level(spdlog::level::debug);
   Log->flush_on(spd::level::info);
 
-  sim->SetTransmitPDUCb([](int linkType, dccomms::DataLinkFramePtr dlf) {
+  sim->SetTransmitPDUCb([](int linkType, dccomms::PacketPtr dlf) {
     Log->info("Transmitting PDU");
   });
-  sim->SetReceivePDUCb([](int linkType, dccomms::DataLinkFramePtr dlf) {
-    Log->info("PDU Received");
-  });
-  sim->SetErrorPDUCb([](int linkType, dccomms::DataLinkFramePtr dlf) {
+  sim->SetReceivePDUCb(
+      [](int linkType, dccomms::PacketPtr dlf) { Log->info("PDU Received"); });
+  sim->SetErrorPDUCb([](int linkType, dccomms::PacketPtr dlf) {
     Log->warn("PDU Received with errors");
   });
 
