@@ -80,23 +80,36 @@ int main(int argc, char **argv) {
   stream->Open();
 
   std::thread work([rxpkt, txpkt, stream]() {
-    int seq = 0;
+    int i = 0;
     while (1) {
       *stream >> rxpkt;
       if (rxpkt->PacketIsOk()) {
-        Log->Info("Heartbeat received: '{}'", (char)*rxpkt->GetPayloadBuffer());
-        std::string msg = std::to_string(seq) + std::string(": Hello world!");
+        Log->Info("Heartbeat received ({} bytes): '{}'", rxpkt->GetPacketSize(),
+                  (char)*rxpkt->GetPayloadBuffer());
+        const char seq = *rxpkt->GetPayloadBuffer();
+        std::string msg = seq + std::string(": Hello world!") +
+                          std::string("; 1234567890 1234567890");
         txpkt->SetPayload(msg.c_str(), msg.length());
         txpkt->UpdateFCS();
-        *(txpkt->GetPayloadBuffer() + msg.length()) = 0;
-        Log->Info("Transmitting packet with data: '{}'",
-                  txpkt->GetPayloadBuffer());
+        Log->Info("Transmitting packet with data ({} bytes): '{}'",
+                  txpkt->GetPacketSize(), txpkt->GetPayloadBuffer());
         *stream << txpkt;
-        seq = (seq + 1) % 10;
       } else {
         Log->Warn("Packet received with errors");
       }
     }
+
+    //      std::string msg = std::to_string(i) + std::string(": Hello world!")
+    //      +
+    //                        std::string("; 1234567890 1234567890");
+    //      txpkt->SetPayload(msg.c_str(), msg.length());
+    //      txpkt->UpdateFCS();
+    //      Log->Info("Transmitting packet with data ({} bytes): '{}'",
+    //                txpkt->GetPacketSize(), txpkt->GetPayloadBuffer());
+    //      *stream << txpkt;
+    //      // std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+    //      i = (i + 1) % 10;
+    // }
   });
 
   while (1) {

@@ -24,7 +24,7 @@ private:
   uint8_t *_fcs;
   int _packetSize;
   void _Init();
-  const static int PRE_SIZE = 1, CODE_SIZE = 1, FCS_SIZE = 1;
+  const static int PRE_SIZE = 1, CODE_SIZE = 4, FCS_SIZE = 1;
 
   bool _CheckFCS();
 };
@@ -38,7 +38,7 @@ MasterPacket::MasterPacket() {
 void MasterPacket::_Init() {
   _pre = GetBuffer();
   _order = _pre + PRE_SIZE;
-  _fcs = _order + FCS_SIZE;
+  _fcs = _order + CODE_SIZE;
   memset(_pre, 0x55, PRE_SIZE);
 }
 
@@ -60,9 +60,7 @@ void MasterPacket::Read(IStream *stream) {
 }
 
 void MasterPacket::UpdateFCS() { *_fcs = ~*_order; }
-bool MasterPacket::_CheckFCS() {
-    return (uint8_t) *_order == (uint8_t) ~*_fcs;
-}
+bool MasterPacket::_CheckFCS() { return (uint8_t)*_order == (uint8_t) ~*_fcs; }
 bool MasterPacket::PacketIsOk() { return _CheckFCS(); }
 
 class SlavePacket : public Packet {
@@ -82,7 +80,7 @@ public:
   void UpdateFCS();
 
 private:
-  static const int PRE_SIZE = 1, PAYLOAD_SIZE = 20, FCS_SIZE = 2;
+  static const int PRE_SIZE = 1, PAYLOAD_SIZE = 40, FCS_SIZE = 2;
 
   uint8_t *_pre;
   uint8_t *_payload;
@@ -126,8 +124,9 @@ void SlavePacket::GetPayload(void *copy) {
 }
 
 void SlavePacket::SetPayload(const void *data, int size) {
-  memset(_payload, 0, PAYLOAD_SIZE);
+  memset(_payload, '#', PAYLOAD_SIZE);
   memcpy(_payload, data, size);
+  *(_payload + PAYLOAD_SIZE - 1) = 0;
 }
 
 void SlavePacket::UpdateFCS() {

@@ -83,8 +83,8 @@ int main(int argc, char **argv) {
     while (1) {
       *txpkt->GetPayloadBuffer() = '0' + i;
       txpkt->UpdateFCS();
-      Log->Info("Transmitting Heartbeat '{}'",
-                (char)*txpkt->GetPayloadBuffer());
+      Log->Info("Transmitting Heartbeat ({} bytes): '{}'",
+                txpkt->GetPacketSize(), (char)*txpkt->GetPayloadBuffer());
       *stream << txpkt;
       i = (i + 1) % 10;
       std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -95,7 +95,8 @@ int main(int argc, char **argv) {
     while (1) {
       *stream >> rxpkt;
       if (rxpkt->PacketIsOk()) {
-        Log->Info("Data received: '{}'", (char *)rxpkt->GetPayloadBuffer());
+        Log->Info("Data received ({} bytes): '{}'", rxpkt->GetPacketSize(),
+                  (char *)rxpkt->GetPayloadBuffer());
       } else {
         Log->Warn("Packet received with errors");
       }
