@@ -5,9 +5,9 @@
 
 using namespace dccomms;
 namespace teleop1 {
-class OperatorPacket : public Packet {
+class MasterPacket : public Packet {
 public:
-  OperatorPacket();
+  MasterPacket();
   void CopyFromRawBuffer(void *buffer);
   uint8_t *GetPayloadBuffer();
   uint32_t GetPayloadSize();
@@ -22,36 +22,36 @@ private:
   void _Init();
 };
 
-OperatorPacket::OperatorPacket() {
+MasterPacket::MasterPacket() {
   _AllocBuffer(1);
   _Init();
 }
 
-void OperatorPacket::_Init() {
+void MasterPacket::_Init() {
   _order = GetBuffer();
   _packetSize = 1;
 }
 
-void OperatorPacket::CopyFromRawBuffer(void *buffer) {
+void MasterPacket::CopyFromRawBuffer(void *buffer) {
   _SetBuffer(buffer);
   _Init();
 }
 
-inline uint8_t *OperatorPacket::GetPayloadBuffer() { return _order; }
+inline uint8_t *MasterPacket::GetPayloadBuffer() { return _order; }
 
-inline uint32_t OperatorPacket::GetPayloadSize() { return _packetSize; }
+inline uint32_t MasterPacket::GetPayloadSize() { return _packetSize; }
 
-inline int OperatorPacket::GetPacketSize() { return _packetSize; }
+inline int MasterPacket::GetPacketSize() { return _packetSize; }
 
-void OperatorPacket::Read(IStream *stream) {
+void MasterPacket::Read(IStream *stream) {
   stream->Read(_order, _packetSize);
 }
 
-bool OperatorPacket::PacketIsOk() { return true; }
+bool MasterPacket::PacketIsOk() { return true; }
 
-class ROVPacket : public Packet {
+class SlavePacket : public Packet {
 public:
-  ROVPacket();
+  SlavePacket();
   void CopyFromRawBuffer(void *buffer);
   uint8_t *GetPayloadBuffer();
   uint32_t GetPayloadSize();
@@ -75,75 +75,75 @@ private:
   bool _CheckFCS();
 };
 
-ROVPacket::ROVPacket() {
+SlavePacket::SlavePacket() {
   _packetSize = PRE_SIZE + PAYLOAD_SIZE + FCS_SIZE;
   _AllocBuffer(_packetSize);
   _Init();
 }
 
-void ROVPacket::_Init() {
+void SlavePacket::_Init() {
   _pre = GetBuffer();
   *_pre = 0x55;
   _payload = _pre + PRE_SIZE;
   _fcs = _payload + PAYLOAD_SIZE;
 }
 
-void ROVPacket::CopyFromRawBuffer(void *buffer) {
+void SlavePacket::CopyFromRawBuffer(void *buffer) {
   _SetBuffer(buffer);
   _Init();
 }
 
-inline uint8_t *ROVPacket::GetPayloadBuffer() { return _payload; }
+inline uint8_t *SlavePacket::GetPayloadBuffer() { return _payload; }
 
-inline uint32_t ROVPacket::GetPayloadSize() { return PAYLOAD_SIZE; }
+inline uint32_t SlavePacket::GetPayloadSize() { return PAYLOAD_SIZE; }
 
-inline int ROVPacket::GetPacketSize() { return _packetSize; }
+inline int SlavePacket::GetPacketSize() { return _packetSize; }
 
-void ROVPacket::Read(IStream *stream) {
+void SlavePacket::Read(IStream *stream) {
   stream->WaitFor(_pre, PRE_SIZE);
   stream->Read(_payload, PAYLOAD_SIZE + FCS_SIZE);
 }
 
-void ROVPacket::GetPayload(void *copy) { memcpy(copy, _payload, PAYLOAD_SIZE); }
+void SlavePacket::GetPayload(void *copy) { memcpy(copy, _payload, PAYLOAD_SIZE); }
 
-void ROVPacket::SetPayload(void *data, int size) {
+void SlavePacket::SetPayload(void *data, int size) {
   memset(_payload, 0, PAYLOAD_SIZE);
   memcpy(_payload, data, size);
 }
 
-void ROVPacket::_SetFCS() {
+void SlavePacket::_SetFCS() {
   uint16_t crc = Checksum::crc16(_payload, PAYLOAD_SIZE);
   *_fcs = (uint8_t)(crc >> 8);
   *(_fcs + 1) = (uint8_t)(crc & 0xff);
 }
 
-bool ROVPacket::_CheckFCS() {
+bool SlavePacket::_CheckFCS() {
   uint16_t crc = Checksum::crc16(_payload, PAYLOAD_SIZE + FCS_SIZE);
   return crc == 0;
 }
-bool ROVPacket::PacketIsOk() { return _CheckFCS(); }
+bool SlavePacket::PacketIsOk() { return _CheckFCS(); }
 
 class ROVPacketBuilder : public IPacketBuilder {
 public:
   PacketPtr CreateFromBuffer(void *buffer) {
-    auto pkt = CreateObject<ROVPacket>();
+    auto pkt = CreateObject<SlavePacket>();
     pkt->CopyFromRawBuffer(buffer);
     return pkt;
   }
   PacketPtr Create(){
-      return CreateObject<ROVPacket>();
+      return CreateObject<SlavePacket>();
   }
 };
 
-class OperatorPacketBuilder : public IPacketBuilder {
+class MasterPacketBuilder : public IPacketBuilder {
 public:
   PacketPtr CreateFromBuffer(void *buffer) {
-    auto pkt = CreateObject<OperatorPacket>();
+    auto pkt = CreateObject<MasterPacket>();
     pkt->CopyFromRawBuffer(buffer);
     return pkt;
   }
   PacketPtr Create(){
-      return CreateObject<OperatorPacket>();
+      return CreateObject<MasterPacket>();
   }
 };
 }

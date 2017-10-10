@@ -69,7 +69,7 @@ int main(int argc, char **argv) {
 
   auto portBaudrate = SerialPortStream::BAUD_2400;
 
-  std::shared_ptr<S100Stream> stream =
+  Ptr<S100Stream> stream =
       CreateObject<S100Stream>(modemPort, portBaudrate, modemBaudrate);
   ;
 
@@ -82,8 +82,8 @@ int main(int argc, char **argv) {
   }
   stream->LogConfig();
 
-  std::shared_ptr<ROVPacket> rxpkt = CreateObject<ROVPacket>();
-  auto txpkt = CreateObject<OperatorPacket>();
+  Ptr<SlavePacket> rxpkt = CreateObject<SlavePacket>();
+  auto txpkt = CreateObject<MasterPacket>();
 
   stream->Open();
   std::thread txwork([txpkt, stream]() {
