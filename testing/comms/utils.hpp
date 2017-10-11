@@ -160,5 +160,56 @@ public:
   }
   PacketPtr Create() { return CreateObject<MasterPacket>(); }
 };
+
+class OneBytePacket : public Packet {
+public:
+  OneBytePacket();
+  void CopyFromRawBuffer(void *buffer);
+  uint8_t *GetPayloadBuffer();
+  uint32_t GetPayloadSize();
+  int GetPacketSize();
+  void Read(IStream *comms);
+
+  bool PacketIsOk();
+
+  void UpdateFCS();
+
+private:
+  uint8_t *_pre;
+  int _packetSize;
+  void _Init();
+  const static int  PRE_SIZE = 1;
+
+  bool _CheckFCS();
+};
+
+OneBytePacket::OneBytePacket() {
+  _packetSize = PRE_SIZE;
+  _AllocBuffer(_packetSize);
+  _Init();
+}
+
+void OneBytePacket::_Init() {
+  _pre = GetBuffer();
+}
+
+void OneBytePacket::CopyFromRawBuffer(void *buffer) {
+  _SetBuffer(buffer);
+  _Init();
+}
+
+inline uint8_t *OneBytePacket::GetPayloadBuffer() { return _pre; }
+
+inline uint32_t OneBytePacket::GetPayloadSize() { return _packetSize; }
+
+inline int OneBytePacket::GetPacketSize() { return _packetSize; }
+
+void OneBytePacket::Read(IStream *stream) {
+  stream->Read(_pre, PRE_SIZE);
+}
+
+void OneBytePacket::UpdateFCS() {  }
+bool OneBytePacket::_CheckFCS() { return true;}
+bool OneBytePacket::PacketIsOk() { return _CheckFCS(); }
 }
 #endif

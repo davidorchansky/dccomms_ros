@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
   }
   stream->LogConfig();
 
-  Ptr<MasterPacket> rxpkt = CreateObject<MasterPacket>();
+  Ptr<OneBytePacket> rxpkt = CreateObject<OneBytePacket>();
   Ptr<SlavePacket> txpkt = CreateObject<SlavePacket>();
 
   stream->Open();
@@ -86,14 +86,14 @@ int main(int argc, char **argv) {
       if (rxpkt->PacketIsOk()) {
         Log->Info("Heartbeat received ({} bytes): '{}'", rxpkt->GetPacketSize(),
                   (char)*rxpkt->GetPayloadBuffer());
-        const char seq = *rxpkt->GetPayloadBuffer();
-        std::string msg = seq + std::string(": Hello world!") +
-                          std::string("; 1234567890 1234567890");
-        txpkt->SetPayload(msg.c_str(), msg.length());
-        txpkt->UpdateFCS();
-        Log->Info("Transmitting packet with data ({} bytes): '{}'",
-                  txpkt->GetPacketSize(), txpkt->GetPayloadBuffer());
-        *stream << txpkt;
+        //        const char seq = *rxpkt->GetPayloadBuffer();
+        //        std::string msg = seq + std::string(": Hello world!") +
+        //                          std::string("; 1234567890 1234567890");
+        //        txpkt->SetPayload(msg.c_str(), msg.length());
+        //        txpkt->UpdateFCS();
+        //        Log->Info("Transmitting packet with data ({} bytes): '{}'",
+        //                  txpkt->GetPacketSize(), txpkt->GetPayloadBuffer());
+        //        *stream << txpkt;
       } else {
         Log->Warn("Packet received with errors");
       }

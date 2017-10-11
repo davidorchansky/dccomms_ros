@@ -74,8 +74,7 @@ int main(int argc, char **argv) {
   }
   stream->LogConfig();
 
-  Ptr<SlavePacket> rxpkt = CreateObject<SlavePacket>();
-  Ptr<MasterPacket> txpkt = CreateObject<MasterPacket>();
+  Ptr<OneBytePacket> txpkt = CreateObject<OneBytePacket>();
 
   stream->Open();
   std::thread txwork([txpkt, stream]() {
@@ -87,10 +86,26 @@ int main(int argc, char **argv) {
                 txpkt->GetPacketSize(), (char)*txpkt->GetPayloadBuffer());
       *stream << txpkt;
       i = (i + 1) % 10;
-      std::this_thread::sleep_for(std::chrono::milliseconds(500));
     }
   });
 
+  //  Ptr<MasterPacket> txpkt = CreateObject<MasterPacket>();
+
+  //  stream->Open();
+  //  std::thread txwork([txpkt, stream]() {
+  //    int i = 0;
+  //    while (1) {
+  //      *txpkt->GetPayloadBuffer() = '0' + i;
+  //      txpkt->UpdateFCS();
+  //      Log->Info("Transmitting Heartbeat ({} bytes): '{}'",
+  //                txpkt->GetPacketSize(), (char)*txpkt->GetPayloadBuffer());
+  //      *stream << txpkt;
+  //      i = (i + 1) % 10;
+  //      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  //    }
+  //  });
+
+  Ptr<SlavePacket> rxpkt = CreateObject<SlavePacket>();
   std::thread rxwork([rxpkt, stream]() {
     while (1) {
       *stream >> rxpkt;
