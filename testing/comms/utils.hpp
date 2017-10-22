@@ -12,7 +12,7 @@ public:
   uint8_t *GetPayloadBuffer();
   uint32_t GetPayloadSize();
   int GetPacketSize();
-  void Read(IStream *comms);
+  void Read(Stream *comms);
 
   bool PacketIsOk();
 
@@ -53,7 +53,7 @@ inline uint32_t MasterPacket::GetPayloadSize() { return _packetSize; }
 
 inline int MasterPacket::GetPacketSize() { return _packetSize; }
 
-void MasterPacket::Read(IStream *stream) {
+void MasterPacket::Read(Stream *stream) {
   stream->WaitFor(_pre, PRE_SIZE);
   stream->Read(_order, CODE_SIZE);
   stream->Read(_fcs, FCS_SIZE);
@@ -70,7 +70,7 @@ public:
   uint8_t *GetPayloadBuffer();
   uint32_t GetPayloadSize();
   int GetPacketSize();
-  void Read(IStream *comms);
+  void Read(Stream *comms);
 
   bool PacketIsOk();
 
@@ -114,7 +114,7 @@ inline uint32_t SlavePacket::GetPayloadSize() { return PAYLOAD_SIZE; }
 
 inline int SlavePacket::GetPacketSize() { return _packetSize; }
 
-void SlavePacket::Read(IStream *stream) {
+void SlavePacket::Read(Stream *stream) {
   stream->WaitFor(_pre, PRE_SIZE);
   stream->Read(_payload, PAYLOAD_SIZE + FCS_SIZE);
 }
@@ -168,7 +168,7 @@ public:
   uint8_t *GetPayloadBuffer();
   uint32_t GetPayloadSize();
   int GetPacketSize();
-  void Read(IStream *comms);
+  void Read(Stream *comms);
 
   bool PacketIsOk();
 
@@ -204,7 +204,7 @@ inline uint32_t OneBytePacket::GetPayloadSize() { return _packetSize; }
 
 inline int OneBytePacket::GetPacketSize() { return _packetSize; }
 
-void OneBytePacket::Read(IStream *stream) {
+void OneBytePacket::Read(Stream *stream) {
   stream->Read(_pre, PRE_SIZE);
 }
 
