@@ -259,8 +259,8 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
 
   if (!exists) {
     auto commsDeviceService =
-        dccomms::CommsDeviceService::BuildCommsDeviceService(_packetBuilder,
-                                                             IPHY_TYPE_PHY);
+        dccomms::CommsDeviceService::BuildCommsDeviceService(
+            _packetBuilder, CommsDeviceService::IPHY_TYPE_PHY);
 
     commsDeviceService->SetCommsDeviceId(newDevice);
     auto node = ROSCommsDevice::BuildCommsDevice(this, commsDeviceService);
