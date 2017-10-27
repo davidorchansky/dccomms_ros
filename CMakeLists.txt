@@ -173,7 +173,7 @@ target_link_libraries(${S100BRIDGE} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/ROSCommsDevice.cpp
         src/simulator/ROSCommsSimulator.cpp
-        src/simulator/ROSCommsChannelState.cpp
+        src/simulator/CustomCommsChannel.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})

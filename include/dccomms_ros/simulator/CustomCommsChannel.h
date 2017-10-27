@@ -10,20 +10,20 @@ using namespace std;
 
 namespace dccomms_ros {
 
-class CommsChannelState;
-typedef std::shared_ptr<CommsChannelState> CommsChannelStatePtr;
+class CustomCommsChannel;
+typedef std::shared_ptr<CustomCommsChannel> CustomCommsChannelPtr;
 
-class CommsChannelState {
+class CustomCommsChannel {
   typedef std::normal_distribution<double> NormalDist;
   typedef std::default_random_engine RandEngGen;
 
   typedef std::uniform_real_distribution<double> UniformRealDist;
 
 public:
-  static CommsChannelStatePtr BuildCommsChannelState();
+  static CustomCommsChannelPtr BuildCommsChannelState();
 
-  CommsChannelState();
-  CommsChannelState(int delay);
+  CustomCommsChannel();
+  CustomCommsChannel(int delay);
 
   int SetDelay(int delay);
   int GetDelay();

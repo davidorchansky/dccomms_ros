@@ -85,7 +85,7 @@ void ROSCommsDevice::_TxWork() {
     if (txdlf->PacketIsOk()) {
       // PACKET OK
       // std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-      _sim->TransmitFrame(_devType, txdlf);
+      _sim->TransmitFrame(std::shared_ptr<ROSCommsDevice>(this), txdlf);
     } else {
       // PACKET WITH ERRORS
       // Log->critical("TX: INTERNAL ERROR: frame received with errors from the
