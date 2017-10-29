@@ -39,9 +39,9 @@ int main(int argc, char **argv) {
   ros::NodeHandle nh("~");
 
   auto packetBuilder =
-      CreateObject<DataLinkFramePacketBuilder>(DataLinkFrame::crc16);
+      dccomms::CreateObject<DataLinkFramePacketBuilder>(DataLinkFrame::crc16);
 
-  auto sim = CreateObject<ROSCommsSimulator>(nh, packetBuilder);
+  auto sim = dccomms::CreateObject<ROSCommsSimulator>(nh, packetBuilder);
   sim->SetLogName("netsim");
   sim->LogToFile("netsim_log");
 

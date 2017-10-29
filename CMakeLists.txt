@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(dccomms_ros CXX)
 
+set(CMAKE_VERBOSE_MAKEFILE ON)
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -170,40 +172,75 @@ target_link_libraries(${S100BRIDGE} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 #######     TO ENABLE netsim BUILD    #########
 ###############################################
 
+
+
+SET(NS3_BUILD "modules/ns-3-dev/build/")
+link_directories(${NS3_BUILD})
+
+#find_library(NS3_CORE_LIB libns3-dev-core-debug.so)
+#find_library(NS3_NETWORK_LIB libns3-dev-network-debug.so)
+#find_library(NS3_ENERGY_LIB libns3-dev-energy-debug.so)
+#find_library(NS3_MOBILITY_LIB libns3-dev-mobility-debug.so)
+#find_library(NS3_INTERNET_LIB libns3-dev-internet-debug.s)
+#find_library(NS3_INTERNET_APPS_LIB libns3-dev-internet-apps-debug.so)
+#find_library(NS3_AQUASIM_LIB libns3-dev-aqua-sim-ng-debug.so)
+#SET(NS3_LIBS
+#    ${NS3_AQUASIM_LIB}
+#    ${NS3_NETWORK_LIB}
+#    ${NS3_CORE_LIB}
+#)
+
+SET(NS3_BUILD "/home/diego/programming/catkin_ws/src/dccomms_ros/modules/ns-3-dev/build/")
+SET(NS3_LIBS
+    libns3-dev-antenna-debug.so                libns3-dev-flow-monitor-test-debug.so      libns3-dev-propagation-debug.so
+    libns3-dev-antenna-test-debug.so           libns3-dev-internet-apps-debug.so          libns3-dev-propagation-test-debug.so
+    libns3-dev-aodv-debug.so                   libns3-dev-internet-apps-test-debug.so     libns3-dev-sixlowpan-debug.so
+    libns3-dev-aodv-test-debug.so              libns3-dev-internet-debug.so               libns3-dev-sixlowpan-test-debug.so
+    libns3-dev-applications-debug.so           libns3-dev-internet-test-debug.so          libns3-dev-spectrum-debug.so
+    libns3-dev-applications-test-debug.so      libns3-dev-lr-wpan-debug.so                libns3-dev-spectrum-test-debug.so
+    libns3-dev-aqua-sim-ng-debug.so            libns3-dev-lr-wpan-test-debug.so           libns3-dev-stats-debug.so
+    libns3-dev-aqua-sim-ng-test-debug.so       libns3-dev-lte-debug.so                    libns3-dev-stats-test-debug.so
+    libns3-dev-bridge-debug.so                 libns3-dev-lte-test-debug.so               libns3-dev-tap-bridge-debug.so
+    libns3-dev-buildings-debug.so              libns3-dev-mesh-debug.so                   libns3-dev-test-debug.so
+    libns3-dev-buildings-test-debug.so         libns3-dev-mesh-test-debug.so              libns3-dev-test-test-debug.so
+    libns3-dev-config-store-debug.so           libns3-dev-mobility-debug.so               libns3-dev-topology-read-debug.so
+    libns3-dev-core-debug.so                   libns3-dev-mobility-test-debug.so          libns3-dev-topology-read-test-debug.so
+    libns3-dev-core-test-debug.so              libns3-dev-mpi-debug.so                    libns3-dev-traffic-control-debug.so
+    libns3-dev-csma-debug.so                   libns3-dev-netanim-debug.so                libns3-dev-traffic-control-test-debug.so
+    libns3-dev-csma-layout-debug.so            libns3-dev-netanim-test-debug.so           libns3-dev-uan-debug.so
+    libns3-dev-dsdv-debug.so                   libns3-dev-network-debug.so                libns3-dev-uan-test-debug.so
+    libns3-dev-dsdv-test-debug.so              libns3-dev-network-test-debug.so           libns3-dev-virtual-net-device-debug.so
+    libns3-dev-dsr-debug.so                    libns3-dev-nix-vector-routing-debug.so     libns3-dev-wave-debug.so
+    libns3-dev-dsr-test-debug.so               libns3-dev-olsr-debug.so                   libns3-dev-wave-test-debug.so
+    libns3-dev-energy-debug.so                 libns3-dev-olsr-test-debug.so              libns3-dev-wifi-debug.so
+    libns3-dev-energy-test-debug.so            libns3-dev-point-to-point-debug.so         libns3-dev-wifi-test-debug.so
+    libns3-dev-fd-net-device-debug.so          libns3-dev-point-to-point-layout-debug.so  libns3-dev-wimax-debug.so
+    libns3-dev-flow-monitor-debug.so           libns3-dev-point-to-point-test-debug.so    libns3-dev-wimax-test-debug.so
+)
+
+
+message("NS3 modules: ${NS3_LIBS}")
 SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/ROSCommsDevice.cpp
         src/simulator/ROSCommsSimulator.cpp
-        src/simulator/CustomCommsChannel.cpp
+        src/simulator/AcousticCommsChannel.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}  ${NS3_LIBS} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 
-SET(NS3_BUILD "modules/ns-3-dev/build")
-find_library(NS3_CORE_LIB libns3-dev-core-debug.so HINTS ${NS3_BUILD})
-find_library(NS3_NETWORK_LIB libns3-dev-network-debug.so HINTS ${NS3_BUILD})
-SET(NS3_LIBS
-    ${NS3_CORE_LIB}
-    ${NS3_NETWORK_LIB}
-    )
 
 SET(SIM netsim)
 add_executable (${SIM} src/simulator/main/netsim.cpp)
-target_include_directories(${SIM} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${SIM} ${PROJECT_NAME} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES}
-     ${NS3_LIBS})
+target_link_libraries(${SIM} ${PROJECT_NAME})
 
-add_executable (ns3-testing testing/simulator/ns3-testing.cpp)
 #target_compile_options(pruebas PUBLIC "")
 #https://cmake.org/cmake/help/v3.4/command/find_library.html
 #https://stackoverflow.com/questions/31438916/cmake-cannot-find-library-using-link-directories
-
-target_link_libraries(ns3-testing ${NS3_LIBS} ${PROJECT_NAME})
-target_include_directories(ns3-testing PUBLIC
-    modules/ns-3-dev/build
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    )
+add_executable (ns3-testing testing/simulator/ns3-testing.cpp)
+target_link_libraries(ns3-testing ${PROJECT_NAME})
+target_include_directories(ns3-testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 ###############################################
 ############ END netsim BUILD #################

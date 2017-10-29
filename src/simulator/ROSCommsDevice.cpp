@@ -1,17 +1,17 @@
 #include <cstdio>
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
+#include <dccomms_ros_msgs/types.h>
 
 namespace dccomms_ros {
-ROSCommsDevice::ROSCommsDevice(ROSCommsSimulator *s, CommsDeviceServicePtr d)
-    : _sim(s), _device(d), _txserv(this) {
-  auto packetBuilder = s->GetPacketBuilder();
-  _txdlf = DataLinkFrame::BuildDataLinkFrame(DataLinkFrame::crc16);
+
+ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr pb)
+    : _sim(s), _pb(pb), _txserv(this) {
+  _device = CommsDeviceService::BuildCommsDeviceService(
+      pb, CommsDeviceService::IPHY_TYPE_PHY);
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
-  _name = "node";
-  SetLogName(_name);
-  _device->LogToConsole(false);
 }
+
 void ROSCommsDevice::StartDeviceService() {
   _device->Start();
   _device->SetPhyLayerState(CommsDeviceService::READY);
@@ -25,55 +25,21 @@ void ROSCommsDevice::ReceiveFrame(PacketPtr dlf) {
   _receiveFrameMutex.unlock();
 }
 
-void ROSCommsDevice::SetName(const std::string name) { _name = name; }
+void ROSCommsDevice::SetChannel(CommsChannelPtr channel) { _channel = channel; }
+void ROSCommsDevice::SetMaxBitRate(uint32_t v) { _maxBitRate = v; }
+uint32_t ROSCommsDevice::GetMaxBitRate() { return _maxBitRate; }
 
-std::string ROSCommsDevice::GetName() { return _name; }
+void ROSCommsDevice::SetDccommsId(const std::string name) { _name = name; }
 
-void ROSCommsDevice::SetTrTime(float mean, float sd) {
-  _trTimeMean = mean;
-  _trTimeSd = sd;
-}
+std::string ROSCommsDevice::GetDccommsId() { return _name; }
 
-void ROSCommsDevice::GetTrTime(float &mean, float &sd) {
-  mean = _trTimeMean;
-  sd = _trTimeSd;
-}
-
-void ROSCommsDevice::SetMinPrTime(float prTime) { _minPrTime = prTime; }
-
-void ROSCommsDevice::SetDevType(int type) { _devType = type; }
+void ROSCommsDevice::SetDevType(DEV_TYPE type) { _devType = type; }
 
 int ROSCommsDevice::GetDevType() { return _devType; }
-
-float ROSCommsDevice::GetMinPrTime() { return _minPrTime; }
-
-void ROSCommsDevice::SetPrTimeInc(float inc) { _prTimeIncPerMeter = inc; }
-
-float ROSCommsDevice::GetPrTimeInc() { return _prTimeIncPerMeter; }
-
-void ROSCommsDevice::SetMinPktErrorRate(double minPktErrorRate) {
-  _minPktErrorRate = minPktErrorRate;
-}
-
-double ROSCommsDevice::GetMinPktErrorRate() { return _minPktErrorRate; }
-
-void ROSCommsDevice::SetPktErrorRateInc(double inc) {
-  _pktErrorRateIncPerMeter = inc;
-}
-
-double ROSCommsDevice::GetPktErrorRateInc() { return _pktErrorRateIncPerMeter; }
 
 void ROSCommsDevice::SetMac(int mac) { _mac = mac; }
 
 int ROSCommsDevice::GetMac() { return _mac; }
-
-void ROSCommsDevice::SetMaxDistance(uint32_t d) { _maxDistance = d; }
-
-uint32_t ROSCommsDevice::GetMaxDistance() { return _maxDistance; }
-
-void ROSCommsDevice::SetMinDistance(uint32_t d) { _minDistance = d; }
-
-uint32_t ROSCommsDevice::GetMinDistance() { return _minDistance; }
 
 void ROSCommsDevice::_TxWork() {
   _device->WaitForFramesFromRxFifo();
@@ -133,20 +99,20 @@ std::string ROSCommsDevice::GetTfFrameId() { return _tfFrameId; }
 std::string ROSCommsDevice::ToString() {
   int maxBuffSize = 1024;
   char buff[maxBuffSize];
-  int n =
-      snprintf(buff, maxBuffSize,
-               "\tID ........................ '%s'\n"
-               "\tMAC ....................... %d\n"
-               "\tTransmission time ......... %f ms/byte (std = %f ms/byte)\n"
-               "\tMin. propagation time ..... %f ms\n"
-               "\tPropagation time inc. ..... %f ms/m\n"
-               "\tPacket Error Rate ......... %f%%\n"
-               "\tPacket Error Rate inc. .... %f%% per meter\n"
-               "\tDevice type ............... %d\n"
-               "\tFrame ID: ................. '%s'",
-               _name.c_str(), _mac, _trTimeMean, _trTimeSd, _minPrTime,
-               _prTimeIncPerMeter, _minPktErrorRate * 100,
-               _pktErrorRateIncPerMeter * 100, _devType, _tfFrameId.c_str());
+  string channelLinked;
+  if (_channel)
+    channelLinked = "Type: " + ChannelType2String(_channel->GetType()) +
+                    " ; Id: " + to_string(_channel->GetId());
+  else
+    channelLinked = "not linked";
+
+  int n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
+                                      "\tMAC ....................... %d\n"
+                                      "\tDevice type ............... %s\n"
+                                      "\tFrame ID: ................. '%s'\n"
+                                      "\tChannel: .................. '%s'",
+                   _name.c_str(), _mac, DevType2String(_devType).c_str(),
+                   _tfFrameId.c_str(), channelLinked.c_str());
   return std::string(buff);
 }
 }

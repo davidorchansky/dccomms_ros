@@ -1,18 +1,21 @@
-#ifndef WHROVSIMULATOR_H
-#define WHROVSIMULATOR_H
+#ifndef DCCOMMS_ROS_ROSCOMMSSIMULATOR_H_
+#define DCCOMMS_ROS_ROSCOMMSSIMULATOR_H_
 
 #include <cpplogging/Loggable.h>
 #include <dccomms/dccomms.h>
 #include <dccomms_ros/simulator/CommsChannel.h>
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
+#include <dccomms_ros/simulator/VirtualDeviceLink.h>
 #include <functional>
 #include <memory>
 #include <random>
 #include <unordered_map>
 
 // ROS
+#include <dccomms_ros_msgs/AddChannel.h>
 #include <dccomms_ros_msgs/AddDevice.h>
 #include <dccomms_ros_msgs/CheckDevice.h>
+#include <dccomms_ros_msgs/LinkDeviceToChannel.h>
 #include <dccomms_ros_msgs/RemoveDevice.h>
 #include <ros/ros.h>
 // end ROS
@@ -22,17 +25,15 @@ using namespace cpplogging;
 
 namespace dccomms_ros {
 
-typedef std::unordered_map<int, ROSCommsDevicePtr> NodeMap;
+typedef std::unordered_map<int, ROSCommsDevicePtr> Mac2DevMap;
+typedef std::shared_ptr<Mac2DevMap> Mac2DevMapPtr;
+typedef std::unordered_map<int, Mac2DevMapPtr> Type2DevMapMap;
 
-typedef std::shared_ptr<NodeMap> NodeMapPtr;
+typedef std::unordered_map<std::string, ROSCommsDevicePtr> DccommsDevMap;
 
-typedef std::unordered_map<int, NodeMapPtr> NodeTypeMap;
-
-typedef std::unordered_map<std::string, //"class_txdir_rxdir"
-                           VirtualDeviceLinkPtr>
-    ChannelMap;
-
-typedef std::unordered_map<std::string, ROSCommsDevicePtr> IdDevMap;
+typedef std::unordered_map<int, CommsChannelPtr> Id2ChannelMap;
+typedef std::shared_ptr<Id2ChannelMap> Id2ChannelMapPtr;
+typedef std::unordered_map<int, Id2ChannelMapPtr> Type2ChannelMapMap;
 
 class ROSCommsSimulator;
 
@@ -43,13 +44,6 @@ public:
   ROSCommsSimulator(ros::NodeHandle &rosnode, PacketBuilderPtr packetBuilder);
   void TransmitFrame(ROSCommsDevicePtr dev, PacketPtr dlf);
   void Start();
-
-  virtual void SetLogName(std::string name);
-  virtual void SetLogLevel(cpplogging::LogLevel);
-  virtual void FlushLog();
-  virtual void FlushLogOn(LogLevel);
-  virtual void LogToConsole(bool);
-  virtual void LogToFile(const string &filename);
 
   PacketBuilderPtr GetPacketBuilder();
 
@@ -83,34 +77,40 @@ private:
                     dccomms_ros_msgs::CheckDevice::Response &res);
   bool _RemoveDevice(dccomms_ros_msgs::RemoveDevice::Request &req,
                      dccomms_ros_msgs::RemoveDevice::Response &res);
-  void _PropagateFrame(PacketPtr dlf, int delay, VirtualDeviceLinkPtr channel);
-  void _DeliverFrame(PacketPtr dlf, VirtualDeviceLinkPtr channel);
+  bool _LinkDevToChannel(dccomms_ros_msgs::LinkDeviceToChannel::Request &req,
+                         dccomms_ros_msgs::LinkDeviceToChannel::Response &res);
+  bool _AddChannel(dccomms_ros_msgs::AddChannel::Request &req,
+                   dccomms_ros_msgs::AddChannel::Response &res);
+  void _PropagateFrame(PacketPtr dlf, int delay, ROSCommsDevicePtr dst);
+
+  void _DeliverFrame(PacketPtr dlf, ROSCommsDevicePtr dst);
 
   void _AddDeviceToSet(std::string iddev, ROSCommsDevicePtr dev);
   bool _DeviceExists(std::string iddev);
   void _RemoveDeviceFromSet(std::string iddev);
 
-  void _RemoveChannel(std::string channelKey);
-
   ROSCommsDevicePtr _GetDevice(std::string iddev);
-  VirtualDeviceLinkPtr _GetChannel(std::string channelKey);
 
-  ros::ServiceServer _addDevService, _checkDevService, _removeDevService;
+  ros::ServiceServer _addDevService, _checkDevService, _removeDevService,
+      _linkDeviceToChannelService;
   ros::NodeHandle &_rosNode;
-  NodeTypeMap _nodeTypeMap;
-  ChannelMap _channels;
-  IdDevMap _idDevMap;
 
   std::mutex _devLinksMutex, _idDevMapMutex, _channelsMutex;
 
   PacketBuilderPtr _packetBuilder;
   ServiceThread<ROSCommsSimulator> _linkUpdaterWorker;
   void _LinkUpdaterWork();
-  void _UpdateChannelStateFromRange(VirtualDeviceLinkPtr chn, double range,
-                                    bool log = true);
+  void _UpdateDevLinkFromRange(VirtualDeviceLinkPtr chn, double range,
+                               bool log = true);
 
   ////////////////////
   VirtualDevicesLinks _devLinks;
+  Type2DevMapMap _type2DevMap;
+  DccommsDevMap _dccommsDevMap;
+  Type2ChannelMapMap _type2ChannelMapMap;
+
+  //////////
+  ROSCommsSimulatorPtr _this;
 };
 }
 #endif // WHROVSIMULATOR_H

@@ -1,9 +1,11 @@
 #include <dccomms/CommsDeviceService.h>
 #include <dccomms/TransportPDU.h>
 #include <dccomms/Utils.h>
+#include <dccomms_ros/simulator/AcousticCommsChannel.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
 #include <dccomms_ros_msgs/AddDevice.h>
 #include <dccomms_ros_msgs/CheckDevice.h>
+#include <dccomms_ros_msgs/types.h>
 #include <iostream>
 #include <list>
 #include <regex>
@@ -19,7 +21,8 @@ using namespace dccomms_ros_msgs;
 namespace dccomms_ros {
 ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle &rosNode,
                                      PacketBuilderPtr packetBuilder)
-    : _rosNode(rosNode), _linkUpdaterWorker(this) {
+    : _rosNode(rosNode), _linkUpdaterWorker(this),
+      _this(ROSCommsSimulatorPtr(this)) {
   _packetBuilder = packetBuilder;
   SetLogName("CommsSimulator");
   LogToConsole(true);
@@ -75,25 +78,17 @@ void ROSCommsSimulator::_Init() {
 void ROSCommsSimulator::_AddDeviceToSet(std::string iddev,
                                         ROSCommsDevicePtr dev) {
   _idDevMapMutex.lock();
-  _idDevMap[iddev] = dev;
+  _dccommsDevMap[iddev] = dev;
   _idDevMapMutex.unlock();
 }
 
 void ROSCommsSimulator::_RemoveDeviceFromSet(std::string iddev) {
   _idDevMapMutex.lock();
-  auto iter = _idDevMap.find(iddev);
-  if (iter != _idDevMap.end()) {
-    _idDevMap.erase(iter);
+  auto iter = _dccommsDevMap.find(iddev);
+  if (iter != _dccommsDevMap.end()) {
+    _dccommsDevMap.erase(iter);
   }
   _idDevMapMutex.unlock();
-}
-
-VirtualDeviceLinkPtr ROSCommsSimulator::_GetChannel(std::string channelKey) {
-  VirtualDeviceLinkPtr res;
-  _channelsMutex.lock();
-  res = _channels[channelKey];
-  _channelsMutex.unlock();
-  return res;
 }
 
 int ROSCommsSimulator::_GetSrcAddr(PacketPtr pkt) { return _getSrcAddr(pkt); }
@@ -103,27 +98,14 @@ int ROSCommsSimulator::_GetDstAddr(PacketPtr pkt) { return _getDstAddr(pkt); }
 void ROSCommsSimulator::TransmitFrame(ROSCommsDevicePtr dev, PacketPtr dlf) {}
 
 void ROSCommsSimulator::_PropagateFrame(PacketPtr dlf, int delay,
-                                        VirtualDeviceLinkPtr channel) {
+                                        ROSCommsDevicePtr dst) {
 
   Simulator::Schedule(
       MilliSeconds(delay),
-      MakeEvent(&ROSCommsSimulator::_DeliverFrame, this, dlf, channel));
+      MakeEvent(&ROSCommsSimulator::_DeliverFrame, this, dlf, dst));
 }
 
-void ROSCommsSimulator::_DeliverFrame(PacketPtr dlf,
-                                      VirtualDeviceLinkPtr channel) {
-  auto dstdir = channel->GetDevice0()->GetMac();
-
-  auto rxNode = channel->GetDevice1();
-  auto devType = rxNode->GetDevType();
-  if (dlf->PacketIsOk()) {
-    ROSCommsDevicePtr dstNode = (*_nodeTypeMap[devType])[dstdir];
-    _ReceivePDUCb(devType, dlf);
-    dstNode->ReceiveFrame(dlf);
-  } else {
-    _ErrorPDUCb(devType, dlf);
-  }
-}
+void ROSCommsSimulator::_DeliverFrame(PacketPtr dlf, ROSCommsDevicePtr dst) {}
 
 bool ROSCommsSimulator::_CheckDevice(CheckDevice::Request &req,
                                      CheckDevice::Response &res) {
@@ -134,28 +116,119 @@ bool ROSCommsSimulator::_CheckDevice(CheckDevice::Request &req,
 
 bool ROSCommsSimulator::_DeviceExists(std::string iddev) {
   bool exists;
+  auto devIt = _dccommsDevMap.find(iddev);
+  if (devIt != _dccommsDevMap.end()) {
+    exists = true;
+  }
   return exists;
 }
 
 ROSCommsDevicePtr ROSCommsSimulator::_GetDevice(std::string iddev) {
   ROSCommsDevicePtr dev;
+  auto devIt = _dccommsDevMap.find(iddev);
+  if (devIt != _dccommsDevMap.end()) {
+    dev = devIt->second;
+  }
   return dev;
 }
 
 bool ROSCommsSimulator::_RemoveDevice(RemoveDevice::Request &req,
                                       RemoveDevice::Response &res) {
-
   return true;
 }
 
-void ROSCommsSimulator::_RemoveChannel(std::string channelKey) {
-  _channelsMutex.lock();
-  _channels.erase(channelKey);
-  _channelsMutex.unlock();
+bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
+                                   AddDevice::Response &res) {
+  auto dccommsId = req.dccommsId;
+  DEV_TYPE deviceType = (DEV_TYPE)req.type;
+  auto mac = req.mac;
+  auto frameId = req.frameId;
+  auto maxBitRate = req.maxBitRate;
+  // auto energyModel = req.energyModel;
+
+  Log->info("Add device request received");
+
+  bool exists = false;
+  auto mac2DevMapIt = _type2DevMap.find(deviceType);
+  if (mac2DevMapIt != _type2DevMap.end()) {
+    Mac2DevMapPtr mac2DevMap = mac2DevMapIt->second;
+    auto devIt = mac2DevMap->find(mac);
+    if (devIt != mac2DevMap->end()) {
+      exists = true;
+      Log->error("Unable to add the device. A net device with the same MAC "
+                 "already exists: '{}'",
+                 devIt->second->GetDccommsId());
+    }
+  } else {
+    Mac2DevMapPtr mac2DevMap(new Mac2DevMap());
+    _type2DevMap[deviceType] = mac2DevMap;
+  }
+
+  if (!exists) {
+    auto devIt = _dccommsDevMap.find(dccommsId);
+    if (devIt != _dccommsDevMap.end()) {
+      exists = true;
+      Log->error(
+          "Unable to add the device. A net device with the same dccommsId "
+          "already exists: '{}'",
+          devIt->second->GetDccommsId());
+    }
+  }
+
+  if (!exists) {
+    ROSCommsDevicePtr dev =
+        dccomms::CreateObject<ROSCommsDevice>(_this, _packetBuilder);
+    dev->SetDccommsId(dccommsId);
+    dev->SetMac(mac);
+    dev->SetTfFrameId(frameId);
+    dev->SetMaxBitRate(maxBitRate);
+
+    Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
+    (*mac2DevMap)[mac] = dev;
+    _dccommsDevMap[dev->GetDccommsId()] = dev;
+
+    Log->info("\nAdding device:\n{}", dev->ToString());
+    auto starterWork = [dev]() {
+      dev->StartDeviceService();
+      dev->StartNodeWorker();
+    };
+
+    std::thread starter(starterWork);
+    starter.detach();
+    res.res = true;
+
+  } else {
+    res.res = false;
+  }
+
+  return res.res;
 }
 
-bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
-                                   AddDevice::Response &res) {}
+bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
+                                          LinkDeviceToChannel::Response &res) {}
+
+bool ROSCommsSimulator::_AddChannel(AddChannel::Request &req,
+                                    AddChannel::Response &res) {
+  CommsChannelPtr channel;
+  CHANNEL_TYPE type = (CHANNEL_TYPE)req.type;
+  uint32_t id = req.id;
+  switch (type) {
+  case ACOUSTIC_UNDERWATER_CHANNEL: {
+    auto acousticChannel =
+        dccomms::CreateObject<dccomms_ros::AcousticCommsChannel>(id);
+    channel = acousticChannel;
+    break;
+  }
+  case CUSTOM_CHANNEL:
+    break;
+  default:
+    Log->error("unknown channel type");
+    res.res = false;
+    return false;
+    break;
+  }
+  return res.res;
+}
 
 void ROSCommsSimulator::Start() {
   /*
@@ -163,84 +236,21 @@ void ROSCommsSimulator::Start() {
    */
   _addDevService = _rosNode.advertiseService(
       "add_net_device", &ROSCommsSimulator::_AddDevice, this);
+  _addDevService = _rosNode.advertiseService(
+      "add_channel", &ROSCommsSimulator::_AddChannel, this);
   _checkDevService = _rosNode.advertiseService(
       "check_net_device", &ROSCommsSimulator::_CheckDevice, this);
   _removeDevService = _rosNode.advertiseService(
       "remove_net_device", &ROSCommsSimulator::_RemoveDevice, this);
+  _linkDeviceToChannelService = _rosNode.advertiseService(
+      "link_dev_to_channel", &ROSCommsSimulator::_LinkDevToChannel, this);
   _linkUpdaterWorker.Start();
   std::thread task([]() { Simulator::Run(); });
   task.detach();
 }
 
-void ROSCommsSimulator::SetLogName(std::string name) {
-  Loggable::SetLogName(name);
-  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
-    NodeMapPtr nodes = tPair.second;
-    for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
-      auto node = pair.second;
-      node->SetLogName(name + ":Node(" + node->GetName() + ")");
-    }
-  }
-}
-
-void ROSCommsSimulator::SetLogLevel(cpplogging::LogLevel _level) {
-  Loggable::SetLogLevel(_level);
-  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
-    NodeMapPtr nodes = tPair.second;
-    for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
-      auto node = pair.second;
-      node->SetLogLevel(_level);
-    }
-  }
-}
-
-void ROSCommsSimulator::LogToConsole(bool c) {
-  Loggable::LogToConsole(c);
-  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
-    NodeMapPtr nodes = tPair.second;
-    for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
-      auto node = pair.second;
-      node->LogToConsole(c);
-    }
-  }
-}
-
-void ROSCommsSimulator::LogToFile(const string &filename) {
-  Loggable::LogToFile(filename);
-  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
-    NodeMapPtr nodes = tPair.second;
-    for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
-      auto node = pair.second;
-      node->LogToFile(filename + "_" + node->GetName() + "_node");
-    }
-  }
-}
-
-void ROSCommsSimulator::FlushLog() {
-  Loggable::FlushLog();
-  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
-    NodeMapPtr nodes = tPair.second;
-    for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
-      auto node = pair.second;
-      node->FlushLog();
-    }
-  }
-}
-
-void ROSCommsSimulator::FlushLogOn(cpplogging::LogLevel level) {
-  Loggable::FlushLogOn(level);
-  for (pair<int, NodeMapPtr> tPair : _nodeTypeMap) {
-    NodeMapPtr nodes = tPair.second;
-    for (pair<int, ROSCommsDevicePtr> pair : *nodes) {
-      auto node = pair.second;
-      node->FlushLogOn(level);
-    }
-  }
-}
-
-void ROSCommsSimulator::_UpdateChannelStateFromRange(VirtualDeviceLinkPtr chn,
-                                                     double distance,
-                                                     bool log) {
+void ROSCommsSimulator::_UpdateDevLinkFromRange(VirtualDeviceLinkPtr chn,
+                                                double distance, bool log) {
   auto dev0 = chn->GetDevice0();
   auto dev1 = chn->GetDevice1();
 
@@ -291,7 +301,7 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
                     "{}-{}: {}",
                     frameId0, frameId1, std::string(e.what()));
       }
-      _UpdateChannelStateFromRange(link, distance, showLog);
+      _UpdateDevLinkFromRange(link, distance, showLog);
     }
     _devLinksMutex.unlock();
     loop_rate.sleep();

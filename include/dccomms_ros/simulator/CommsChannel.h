@@ -1,42 +1,17 @@
-#ifndef COMMSCHANNELPROPERTIES_H
-#define COMMSCHANNELPROPERTIES_H
+#ifndef DCCOMMS_ROS_COMMS_CHANNEL_H_
+#define DCCOMMS_ROS_COMMS_CHANNEL_H_
 
-#include <condition_variable>
-#include <dccomms_ros/simulator/ROSCommsDevice.h>
-#include <memory>
-#include <random>
-#include <list>
-
-using namespace std;
+#include <dccomms/dccomms.h>
+#include <dccomms_ros_msgs/types.h>
 
 namespace dccomms_ros {
 
-class CommsChannel
-{
-
-};
-typedef std::shared_ptr<CommsChannel> CommsChannelPtr;
-
-class VirtualDeviceLink;
-typedef std::shared_ptr<VirtualDeviceLink> VirtualDeviceLinkPtr;
-
-class VirtualDeviceLink {
-
+class CommsChannel {
 public:
-  VirtualDeviceLink(ROSCommsDevicePtr dev0, ROSCommsDevicePtr dev1, CommsChannel);
-  int GetDelay();
-  bool LinkOk();
-  double GetNextTt();
-  double GetErrRate();
-  bool ErrOnNextPkt();
-
-  ROSCommsDevicePtr GetDevice0();
-  ROSCommsDevicePtr GetDevice1();
-
+  virtual uint32_t GetId() = 0;
+  virtual CHANNEL_TYPE GetType() = 0;
 };
 
-typedef std::list<VirtualDeviceLinkPtr> VirtualDevicesLinks;
-
+typedef std::shared_ptr<CommsChannel> CommsChannelPtr;
 }
-
 #endif // COMMSCHANNELPROPERTIES_H
