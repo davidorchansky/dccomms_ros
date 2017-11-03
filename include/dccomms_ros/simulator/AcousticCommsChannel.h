@@ -22,10 +22,6 @@ public:
   AcousticCommsChannel(uint32_t id);
   uint32_t GetId() { return _rosChannelId; }
   CHANNEL_TYPE GetType() { return ACOUSTIC_UNDERWATER_CHANNEL; }
-  uint32_t GetPropDelay(ns3::Ptr<AquaSimNetDevice> tx,
-                        ns3::Ptr<AquaSimNetDevice> rx) {
-    return _aquaSimChannel->GetPropDelay(tx, rx);
-  }
 
 private:
   int _rosChannelId;

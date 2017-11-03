@@ -204,8 +204,38 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
   return res.res;
 }
 
+CommsChannelPtr ROSCommsSimulator::_GetChannel(int id) {
+  CommsChannelPtr channel;
+  auto it = _channelMap.find(id);
+  if (it != _channelMap.end()) {
+    channel = it->second;
+  }
+  return channel;
+}
 bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
-                                          LinkDeviceToChannel::Response &res) {}
+                                          LinkDeviceToChannel::Response &res) {
+  ROSCommsDevicePtr dev = _GetDevice(req.dccommsId);
+  CommsChannelPtr channel = _GetChannel(req.channelId);
+  DEV_TYPE devType = dev->GetDevType();
+  CHANNEL_TYPE chnType = channel->GetType();
+  switch (devType) {
+  case ACOUSTIC_UNDERWATER_DEV: {
+    if (chnType == ACOUSTIC_UNDERWATER_CHANNEL) {
+
+    } else {
+      res.res = false;
+    }
+    break;
+  }
+  case CUSTOM_DEV: {
+    break;
+  }
+  }
+  if (res.res) {
+    // Link dev to channel
+  }
+  return res.res;
+}
 
 bool ROSCommsSimulator::_AddChannel(AddChannel::Request &req,
                                     AddChannel::Response &res) {
@@ -217,6 +247,7 @@ bool ROSCommsSimulator::_AddChannel(AddChannel::Request &req,
     auto acousticChannel =
         dccomms::CreateObject<dccomms_ros::AcousticCommsChannel>(id);
     channel = acousticChannel;
+    res.res = true;
     break;
   }
   case CUSTOM_CHANNEL:
@@ -227,6 +258,7 @@ bool ROSCommsSimulator::_AddChannel(AddChannel::Request &req,
     return false;
     break;
   }
+  _channelMap[id] = channel;
   return res.res;
 }
 

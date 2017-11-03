@@ -25,15 +25,15 @@ using namespace cpplogging;
 
 namespace dccomms_ros {
 
-typedef std::unordered_map<int, ROSCommsDevicePtr> Mac2DevMap;
+typedef std::unordered_map<uint32_t, ROSCommsDevicePtr> Mac2DevMap;
 typedef std::shared_ptr<Mac2DevMap> Mac2DevMapPtr;
-typedef std::unordered_map<int, Mac2DevMapPtr> Type2DevMapMap;
+typedef std::unordered_map<uint32_t, Mac2DevMapPtr> Type2DevMapMap;
 
 typedef std::unordered_map<std::string, ROSCommsDevicePtr> DccommsDevMap;
 
-typedef std::unordered_map<int, CommsChannelPtr> Id2ChannelMap;
+typedef std::unordered_map<uint32_t, CommsChannelPtr> Id2ChannelMap;
 typedef std::shared_ptr<Id2ChannelMap> Id2ChannelMapPtr;
-typedef std::unordered_map<int, Id2ChannelMapPtr> Type2ChannelMapMap;
+typedef std::unordered_map<uint32_t, Id2ChannelMapPtr> Type2ChannelMapMap;
 
 class ROSCommsSimulator;
 
@@ -91,6 +91,8 @@ private:
 
   ROSCommsDevicePtr _GetDevice(std::string iddev);
 
+  CommsChannelPtr _GetChannel(int id);
+
   ros::ServiceServer _addDevService, _checkDevService, _removeDevService,
       _linkDeviceToChannelService;
   ros::NodeHandle &_rosNode;
@@ -107,8 +109,8 @@ private:
   VirtualDevicesLinks _devLinks;
   Type2DevMapMap _type2DevMap;
   DccommsDevMap _dccommsDevMap;
-  Type2ChannelMapMap _type2ChannelMapMap;
-
+  // Type2ChannelMapMap _type2ChannelMapMap;
+  Id2ChannelMap _channelMap;
   //////////
   ROSCommsSimulatorPtr _this;
 };

@@ -5,11 +5,18 @@
 
 namespace dccomms_ros {
 
-ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr pb)
-    : _sim(s), _pb(pb), _txserv(this) {
+ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr pb,
+                               DEV_TYPE devType)
+    : _sim(s), _pb(pb), _txserv(this), _devType(devType) {
   _device = CommsDeviceService::BuildCommsDeviceService(
       pb, CommsDeviceService::IPHY_TYPE_PHY);
+
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
+  switch (_devType) {
+  case ACOUSTIC_UNDERWATER_DEV: {
+    break;
+  }
+  }
 }
 
 void ROSCommsDevice::StartDeviceService() {
@@ -35,7 +42,7 @@ std::string ROSCommsDevice::GetDccommsId() { return _name; }
 
 void ROSCommsDevice::SetDevType(DEV_TYPE type) { _devType = type; }
 
-int ROSCommsDevice::GetDevType() { return _devType; }
+DEV_TYPE ROSCommsDevice::GetDevType() { return _devType; }
 
 void ROSCommsDevice::SetMac(int mac) { _mac = mac; }
 
@@ -51,7 +58,7 @@ void ROSCommsDevice::_TxWork() {
     if (txdlf->PacketIsOk()) {
       // PACKET OK
       // std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-      _sim->TransmitFrame(std::shared_ptr<ROSCommsDevice>(this), txdlf);
+      _Transmit(txdlf);
     } else {
       // PACKET WITH ERRORS
       // Log->critical("TX: INTERNAL ERROR: frame received with errors from the
@@ -62,6 +69,7 @@ void ROSCommsDevice::_TxWork() {
   _device->SetPhyLayerState(CommsDeviceService::READY);
 }
 
+void ROSCommsDevice::_Transmit(PacketPtr dlf) {}
 void ROSCommsDevice::SetLogName(std::string name) {
   Loggable::SetLogName(name);
   _device->SetLogName(name + ":CommsDeviceService");
