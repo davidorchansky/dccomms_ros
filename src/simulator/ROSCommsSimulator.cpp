@@ -44,21 +44,6 @@ void ROSCommsSimulator::SetReceivePDUCb(
     std::function<void(int, PacketPtr)> cb) {
   _ReceivePDUCb = cb;
 }
-void ROSCommsSimulator::SetGetSrcAddrFunc(
-    std::function<int(dccomms::PacketPtr)> cb) {
-  _getSrcAddr = cb;
-}
-
-void ROSCommsSimulator::SetGetDstAddrFunc(
-    std::function<int(dccomms::PacketPtr)> cb) {
-  _getDstAddr = cb;
-}
-
-void ROSCommsSimulator::SetIsBroadcastFunc(std::function<bool(int)> fc) {
-  _isBroadcast = fc;
-}
-
-bool ROSCommsSimulator::_IsBroadcast(int addr) { return _isBroadcast(addr); }
 
 void ROSCommsSimulator::SetErrorPDUCb(std::function<void(int, PacketPtr)> cb) {
   _ErrorPDUCb = cb;
@@ -68,9 +53,6 @@ void ROSCommsSimulator::_Init() {
   _TransmitPDUCb = [](int linkType, PacketPtr pdu) {};
   _ReceivePDUCb = [](int linkType, PacketPtr pdu) {};
   _ErrorPDUCb = [](int linkType, PacketPtr pdu) {};
-  _getDstAddr = [](PacketPtr pkt) { return 0; };
-  _getDstAddr = [](PacketPtr pkt) { return 0; };
-  _isBroadcast = [](int addr) { return true; };
   GlobalValue::Bind("SimulatorImplementationType",
                     StringValue("ns3::RealtimeSimulatorImpl"));
 }
@@ -90,22 +72,6 @@ void ROSCommsSimulator::_RemoveDeviceFromSet(std::string iddev) {
   }
   _idDevMapMutex.unlock();
 }
-
-int ROSCommsSimulator::_GetSrcAddr(PacketPtr pkt) { return _getSrcAddr(pkt); }
-
-int ROSCommsSimulator::_GetDstAddr(PacketPtr pkt) { return _getDstAddr(pkt); }
-
-void ROSCommsSimulator::TransmitFrame(ROSCommsDevicePtr dev, PacketPtr dlf) {}
-
-void ROSCommsSimulator::_PropagateFrame(PacketPtr dlf, int delay,
-                                        ROSCommsDevicePtr dst) {
-
-  Simulator::Schedule(
-      MilliSeconds(delay),
-      MakeEvent(&ROSCommsSimulator::_DeliverFrame, this, dlf, dst));
-}
-
-void ROSCommsSimulator::_DeliverFrame(PacketPtr dlf, ROSCommsDevicePtr dst) {}
 
 bool ROSCommsSimulator::_CheckDevice(CheckDevice::Request &req,
                                      CheckDevice::Response &res) {
@@ -176,26 +142,26 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
   }
 
   if (!exists) {
-    ROSCommsDevicePtr dev =
-        dccomms::CreateObject<ROSCommsDevice>(_this, _packetBuilder);
-    dev->SetDccommsId(dccommsId);
-    dev->SetMac(mac);
-    dev->SetTfFrameId(frameId);
-    dev->SetMaxBitRate(maxBitRate);
+    //    ROSCommsDevicePtr dev =
+    //        dccomms::CreateObject<ROSCommsDevice>(_this, _packetBuilder);
+    //    dev->SetDccommsId(dccommsId);
+    //    dev->SetMac(mac);
+    //    dev->SetTfFrameId(frameId);
+    //    dev->SetMaxBitRate(maxBitRate);
 
-    Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
-    (*mac2DevMap)[mac] = dev;
-    _dccommsDevMap[dev->GetDccommsId()] = dev;
+    //    Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
+    //    (*mac2DevMap)[mac] = dev;
+    //    _dccommsDevMap[dev->GetDccommsId()] = dev;
 
-    Log->info("\nAdding device:\n{}", dev->ToString());
-    auto starterWork = [dev]() {
-      dev->StartDeviceService();
-      dev->StartNodeWorker();
-    };
+    //    Log->info("\nAdding device:\n{}", dev->ToString());
+    //    auto starterWork = [dev]() {
+    //      dev->StartDeviceService();
+    //      dev->StartNodeWorker();
+    //    };
 
-    std::thread starter(starterWork);
-    starter.detach();
-    res.res = true;
+    //    std::thread starter(starterWork);
+    //    starter.detach();
+    //    res.res = true;
 
   } else {
     res.res = false;
@@ -262,7 +228,7 @@ bool ROSCommsSimulator::_AddChannel(AddChannel::Request &req,
   return res.res;
 }
 
-void ROSCommsSimulator::Start() {
+void ROSCommsSimulator::StartROSInterface() {
   /*
    * http://www.boost.org/doc/libs/1_63_0/libs/bind/doc/html/bind.html#bind.purpose.using_bind_with_functions_and_fu
    */
@@ -277,21 +243,11 @@ void ROSCommsSimulator::Start() {
   _linkDeviceToChannelService = _rosNode.advertiseService(
       "link_dev_to_channel", &ROSCommsSimulator::_LinkDevToChannel, this);
   _linkUpdaterWorker.Start();
-  std::thread task([]() { Simulator::Run(); });
-  task.detach();
 }
 
-void ROSCommsSimulator::_UpdateDevLinkFromRange(VirtualDeviceLinkPtr chn,
-                                                double distance, bool log) {
-  auto dev0 = chn->GetDevice0();
-  auto dev1 = chn->GetDevice1();
-
-  auto dev0FrameId = dev0->GetTfFrameId();
-  auto dev1FrameId = dev1->GetTfFrameId();
-
-  if (log) {
-    // TODO: show log
-  }
+void ROSCommsSimulator::_Run() {
+  std::thread task([]() { Simulator::Run(); });
+  task.detach();
 }
 
 void ROSCommsSimulator::_LinkUpdaterWork() {
@@ -333,7 +289,7 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
                     "{}-{}: {}",
                     frameId0, frameId1, std::string(e.what()));
       }
-      _UpdateDevLinkFromRange(link, distance, showLog);
+      //_UpdateDevLinkFromRange(link, distance, showLog);
     }
     _devLinksMutex.unlock();
     loop_rate.sleep();

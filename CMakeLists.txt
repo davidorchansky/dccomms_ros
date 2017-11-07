@@ -223,6 +223,7 @@ message("NS3 modules: ${NS3_LIBS}")
 SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/ROSCommsDevice.cpp
         src/simulator/ROSCommsSimulator.cpp
+        src/simulator/AcousticROSCommsDevice.cpp
         src/simulator/AcousticCommsChannel.cpp
 )
 

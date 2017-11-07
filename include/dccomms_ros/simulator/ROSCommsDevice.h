@@ -5,7 +5,6 @@
 #include <dccomms/CommsDeviceService.h>
 #include <dccomms/Utils.h>
 #include <dccomms_ros/simulator/CommsChannel.h>
-#include <ns3/aqua-sim-net-device.h>
 
 using namespace dccomms;
 using namespace cpplogging;
@@ -20,8 +19,7 @@ typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 
 class ROSCommsDevice : public virtual Loggable {
 public:
-  ROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr,
-                 DEV_TYPE devType = ACOUSTIC_UNDERWATER_DEV);
+  ROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr);
 
   CommsDeviceServicePtr GetService();
   void ReceiveFrame(PacketPtr);
@@ -29,8 +27,8 @@ public:
   void StartNodeWorker();
   std::string GetDccommsId();
   void SetDccommsId(const std::string name);
-  void SetMaxBitRate(uint32_t);
-  void SetChannel(CommsChannelPtr channel);
+
+  void SetMaxBitRate(uint32_t bps);
   uint32_t GetMaxBitRate();
 
   virtual void SetLogName(std::string name);
@@ -40,32 +38,39 @@ public:
   virtual void LogToConsole(bool);
   virtual void LogToFile(const std::string &filename);
 
-  void SetMac(int mac);
-  void SetDevType(DEV_TYPE type);
+  void SetMac(uint32_t mac);
   void SetTfFrameId(const std::string &);
 
-  int GetMac();
-  DEV_TYPE GetDevType();
+  uint32_t GetMac();
   std::string GetTfFrameId();
 
   std::string ToString();
+
   void Start();
 
+  void LinkToChannel(CommsChannelPtr channel);
+  CommsChannelPtr GetLinkedChannel();
+
+  virtual DEV_TYPE GetDevType() = 0;
+
+protected:
+  virtual void DoSetMac(uint32_t mac) = 0;
+  virtual void DoSend(PacketPtr dlf) = 0;
+  virtual void DoLinkToChannel(CommsChannelPtr channel) = 0;
+  virtual void DoStart() = 0;
+  ROSCommsSimulatorPtr _sim;
+
 private:
-  void _Transmit(PacketPtr dlf);
   std::mutex _receiveFrameMutex;
   CommsDeviceServicePtr _device;
   CommsChannelPtr _channel;
-  ROSCommsSimulatorPtr _sim;
   ServiceThread<ROSCommsDevice> _txserv;
   PacketPtr _txdlf;
   std::string _name, _tfFrameId;
-  int _mac;
-  DEV_TYPE _devType;
-  int _maxBitRate;
+  uint32_t _mac;
+  uint32_t _maxBitRate;
+  uint32_t _millisPerByte;
   PacketBuilderPtr _pb;
-  ns3::Ptr<ns3::AquaSimMac> _asMac;
-  ns3::Ptr<ns3::AquaSimPhy> _asPhy;
 
   void _TxWork();
 };

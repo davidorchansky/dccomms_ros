@@ -5,18 +5,10 @@
 
 namespace dccomms_ros {
 
-ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr pb,
-                               DEV_TYPE devType)
-    : _sim(s), _pb(pb), _txserv(this), _devType(devType) {
+ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr pb)
+    : _sim(s), _pb(pb), _txserv(this) {
   _device = CommsDeviceService::BuildCommsDeviceService(
       pb, CommsDeviceService::IPHY_TYPE_PHY);
-
-  _txserv.SetWork(&ROSCommsDevice::_TxWork);
-  switch (_devType) {
-  case ACOUSTIC_UNDERWATER_DEV: {
-    break;
-  }
-  }
 }
 
 void ROSCommsDevice::StartDeviceService() {
@@ -28,48 +20,55 @@ void ROSCommsDevice::StartNodeWorker() { _txserv.Start(); }
 
 void ROSCommsDevice::ReceiveFrame(PacketPtr dlf) {
   _receiveFrameMutex.lock();
-  *_device << dlf;
+  _device << dlf;
   _receiveFrameMutex.unlock();
 }
 
-void ROSCommsDevice::SetChannel(CommsChannelPtr channel) { _channel = channel; }
-void ROSCommsDevice::SetMaxBitRate(uint32_t v) { _maxBitRate = v; }
-uint32_t ROSCommsDevice::GetMaxBitRate() { return _maxBitRate; }
+void ROSCommsDevice::SetMaxBitRate(uint32_t v) {
+  _maxBitRate = v; // bps
+  _millisPerByte = static_cast<uint32_t>(std::round(1000. / _maxBitRate * 8));
+}
 
 void ROSCommsDevice::SetDccommsId(const std::string name) { _name = name; }
 
 std::string ROSCommsDevice::GetDccommsId() { return _name; }
 
-void ROSCommsDevice::SetDevType(DEV_TYPE type) { _devType = type; }
+void ROSCommsDevice::SetMac(uint32_t mac) {
+  _mac = mac;
+  DoSetMac(_mac);
+}
 
-DEV_TYPE ROSCommsDevice::GetDevType() { return _devType; }
+void ROSCommsDevice::LinkToChannel(CommsChannelPtr channel) {
+  _channel = channel;
+  DoLinkToChannel(channel);
+}
 
-void ROSCommsDevice::SetMac(int mac) { _mac = mac; }
+CommsChannelPtr ROSCommsDevice::GetLinkedChannel() { return _channel; }
 
-int ROSCommsDevice::GetMac() { return _mac; }
+uint32_t ROSCommsDevice::GetMac() { return _mac; }
 
 void ROSCommsDevice::_TxWork() {
   _device->WaitForFramesFromRxFifo();
   _device->SetPhyLayerState(CommsDeviceService::BUSY);
   do {
-    *_device >> _txdlf;
+    _device >> _txdlf;
     PacketPtr txdlf =
         _sim->GetPacketBuilder()->CreateFromBuffer(_txdlf->GetBuffer());
     if (txdlf->PacketIsOk()) {
       // PACKET OK
-      // std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-      _Transmit(txdlf);
+      //
+      DoSend(txdlf);
+      uint32_t packetSize = txdlf->GetPacketSize();
+      uint32_t transmissionTime = packetSize * _millisPerByte;
+      std::this_thread::sleep_for(std::chrono::milliseconds(transmissionTime));
     } else {
       // PACKET WITH ERRORS
-      // Log->critical("TX: INTERNAL ERROR: frame received with errors from the
-      // upper layer!");
     }
   } while (_device->GetRxFifoSize() > 0);
 
   _device->SetPhyLayerState(CommsDeviceService::READY);
 }
 
-void ROSCommsDevice::_Transmit(PacketPtr dlf) {}
 void ROSCommsDevice::SetLogName(std::string name) {
   Loggable::SetLogName(name);
   _device->SetLogName(name + ":CommsDeviceService");
@@ -119,7 +118,7 @@ std::string ROSCommsDevice::ToString() {
                                       "\tDevice type ............... %s\n"
                                       "\tFrame ID: ................. '%s'\n"
                                       "\tChannel: .................. '%s'",
-                   _name.c_str(), _mac, DevType2String(_devType).c_str(),
+                   _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
                    _tfFrameId.c_str(), channelLinked.c_str());
   return std::string(buff);
 }

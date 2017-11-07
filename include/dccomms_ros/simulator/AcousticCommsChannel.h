@@ -14,14 +14,15 @@ using namespace std;
 using namespace ns3;
 namespace dccomms_ros {
 
-class AcousticCommsChannel : public CommsChannel {
-  typedef ns3::Ptr<ns3::AquaSimChannel> AquaSimChannelPtr;
-  typedef std::unordered_map<int, AquaSimChannelPtr> AquaSimChannelSet;
+typedef ns3::Ptr<ns3::AquaSimChannel> AquaSimChannelPtr;
+typedef std::unordered_map<int, AquaSimChannelPtr> AquaSimChannelSet;
 
+class AcousticCommsChannel : public CommsChannel {
 public:
   AcousticCommsChannel(uint32_t id);
   uint32_t GetId() { return _rosChannelId; }
   CHANNEL_TYPE GetType() { return ACOUSTIC_UNDERWATER_CHANNEL; }
+  AquaSimChannelPtr GetAquaSimChannel() { return _aquaSimChannel; };
 
 private:
   int _rosChannelId;
@@ -30,6 +31,8 @@ private:
   static AquaSimChannelSet _aquaSimChannels;
   InternetStackHelper _internet;
 };
+
+typedef dccomms::Ptr<AcousticCommsChannel> AcousticCommsChannelPtr;
 }
 
 #endif // COMMSCHANNELPROPERTIES_H

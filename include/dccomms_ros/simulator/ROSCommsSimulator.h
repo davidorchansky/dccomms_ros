@@ -42,9 +42,7 @@ typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 class ROSCommsSimulator : public virtual Loggable {
 public:
   ROSCommsSimulator(ros::NodeHandle &rosnode, PacketBuilderPtr packetBuilder);
-  void TransmitFrame(ROSCommsDevicePtr dev, PacketPtr dlf);
-  void Start();
-
+  void StartROSInterface();
   PacketBuilderPtr GetPacketBuilder();
 
   void
@@ -53,23 +51,11 @@ public:
   SetReceivePDUCb(std::function<void(int linkType, dccomms::PacketPtr)> cb);
   void SetErrorPDUCb(std::function<void(int linkType, dccomms::PacketPtr)> cb);
 
-  void SetGetSrcAddrFunc(std::function<int(dccomms::PacketPtr)> cb);
-  void SetGetDstAddrFunc(std::function<int(dccomms::PacketPtr)> cb);
-
-  void SetIsBroadcastFunc(std::function<bool(int)> cb);
-
 private:
+  void _Run();
   void _Init();
   std::function<void(int, dccomms::PacketPtr)> _TransmitPDUCb, _ReceivePDUCb,
       _ErrorPDUCb;
-
-  std::function<int(dccomms::PacketPtr)> _getSrcAddr, _getDstAddr;
-  std::function<bool(int)> _isBroadcast;
-
-  int _GetSrcAddr(PacketPtr pkt);
-  int _GetDstAddr(PacketPtr pkt);
-
-  bool _IsBroadcast(int addr);
 
   bool _AddDevice(dccomms_ros_msgs::AddDevice::Request &req,
                   dccomms_ros_msgs::AddDevice::Response &res);
@@ -81,9 +67,6 @@ private:
                          dccomms_ros_msgs::LinkDeviceToChannel::Response &res);
   bool _AddChannel(dccomms_ros_msgs::AddChannel::Request &req,
                    dccomms_ros_msgs::AddChannel::Response &res);
-  void _PropagateFrame(PacketPtr dlf, int delay, ROSCommsDevicePtr dst);
-
-  void _DeliverFrame(PacketPtr dlf, ROSCommsDevicePtr dst);
 
   void _AddDeviceToSet(std::string iddev, ROSCommsDevicePtr dev);
   bool _DeviceExists(std::string iddev);
@@ -102,8 +85,6 @@ private:
   PacketBuilderPtr _packetBuilder;
   ServiceThread<ROSCommsSimulator> _linkUpdaterWorker;
   void _LinkUpdaterWork();
-  void _UpdateDevLinkFromRange(VirtualDeviceLinkPtr chn, double range,
-                               bool log = true);
 
   ////////////////////
   VirtualDevicesLinks _devLinks;

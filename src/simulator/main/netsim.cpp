@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
     Log->warn("PDU Received with errors");
   });
 
-  sim->Start();
+  sim->StartROSInterface();
 
   ros::Rate loop_rate(30);
   while (ros::ok()) {
