@@ -110,7 +110,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-  INCLUDE_DIRS include
+  INCLUDE_DIRS src/include
 #  LIBRARIES dccomms_ros
   CATKIN_DEPENDS 
 	roscpp 
@@ -153,13 +153,10 @@ SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++14 ")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 
 SET(${PROJECT_NAME}_INCLUDE_DIRS
-    "include"
-    "modules/ns-3-dev/build")
-
-include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
-)
+    "src/include"
+    "modules/ns-3-dev/build"
+    ${catkin_INCLUDE_DIRS}
+    )
 
 
 SET(S100BRIDGE s100_bridge)
@@ -261,6 +258,7 @@ target_link_libraries(master
     )
 target_include_directories(master PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${catkin_INCLUDE_DIRS}
     )
 
 add_executable (slave
@@ -272,6 +270,7 @@ target_link_libraries(slave
     )
 target_include_directories(slave PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
+    ${catkin_INCLUDE_DIRS}
     )
 ###############################################
 ########### END comms tests BUILD #############
