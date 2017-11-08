@@ -240,6 +240,9 @@ add_executable (ns3-testing testing/simulator/ns3-testing.cpp)
 target_link_libraries(ns3-testing ${PROJECT_NAME})
 target_include_directories(ns3-testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+add_executable (ns3-as-testing testing/simulator/ns3-as-testing.cpp)
+target_link_libraries(ns3-as-testing ${PROJECT_NAME})
+target_include_directories(ns3-as-testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 ###############################################
 ############ END netsim BUILD #################
 ###############################################
