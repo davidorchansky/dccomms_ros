@@ -37,6 +37,11 @@
  *
  */
 
+#include <chrono>
+#include <ctime>
+#include <iomanip>
+#include <iostream>
+
 using namespace ns3;
 
 NS_LOG_COMPONENT_DEFINE("BMac");
@@ -50,9 +55,14 @@ public:
                        AquaSimAddress nextHop, AquaSimAddress dest);
   void RoutingPacketRx(std::string context, Ptr<const Packet>);
   void CourseChange(std::string context, Ptr<const MobilityModel> model);
+  void GetSimTime(const char *format, std::string &datetime,
+                  double &secsFromStart);
+  void SetSimulationStartDateTime();
 
 private:
   cpplogging::Logger routingLog, macLog, phyLog, mobilityLog;
+  const char timeFormat[100] = "%Y-%m-%d %H:%M:%S";
+  std::chrono::high_resolution_clock::time_point start;
 };
 
 Test::Test() {
@@ -71,6 +81,31 @@ Test::Test() {
   mobilityLog.SetLogLevel(level);
 }
 
+void Test::SetSimulationStartDateTime()
+{
+  start = std::chrono::high_resolution_clock::now();
+}
+void Test::GetSimTime(const char *format, std::string &datetime,
+                      double &secsFromStart) {
+  auto simTime = Simulator::Now();
+  secsFromStart = simTime.GetSeconds();
+  auto tstamp = simTime.GetTimeStep(); // nanoseconds
+
+  auto simNanos = std::chrono::nanoseconds(tstamp);
+  auto curpoint = start + simNanos;
+  auto t = std::chrono::high_resolution_clock::to_time_t(curpoint);
+  auto localEventTime = std::localtime(&t);
+  char mbstr[100];
+  auto count = std::strftime(mbstr, sizeof(mbstr), format, localEventTime);
+  char *mp = mbstr + count;
+
+  auto durationFromEpoch = curpoint.time_since_epoch();
+  auto millis =
+      std::chrono::duration_cast<std::chrono::milliseconds>(durationFromEpoch) -
+      std::chrono::duration_cast<std::chrono::seconds>(durationFromEpoch);
+  sprintf(mp, ".%ld", millis.count());
+  datetime = mbstr;
+}
 void Test::ReceivedPkt(Ptr<Socket> socket) {}
 
 void Test::RoutingPacketRx(std::string context, Ptr<const Packet> pkt) {
@@ -79,18 +114,22 @@ void Test::RoutingPacketRx(std::string context, Ptr<const Packet> pkt) {
   auto saddr = ash.GetSAddr().GetAsInt();
   auto daddr = ash.GetDAddr().GetAsInt();
 
-  auto simTime = Simulator::Now();
-  double secs = simTime.GetSeconds();
-  routingLog.Info("({} sec.) {}: (Addr: {}) Received packet from {}", secs,
-                  context, daddr, saddr);
+  std::string datetime;
+  double secs;
+  GetSimTime(timeFormat, datetime, secs);
+
+  routingLog.Info("({} secs; {}) {}: (Addr: {}) Received packet from {}", secs,
+                  datetime, context, daddr, saddr);
 }
 
 void Test::CourseChange(std::string context, Ptr<const MobilityModel> model) {
   Vector position = model->GetPosition();
-  auto simTime = Simulator::Now();
-  double secs = simTime.GetSeconds();
-  mobilityLog.Info("({} sec.) {}: [x,y,z] = [{},{},{}]", secs, context,
-                   position.x, position.y, position.z);
+
+  std::string datetime;
+  double secs;
+  GetSimTime(timeFormat, datetime, secs);
+  mobilityLog.Info("({} secs; {}) {}: [x,y,z] = [{},{},{}]", secs, datetime,
+                   context, position.x, position.y, position.z);
 }
 void Test::RoutingPacketTx(std::string context, Ptr<const Packet> pkt,
                            AquaSimAddress nextHop, AquaSimAddress dest) {
@@ -99,15 +138,18 @@ void Test::RoutingPacketTx(std::string context, Ptr<const Packet> pkt,
   auto saddr = ash.GetSAddr().GetAsInt();
   auto daddr = ash.GetDAddr().GetAsInt();
   auto nhaddr = ash.GetNextHop().GetAsInt();
-  auto simTime = Simulator::Now();
-  double secs = simTime.GetSeconds();
+
+  std::string datetime;
+  double secs;
+  GetSimTime(timeFormat, datetime, secs);
+
   routingLog.Info(
-      "({} sec.) {}: (Addr: {}) Transmitting packet to {}. Next hop: {}", secs,
-      context, saddr, daddr, nhaddr);
+      "({} secs; {}) {}: (Addr: {}) Transmitting packet to {}. Next hop: {} ",
+      secs, datetime, context, saddr, daddr, nhaddr);
 }
 
 void Test::RunTest() {
-  double simStop = 30; // seconds
+  double simStop = 40; // seconds
   int nodes = 4;
   int sinks = 1;
   uint32_t m_dataRate = 180;   // 120;
@@ -270,6 +312,8 @@ void Test::RunTest() {
   Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange",
                   MakeCallback(&Test::CourseChange, this));
 
+  Simulator::Schedule(Seconds(0), MakeEvent(&Test::SetSimulationStartDateTime,
+                                            this));
   Simulator::Run();
   cont = false;
   mobilityWorker.join();
