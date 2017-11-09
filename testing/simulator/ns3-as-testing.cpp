@@ -50,7 +50,6 @@ class Test : virtual public cpplogging::Logger {
 public:
   Test();
   void RunTest();
-  void ReceivedPkt(Ptr<Socket> socket);
   void RoutingPacketTx(std::string context, Ptr<const Packet>,
                        AquaSimAddress nextHop, AquaSimAddress dest);
   void RoutingPacketRx(std::string context, Ptr<const Packet>);
@@ -106,7 +105,6 @@ void Test::GetSimTime(const char *format, std::string &datetime,
   sprintf(mp, ".%ld", millis.count());
   datetime = mbstr;
 }
-void Test::ReceivedPkt(Ptr<Socket> socket) {}
 
 void Test::RoutingPacketRx(std::string context, Ptr<const Packet> pkt) {
   AquaSimHeader ash;
@@ -271,13 +269,6 @@ void Test::RunTest() {
   //  ApplicationContainer apps2 = app.Install(nodesCon.Get(1));
   //  apps2.Start(Seconds(0.6));
   //  apps2.Stop(Seconds(simStop + 1.1));
-
-  Ptr<Node> sinkNode = sinksCon.Get(0);
-  TypeId psfid = TypeId::LookupByName("ns3::PacketSocketFactory");
-
-  Ptr<Socket> sinkSocket = Socket::CreateSocket(sinkNode, psfid);
-  sinkSocket->Bind(socket);
-  sinkSocket->SetRecvCallback(MakeCallback(&Test::ReceivedPkt, this));
 
   Packet::EnablePrinting(); // for debugging purposes
   Simulator::Stop(Seconds(simStop));
