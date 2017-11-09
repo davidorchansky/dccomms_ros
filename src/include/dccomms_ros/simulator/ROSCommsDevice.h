@@ -17,14 +17,12 @@ typedef std::shared_ptr<ROSCommsDevice> ROSCommsDevicePtr;
 class ROSCommsSimulator;
 typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 
-class ROSCommsDevice : public virtual Loggable {
+class ROSCommsDevice : public virtual Logger {
 public:
   ROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr);
 
   CommsDeviceServicePtr GetService();
   void ReceiveFrame(PacketPtr);
-  void StartDeviceService();
-  void StartNodeWorker();
   std::string GetDccommsId();
   void SetDccommsId(const std::string name);
 
@@ -58,9 +56,13 @@ protected:
   virtual void DoSend(PacketPtr dlf) = 0;
   virtual void DoLinkToChannel(CommsChannelPtr channel) = 0;
   virtual void DoStart() = 0;
+
   ROSCommsSimulatorPtr _sim;
 
 private:
+  void _StartDeviceService();
+  void _StartNodeWorker();
+
   std::mutex _receiveFrameMutex;
   CommsDeviceServicePtr _device;
   CommsChannelPtr _channel;

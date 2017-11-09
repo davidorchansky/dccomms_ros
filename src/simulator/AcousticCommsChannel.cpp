@@ -8,6 +8,8 @@ namespace dccomms_ros {
 AcousticCommsChannel::AcousticCommsChannel(uint32_t id) {
   _rosChannelId = id;
   _ns3ChannelId = ns3::ChannelList::GetNChannels();
-  _aquaSimChannel = ns3::CreateObject<AquaSimChannel>();
+  _channelHelper = AquaSimChannelHelper::Default();
+  _channelHelper.SetPropagation("ns3::AquaSimRangePropagation");
+  _aquaSimChannel = _channelHelper.Create();
 }
 }

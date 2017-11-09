@@ -17,6 +17,7 @@
 #include <dccomms_ros_msgs/CheckDevice.h>
 #include <dccomms_ros_msgs/LinkDeviceToChannel.h>
 #include <dccomms_ros_msgs/RemoveDevice.h>
+#include <dccomms_ros_msgs/StartSimulation.h>
 #include <ros/ros.h>
 // end ROS
 
@@ -51,9 +52,16 @@ public:
   SetReceivePDUCb(std::function<void(int linkType, dccomms::PacketPtr)> cb);
   void SetErrorPDUCb(std::function<void(int linkType, dccomms::PacketPtr)> cb);
 
+  void GetSimTime(std::string &datetime, double &secsFromStart);
+
 private:
+  const char _timeFormat[100] = "%Y-%m-%d %H:%M:%S";
   void _Run();
   void _Init();
+
+  std::chrono::high_resolution_clock::time_point _startPoint;
+  void _SetSimulationStartDateTime();
+
   std::function<void(int, dccomms::PacketPtr)> _TransmitPDUCb, _ReceivePDUCb,
       _ErrorPDUCb;
 
@@ -72,12 +80,14 @@ private:
   bool _DeviceExists(std::string iddev);
   void _RemoveDeviceFromSet(std::string iddev);
 
+  bool _StartSimulation(dccomms_ros_msgs::StartSimulation::Request &req,
+                        dccomms_ros_msgs::StartSimulation::Response &res);
   ROSCommsDevicePtr _GetDevice(std::string iddev);
 
   CommsChannelPtr _GetChannel(int id);
 
-  ros::ServiceServer _addDevService, _checkDevService, _removeDevService,
-      _linkDeviceToChannelService;
+  ros::ServiceServer _addDevService, _checkDevService, _addChannelService, _removeDevService,
+      _linkDeviceToChannelService, _startSimulationService;
   ros::NodeHandle &_rosNode;
 
   std::mutex _devLinksMutex, _idDevMapMutex, _channelsMutex;

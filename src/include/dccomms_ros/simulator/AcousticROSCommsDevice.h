@@ -4,6 +4,7 @@
 #include <dccomms_ros/simulator/AcousticCommsChannel.h>
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <ns3/aqua-sim-net-device.h>
+#include <ns3/aqua-sim-helper.h>
 
 using namespace dccomms;
 using namespace cpplogging;
@@ -29,6 +30,13 @@ private:
   ns3::Ptr<ns3::AquaSimRouting> _routingLayer;
   ns3::Ptr<ns3::Node> _node;
   ns3::Ptr<ns3::MobilityModel> _mobility;
+  ns3::AquaSimHelper _asHelper;
+  ns3::AquaSimAddress _aquaSimAddr;
+
+  bool _started;
+  uint32_t _nodeListIndex;
+
+  void _Recv(std::string context, ns3::Ptr<const ns3::Packet>);
 };
 }
 #endif // COMMSNODE_H

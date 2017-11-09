@@ -8,6 +8,7 @@
 #include <memory>
 #include <ns3/aqua-sim-channel.h>
 #include <ns3/internet-module.h>
+#include <ns3/aqua-sim-ng-module.h>
 #include <random>
 
 using namespace std;
@@ -30,6 +31,7 @@ private:
   AquaSimChannelPtr _aquaSimChannel;
   static AquaSimChannelSet _aquaSimChannels;
   InternetStackHelper _internet;
+  ns3::AquaSimChannelHelper _channelHelper;
 };
 
 typedef dccomms::Ptr<AcousticCommsChannel> AcousticCommsChannelPtr;

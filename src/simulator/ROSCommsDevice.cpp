@@ -9,14 +9,22 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr pb)
     : _sim(s), _pb(pb), _txserv(this) {
   _device = CommsDeviceService::BuildCommsDeviceService(
       pb, CommsDeviceService::IPHY_TYPE_PHY);
+  _txserv.SetWork(&ROSCommsDevice::_TxWork);
+  _txdlf = _sim->GetPacketBuilder()->Create();
 }
 
-void ROSCommsDevice::StartDeviceService() {
+void ROSCommsDevice::_StartDeviceService() {
   _device->Start();
   _device->SetPhyLayerState(CommsDeviceService::READY);
 }
 
-void ROSCommsDevice::StartNodeWorker() { _txserv.Start(); }
+void ROSCommsDevice::Start() {
+  _StartDeviceService();
+  _StartNodeWorker();
+  DoStart();
+}
+
+void ROSCommsDevice::_StartNodeWorker() { _txserv.Start(); }
 
 void ROSCommsDevice::ReceiveFrame(PacketPtr dlf) {
   _receiveFrameMutex.lock();
@@ -29,7 +37,10 @@ void ROSCommsDevice::SetMaxBitRate(uint32_t v) {
   _millisPerByte = static_cast<uint32_t>(std::round(1000. / _maxBitRate * 8));
 }
 
-void ROSCommsDevice::SetDccommsId(const std::string name) { _name = name; }
+void ROSCommsDevice::SetDccommsId(const std::string name) {
+  _name = name;
+  _device->SetCommsDeviceId(_name);
+}
 
 std::string ROSCommsDevice::GetDccommsId() { return _name; }
 

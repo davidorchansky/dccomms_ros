@@ -2,6 +2,7 @@
 #include <dccomms/TransportPDU.h>
 #include <dccomms/Utils.h>
 #include <dccomms_ros/simulator/AcousticCommsChannel.h>
+#include <dccomms_ros/simulator/AcousticROSCommsDevice.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
 #include <dccomms_ros_msgs/AddDevice.h>
 #include <dccomms_ros_msgs/CheckDevice.h>
@@ -142,26 +143,21 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
   }
 
   if (!exists) {
-    //    ROSCommsDevicePtr dev =
-    //        dccomms::CreateObject<ROSCommsDevice>(_this, _packetBuilder);
-    //    dev->SetDccommsId(dccommsId);
-    //    dev->SetMac(mac);
-    //    dev->SetTfFrameId(frameId);
-    //    dev->SetMaxBitRate(maxBitRate);
+    ROSCommsDevicePtr dev =
+        dccomms::CreateObject<AcousticROSCommsDevice>(_this, _packetBuilder);
+    dev->SetDccommsId(dccommsId);
+    dev->SetMac(mac);
+    dev->SetTfFrameId(frameId);
+    dev->SetMaxBitRate(maxBitRate);
 
-    //    Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
-    //    (*mac2DevMap)[mac] = dev;
-    //    _dccommsDevMap[dev->GetDccommsId()] = dev;
+    Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
+    (*mac2DevMap)[mac] = dev;
+    _dccommsDevMap[dev->GetDccommsId()] = dev;
 
-    //    Log->info("\nAdding device:\n{}", dev->ToString());
-    //    auto starterWork = [dev]() {
-    //      dev->StartDeviceService();
-    //      dev->StartNodeWorker();
-    //    };
-
-    //    std::thread starter(starterWork);
-    //    starter.detach();
-    //    res.res = true;
+    Log->info("\nAdding device:\n{}", dev->ToString());
+    Simulator::Schedule(Seconds(0),
+                        MakeEvent(&ROSCommsDevice::Start, dev.get()));
+    res.res = true;
 
   } else {
     res.res = false;
@@ -183,22 +179,29 @@ bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
   ROSCommsDevicePtr dev = _GetDevice(req.dccommsId);
   CommsChannelPtr channel = _GetChannel(req.channelId);
   DEV_TYPE devType = dev->GetDevType();
+  res.res = true;
+  if (!channel) {
+    res.res = false;
+    return res.res;
+  }
+
   CHANNEL_TYPE chnType = channel->GetType();
   switch (devType) {
   case ACOUSTIC_UNDERWATER_DEV: {
     if (chnType == ACOUSTIC_UNDERWATER_CHANNEL) {
-
     } else {
       res.res = false;
     }
     break;
   }
   case CUSTOM_DEV: {
+    res.res = false;
     break;
+  default: { res.res = false; }
   }
   }
   if (res.res) {
-    // Link dev to channel
+    dev->LinkToChannel(channel);
   }
   return res.res;
 }
@@ -213,6 +216,7 @@ bool ROSCommsSimulator::_AddChannel(AddChannel::Request &req,
     auto acousticChannel =
         dccomms::CreateObject<dccomms_ros::AcousticCommsChannel>(id);
     channel = acousticChannel;
+    _channelMap[id] = channel;
     res.res = true;
     break;
   }
@@ -234,7 +238,7 @@ void ROSCommsSimulator::StartROSInterface() {
    */
   _addDevService = _rosNode.advertiseService(
       "add_net_device", &ROSCommsSimulator::_AddDevice, this);
-  _addDevService = _rosNode.advertiseService(
+  _addChannelService = _rosNode.advertiseService(
       "add_channel", &ROSCommsSimulator::_AddChannel, this);
   _checkDevService = _rosNode.advertiseService(
       "check_net_device", &ROSCommsSimulator::_CheckDevice, this);
@@ -242,11 +246,52 @@ void ROSCommsSimulator::StartROSInterface() {
       "remove_net_device", &ROSCommsSimulator::_RemoveDevice, this);
   _linkDeviceToChannelService = _rosNode.advertiseService(
       "link_dev_to_channel", &ROSCommsSimulator::_LinkDevToChannel, this);
+  _startSimulationService = _rosNode.advertiseService(
+      "start_simulation", &ROSCommsSimulator::_StartSimulation, this);
   _linkUpdaterWorker.Start();
 }
 
+bool ROSCommsSimulator::_StartSimulation(
+    dccomms_ros_msgs::StartSimulation::Request &req,
+    dccomms_ros_msgs::StartSimulation::Response &res) {
+  _Run();
+  res.res = true;
+  return res.res;
+}
+
+void ROSCommsSimulator::_SetSimulationStartDateTime() {
+  _startPoint = std::chrono::high_resolution_clock::now();
+}
+
+void ROSCommsSimulator::GetSimTime(std::string &datetime,
+                                   double &secsFromStart) {
+  auto simTime = ns3::Simulator::Now();
+  secsFromStart = simTime.GetSeconds();
+  auto tstamp = simTime.GetTimeStep(); // nanoseconds
+
+  auto simNanos = std::chrono::nanoseconds(tstamp);
+  auto curpoint = _startPoint + simNanos;
+  auto t = std::chrono::high_resolution_clock::to_time_t(curpoint);
+  auto localEventTime = std::localtime(&t);
+  char mbstr[100];
+  auto count = std::strftime(mbstr, sizeof(mbstr), _timeFormat, localEventTime);
+  char *mp = mbstr + count;
+
+  auto durationFromEpoch = curpoint.time_since_epoch();
+  auto millis =
+      std::chrono::duration_cast<std::chrono::milliseconds>(durationFromEpoch) -
+      std::chrono::duration_cast<std::chrono::seconds>(durationFromEpoch);
+  sprintf(mp, ".%ld", millis.count());
+  datetime = mbstr;
+}
+
 void ROSCommsSimulator::_Run() {
-  std::thread task([]() { Simulator::Run(); });
+  std::thread task([this]() {
+    Simulator::Schedule(
+        Seconds(0),
+        MakeEvent(&ROSCommsSimulator::_SetSimulationStartDateTime, this));
+    Simulator::Run();
+  });
   task.detach();
 }
 
@@ -255,7 +300,7 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
 
   dccomms::Timer timer;
   bool showLog = false;
-  unsigned int showLogInterval = 1500;
+  unsigned int showLogInterval = 10000;
   timer.Reset();
 
   ros::Rate loop_rate(20);
