@@ -3,7 +3,6 @@
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
 #include <ns3/aqua-sim-header.h>
 #include <ns3/core-module.h>
-#include <ns3/mobility-helper.h>
 #include <ns3/node-list.h>
 
 namespace dccomms_ros {
@@ -14,9 +13,8 @@ AcousticROSCommsDevice::AcousticROSCommsDevice(ROSCommsSimulatorPtr s,
   _started = false;
   _nodeListIndex = ns3::NodeList::GetNNodes();
   _node = ns3::CreateObject<ns3::Node>();
-  ns3::MobilityHelper mobh;
-  mobh.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-  mobh.Install(_node);
+  _mobh.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+  _mobh.Install(_node);
 
   _asHelper = ns3::AquaSimHelper::Default();
   _asHelper.SetMac("ns3::AquaSimBroadcastMac");
@@ -84,6 +82,10 @@ void AcousticROSCommsDevice::DoStart() {
   _device->SetAddress(_aquaSimAddr);
   _macLayer = _device->GetMac();
   _routingLayer = _device->GetRouting();
+  _mobility = _node->GetObject<ns3::MobilityModel>();
+
+  _device->GetPhy()->SetTransRange(20);
+  _mobility->SetPosition(Vector3D(10 * _nodeListIndex, 0, 0));
   // TODO: set receive callback
   ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
                            "/DeviceList/0/Routing/PacketReceived",

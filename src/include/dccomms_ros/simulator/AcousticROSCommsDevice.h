@@ -5,6 +5,7 @@
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <ns3/aqua-sim-net-device.h>
 #include <ns3/aqua-sim-helper.h>
+#include <ns3/mobility-helper.h>
 
 using namespace dccomms;
 using namespace cpplogging;
@@ -32,6 +33,7 @@ private:
   ns3::Ptr<ns3::MobilityModel> _mobility;
   ns3::AquaSimHelper _asHelper;
   ns3::AquaSimAddress _aquaSimAddr;
+  ns3::MobilityHelper  _mobh;
 
   bool _started;
   uint32_t _nodeListIndex;
