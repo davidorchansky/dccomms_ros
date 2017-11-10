@@ -14,8 +14,11 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr pb)
 }
 
 void ROSCommsDevice::_StartDeviceService() {
-  _device->Start();
-  _device->SetPhyLayerState(CommsDeviceService::READY);
+  auto startWorker = std::thread([this]() {
+    _device->Start();
+    _device->SetPhyLayerState(CommsDeviceService::READY);
+  });
+  startWorker.detach();
 }
 
 void ROSCommsDevice::Start() {

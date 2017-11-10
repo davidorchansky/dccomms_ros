@@ -40,7 +40,7 @@ class ROSCommsSimulator;
 
 typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 
-class ROSCommsSimulator : public virtual Loggable {
+class ROSCommsSimulator : public virtual Logger {
 public:
   ROSCommsSimulator(ros::NodeHandle &rosnode, PacketBuilderPtr packetBuilder);
   void StartROSInterface();
@@ -95,7 +95,7 @@ private:
   PacketBuilderPtr _packetBuilder;
   ServiceThread<ROSCommsSimulator> _linkUpdaterWorker;
   void _LinkUpdaterWork();
-
+  void _IsAliveWork();
   ////////////////////
   VirtualDevicesLinks _devLinks;
   Type2DevMapMap _type2DevMap;

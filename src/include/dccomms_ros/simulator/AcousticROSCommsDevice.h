@@ -3,8 +3,8 @@
 
 #include <dccomms_ros/simulator/AcousticCommsChannel.h>
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
-#include <ns3/aqua-sim-net-device.h>
 #include <ns3/aqua-sim-helper.h>
+#include <ns3/aqua-sim-net-device.h>
 #include <ns3/mobility-helper.h>
 
 using namespace dccomms;
@@ -12,6 +12,7 @@ using namespace cpplogging;
 
 namespace dccomms_ros {
 
+enum AQS_ROUTING_TYPE { AQS_ROUTING_DUMMY, AQS_ROUTING_VBF };
 class AcousticROSCommsDevice : public ROSCommsDevice {
 public:
   AcousticROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr);
@@ -33,10 +34,12 @@ private:
   ns3::Ptr<ns3::MobilityModel> _mobility;
   ns3::AquaSimHelper _asHelper;
   ns3::AquaSimAddress _aquaSimAddr;
-  ns3::MobilityHelper  _mobh;
+  ns3::MobilityHelper _mobh;
 
   bool _started;
   uint32_t _nodeListIndex;
+
+  AQS_ROUTING_TYPE _routingType;
 
   void _Recv(std::string context, ns3::Ptr<const ns3::Packet>);
 };

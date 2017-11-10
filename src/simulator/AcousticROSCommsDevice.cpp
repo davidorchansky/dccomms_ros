@@ -19,6 +19,7 @@ AcousticROSCommsDevice::AcousticROSCommsDevice(ROSCommsSimulatorPtr s,
   _asHelper = ns3::AquaSimHelper::Default();
   _asHelper.SetMac("ns3::AquaSimBroadcastMac");
   _asHelper.SetRouting("ns3::AquaSimRoutingDummy");
+  _routingType = AQS_ROUTING_DUMMY;
   _device = ns3::CreateObject<ns3::AquaSimNetDevice>();
 }
 
@@ -46,8 +47,9 @@ void AcousticROSCommsDevice::DoSetMac(uint32_t mac) {
 }
 
 void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
-  while (!_started)
-    this_thread::sleep_for(chrono::milliseconds(100));
+  while (!_started) {
+    this_thread::sleep_for(chrono::milliseconds(500));
+  }
   auto packetSize = pkt->GetPacketSize();
   auto packetBuffer = pkt->GetBuffer();
   ns3::Ptr<ns3::Packet> ns3pkt =
@@ -57,11 +59,21 @@ void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
   // consider a
   // broadcast
   // this does not work (traced callbacks length = 0 in this thread)
-  _device->Send(ns3pkt, AquaSimAddress::GetBroadcast(), 0);
-
-  //  Simulator::Schedule(Seconds(0),
-  //                      MakeEvent(&ns3::AquaSimNetDevice::Send, (&*_device),
-  //                                ns3pkt, AquaSimAddress::GetBroadcast(), 0));
+  switch (_routingType) {
+  case AQS_ROUTING_DUMMY: {
+    ns3::AquaSimHeader ash;
+    ash.SetNumForwards(0);
+    ns3pkt->AddHeader(ash);
+    //_device->Send(ns3pkt, AquaSimAddress(2), 0);
+    _device->Send(ns3pkt, AquaSimAddress::GetBroadcast(), 0);
+    break;
+  }
+  case AQS_ROUTING_VBF: {
+    break;
+  default:
+    break;
+  }
+  }
 }
 
 void AcousticROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel) {

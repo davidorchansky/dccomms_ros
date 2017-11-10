@@ -155,7 +155,7 @@ bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
     _dccommsDevMap[dev->GetDccommsId()] = dev;
 
     Log->info("\nAdding device:\n{}", dev->ToString());
-    Simulator::Schedule(Seconds(0),
+    Simulator::Schedule(Seconds(0 + 0.01 * mac),
                         MakeEvent(&ROSCommsDevice::Start, dev.get()));
     res.res = true;
 
@@ -285,11 +285,20 @@ void ROSCommsSimulator::GetSimTime(std::string &datetime,
   datetime = mbstr;
 }
 
+void ROSCommsSimulator::_IsAliveWork() {
+  Info("Is alive...");
+  Simulator::Schedule(Seconds(1),
+                      MakeEvent(&ROSCommsSimulator::_IsAliveWork, this));
+}
+
 void ROSCommsSimulator::_Run() {
   std::thread task([this]() {
     Simulator::Schedule(
         Seconds(0),
         MakeEvent(&ROSCommsSimulator::_SetSimulationStartDateTime, this));
+
+    Simulator::Schedule(Seconds(1),
+                        MakeEvent(&ROSCommsSimulator::_IsAliveWork, this));
     Simulator::Run();
   });
   task.detach();

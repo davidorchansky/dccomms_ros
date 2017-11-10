@@ -50,8 +50,7 @@ class Test : virtual public cpplogging::Logger {
 public:
   Test();
   void RunTest();
-  void RoutingPacketTx(std::string context, Ptr<const Packet>,
-                       AquaSimAddress nextHop, AquaSimAddress dest);
+  void RoutingPacketTx(std::string context, Ptr<const Packet>);
   void RoutingPacketRx(std::string context, Ptr<const Packet>);
   void CourseChange(std::string context, Ptr<const MobilityModel> model);
   void GetSimTime(const char *format, std::string &datetime,
@@ -80,8 +79,7 @@ Test::Test() {
   mobilityLog.SetLogLevel(level);
 }
 
-void Test::SetSimulationStartDateTime()
-{
+void Test::SetSimulationStartDateTime() {
   start = std::chrono::high_resolution_clock::now();
 }
 void Test::GetSimTime(const char *format, std::string &datetime,
@@ -116,8 +114,9 @@ void Test::RoutingPacketRx(std::string context, Ptr<const Packet> pkt) {
   double secs;
   GetSimTime(timeFormat, datetime, secs);
 
-  routingLog.Info("({} secs; {}) {}: (Addr: {}) Received packet from {}", secs,
-                  datetime, context, daddr, saddr);
+  routingLog.Info(
+      "({} secs; {}) {}: (Addr: {}) Received packet from {} ; {} bytes", secs,
+      datetime, context, daddr, saddr, pkt->GetSize());
 }
 
 void Test::CourseChange(std::string context, Ptr<const MobilityModel> model) {
@@ -129,8 +128,7 @@ void Test::CourseChange(std::string context, Ptr<const MobilityModel> model) {
   mobilityLog.Info("({} secs; {}) {}: [x,y,z] = [{},{},{}]", secs, datetime,
                    context, position.x, position.y, position.z);
 }
-void Test::RoutingPacketTx(std::string context, Ptr<const Packet> pkt,
-                           AquaSimAddress nextHop, AquaSimAddress dest) {
+void Test::RoutingPacketTx(std::string context, Ptr<const Packet> pkt) {
   AquaSimHeader ash;
   pkt->PeekHeader(ash);
   auto saddr = ash.GetSAddr().GetAsInt();
@@ -142,12 +140,12 @@ void Test::RoutingPacketTx(std::string context, Ptr<const Packet> pkt,
   GetSimTime(timeFormat, datetime, secs);
 
   routingLog.Info(
-      "({} secs; {}) {}: (Addr: {}) Transmitting packet to {}. Next hop: {} ",
-      secs, datetime, context, saddr, daddr, nhaddr);
+      "({} secs; {}) {}: (Addr: {}) Transmitting packet to {}. Next hop: {} ; {} bytes",
+      secs, datetime, context, saddr, daddr, nhaddr, pkt->GetSize());
 }
 
 void Test::RunTest() {
-  double simStop = 40; // seconds
+  double simStop = 60; // seconds
   int nodes = 4;
   int sinks = 1;
   uint32_t m_dataRate = 180;   // 120;
@@ -289,9 +287,9 @@ void Test::RunTest() {
     auto mobility = node0->GetObject<MobilityModel>();
     while (cont) {
       std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-      auto x = mobility->GetPosition().x;
-      auto y = mobility->GetPosition().y;
-      mobility->SetPosition(Vector3D(x + 0.2, y + 0.2, 0));
+//      auto x = mobility->GetPosition().x;
+//      auto y = mobility->GetPosition().y;
+//      mobility->SetPosition(Vector3D(x + 0.2, y + 0.2, 0));
     }
   });
 
@@ -303,8 +301,8 @@ void Test::RunTest() {
   Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange",
                   MakeCallback(&Test::CourseChange, this));
 
-  Simulator::Schedule(Seconds(0), MakeEvent(&Test::SetSimulationStartDateTime,
-                                            this));
+  Simulator::Schedule(Seconds(0),
+                      MakeEvent(&Test::SetSimulationStartDateTime, this));
   Simulator::Run();
   cont = false;
   mobilityWorker.join();
