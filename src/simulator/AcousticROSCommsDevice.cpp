@@ -25,17 +25,38 @@ AcousticROSCommsDevice::AcousticROSCommsDevice(ROSCommsSimulatorPtr s,
 
 void AcousticROSCommsDevice::_Recv(std::string context,
                                    ns3::Ptr<const ns3::Packet> pkt) {
-  ns3::AquaSimHeader ash;
-  pkt->PeekHeader(ash);
-  auto saddr = ash.GetSAddr().GetAsInt();
-  auto daddr = ash.GetDAddr().GetAsInt();
 
   std::string datetime;
   double secs;
   _sim->GetSimTime(datetime, secs);
 
-  Info("({} secs; {}) {}: (Addr: {}) Received packet from {}", secs, datetime,
-       context, daddr, saddr);
+  auto packet = pkt->Copy();
+  switch (_routingType) {
+  case AQS_ROUTING_DUMMY: {
+    ns3::AquaSimHeader ash;
+    packet->RemoveHeader(ash);
+    auto saddr = ash.GetSAddr().GetAsInt();
+    auto daddr = ash.GetDAddr().GetAsInt();
+    auto numForwards = ash.GetNumForwards();
+    while (ash.GetNumForwards() > 0) {
+      packet->RemoveHeader(ash);
+    }
+    char ser[5000];
+    auto size = packet->GetSize();
+    packet->CopyData((uint8_t*)ser, size);
+    auto dccommsPacket = _sim->GetPacketBuilder()->CreateFromBuffer(ser);
+    Info("({} secs; {}) {}: (Own Addr: {} Dest. Addr: {}) Received packet from "
+         "{} ({} forwards)",
+         secs, datetime, context, GetMac(), daddr, saddr, numForwards);
+    ReceiveFrame(dccommsPacket);
+    break;
+  }
+  case AQS_ROUTING_VBF: {
+    break;
+  default:
+    break;
+  }
+  }
 }
 
 DEV_TYPE AcousticROSCommsDevice::GetDevType() {
@@ -58,7 +79,6 @@ void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
   // TODO: check pkt destination addres (if exists). At the moment we
   // consider a
   // broadcast
-  // this does not work (traced callbacks length = 0 in this thread)
   switch (_routingType) {
   case AQS_ROUTING_DUMMY: {
     ns3::AquaSimHeader ash;
