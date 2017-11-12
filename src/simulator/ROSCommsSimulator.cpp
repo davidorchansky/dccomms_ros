@@ -296,9 +296,9 @@ void ROSCommsSimulator::_Run() {
     Simulator::Schedule(
         Seconds(0),
         MakeEvent(&ROSCommsSimulator::_SetSimulationStartDateTime, this));
-
-    Simulator::Schedule(Seconds(1),
-                        MakeEvent(&ROSCommsSimulator::_IsAliveWork, this));
+    //    Simulator::Schedule(Seconds(1),
+    //                        MakeEvent(&ROSCommsSimulator::_IsAliveWork,
+    //                        this));
     Simulator::Run();
   });
   task.detach();

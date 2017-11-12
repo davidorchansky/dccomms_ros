@@ -149,7 +149,7 @@ void Test::RunTest() {
   int nodes = 4;
   int sinks = 1;
   uint32_t m_dataRate = 180;   // 120;
-  uint32_t m_packetSize = 320; // 32;
+  uint32_t m_packetSize = 300; // 32;
   double range = 22;
 
   std::string asciiTraceFile = "bMAC-trace.asc";
@@ -282,16 +282,16 @@ void Test::RunTest() {
   std::cout << "-----------Running Simulation-----------\n";
 
   auto node0 = nodesCon.Get(0);
-  bool cont = true;
-  std::thread mobilityWorker([node0, &cont]() {
-    auto mobility = node0->GetObject<MobilityModel>();
-    while (cont) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-//      auto x = mobility->GetPosition().x;
-//      auto y = mobility->GetPosition().y;
-//      mobility->SetPosition(Vector3D(x + 0.2, y + 0.2, 0));
-    }
-  });
+//  bool cont = true;
+//  std::thread mobilityWorker([node0, &cont]() {
+//    auto mobility = node0->GetObject<MobilityModel>();
+//    while (cont) {
+//      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+////      auto x = mobility->GetPosition().x;
+////      auto y = mobility->GetPosition().y;
+////      mobility->SetPosition(Vector3D(x + 0.2, y + 0.2, 0));
+//    }
+//  });
 
   Config::Connect("/NodeList/*/DeviceList/*/Routing/PacketReceived",
                   MakeCallback(&Test::RoutingPacketRx, this));
@@ -304,8 +304,8 @@ void Test::RunTest() {
   Simulator::Schedule(Seconds(0),
                       MakeEvent(&Test::SetSimulationStartDateTime, this));
   Simulator::Run();
-  cont = false;
-  mobilityWorker.join();
+  //cont = false;
+  //mobilityWorker.join();
   Simulator::Destroy();
 }
 

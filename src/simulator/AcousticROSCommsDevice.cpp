@@ -23,9 +23,26 @@ AcousticROSCommsDevice::AcousticROSCommsDevice(ROSCommsSimulatorPtr s,
   _device = ns3::CreateObject<ns3::AquaSimNetDevice>();
 }
 
+void AcousticROSCommsDevice::_SendTrace(string context,
+                                        ns3::Ptr<const ns3::Packet> pkt) {
+  std::string datetime;
+  double secs;
+  _sim->GetSimTime(datetime, secs);
+
+  AquaSimHeader ash;
+  pkt->PeekHeader(ash);
+  auto saddr = ash.GetSAddr().GetAsInt();
+  auto daddr = ash.GetDAddr().GetAsInt();
+  auto nhaddr = ash.GetNextHop().GetAsInt();
+
+  Info("({} secs; {}) {}: (Addr: {}) Transmitting packet to {}. Next hop: {} ; "
+       "{} bytes",
+       secs, datetime, context, saddr, daddr, nhaddr, pkt->GetSize());
+  FlushLog();
+}
+
 void AcousticROSCommsDevice::_Recv(std::string context,
                                    ns3::Ptr<const ns3::Packet> pkt) {
-
   std::string datetime;
   double secs;
   _sim->GetSimTime(datetime, secs);
@@ -34,6 +51,7 @@ void AcousticROSCommsDevice::_Recv(std::string context,
   switch (_routingType) {
   case AQS_ROUTING_DUMMY: {
     ns3::AquaSimHeader ash;
+    auto psize = packet->GetSize();
     packet->RemoveHeader(ash);
     auto saddr = ash.GetSAddr().GetAsInt();
     auto daddr = ash.GetDAddr().GetAsInt();
@@ -43,12 +61,13 @@ void AcousticROSCommsDevice::_Recv(std::string context,
     }
     char ser[5000];
     auto size = packet->GetSize();
-    packet->CopyData((uint8_t*)ser, size);
+    packet->CopyData((uint8_t *)ser, size);
     auto dccommsPacket = _sim->GetPacketBuilder()->CreateFromBuffer(ser);
     Info("({} secs; {}) {}: (Own Addr: {} Dest. Addr: {}) Received packet from "
-         "{} ({} forwards)",
-         secs, datetime, context, GetMac(), daddr, saddr, numForwards);
+         "{} ({} forwards) ({} bytes)",
+         secs, datetime, context, GetMac(), daddr, saddr, numForwards, psize);
     ReceiveFrame(dccommsPacket);
+    FlushLog();
     break;
   }
   case AQS_ROUTING_VBF: {
@@ -75,17 +94,14 @@ void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
   auto packetBuffer = pkt->GetBuffer();
   ns3::Ptr<ns3::Packet> ns3pkt =
       ns3::Create<ns3::Packet>(packetBuffer, packetSize);
-
-  // TODO: check pkt destination addres (if exists). At the moment we
-  // consider a
-  // broadcast
   switch (_routingType) {
   case AQS_ROUTING_DUMMY: {
     ns3::AquaSimHeader ash;
     ash.SetNumForwards(0);
     ns3pkt->AddHeader(ash);
-    //_device->Send(ns3pkt, AquaSimAddress(2), 0);
-    _device->Send(ns3pkt, AquaSimAddress::GetBroadcast(), 0);
+    ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
+                                        &ns3::AquaSimNetDevice::Send, _device,
+                                        ns3pkt, AquaSimAddress(2), 0);
     break;
   }
   case AQS_ROUTING_VBF: {
@@ -118,10 +134,12 @@ void AcousticROSCommsDevice::DoStart() {
 
   _device->GetPhy()->SetTransRange(20);
   _mobility->SetPosition(Vector3D(10 * _nodeListIndex, 0, 0));
-  // TODO: set receive callback
   ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
                            "/DeviceList/0/Routing/PacketReceived",
                        MakeCallback(&AcousticROSCommsDevice::_Recv, this));
+  ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
+                           "/DeviceList/0/Routing/PacketTransmitting",
+                       MakeCallback(&AcousticROSCommsDevice::_SendTrace, this));
   _started = true;
 }
 }

@@ -42,6 +42,7 @@ private:
   AQS_ROUTING_TYPE _routingType;
 
   void _Recv(std::string context, ns3::Ptr<const ns3::Packet>);
+  void _SendTrace(std::string context, ns3::Ptr<const ns3::Packet>);
 };
 }
 #endif // COMMSNODE_H
