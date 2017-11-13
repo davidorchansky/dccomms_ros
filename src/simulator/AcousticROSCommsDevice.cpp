@@ -78,6 +78,11 @@ void AcousticROSCommsDevice::_Recv(std::string context,
   }
 }
 
+void AcousticROSCommsDevice::_RxError(std::string context,
+                                      ns3::Ptr<const ns3::Packet> pkt) {
+    Warn("Packet received with errors!");
+}
+
 DEV_TYPE AcousticROSCommsDevice::GetDevType() {
   return DEV_TYPE::ACOUSTIC_UNDERWATER_DEV;
 }
@@ -94,6 +99,8 @@ void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
   auto packetBuffer = pkt->GetBuffer();
   ns3::Ptr<ns3::Packet> ns3pkt =
       ns3::Create<ns3::Packet>(packetBuffer, packetSize);
+
+  uint16_t daddr = pkt->GetDestAddr();
   switch (_routingType) {
   case AQS_ROUTING_DUMMY: {
     ns3::AquaSimHeader ash;
@@ -101,7 +108,7 @@ void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
     ns3pkt->AddHeader(ash);
     ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
                                         &ns3::AquaSimNetDevice::Send, _device,
-                                        ns3pkt, AquaSimAddress(2), 0);
+                                        ns3pkt, AquaSimAddress(daddr), 0);
     break;
   }
   case AQS_ROUTING_VBF: {
@@ -140,6 +147,9 @@ void AcousticROSCommsDevice::DoStart() {
   ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
                            "/DeviceList/0/Routing/PacketTransmitting",
                        MakeCallback(&AcousticROSCommsDevice::_SendTrace, this));
+  ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
+                           "/DeviceList/0/Phy/RxError",
+                       MakeCallback(&AcousticROSCommsDevice::_RxError, this));
   _started = true;
 }
 }
