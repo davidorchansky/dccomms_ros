@@ -80,7 +80,7 @@ void AcousticROSCommsDevice::_Recv(std::string context,
 
 void AcousticROSCommsDevice::_RxError(std::string context,
                                       ns3::Ptr<const ns3::Packet> pkt) {
-    Warn("Packet received with errors!");
+  Warn("Packet received with errors!");
 }
 
 DEV_TYPE AcousticROSCommsDevice::GetDevType() {
@@ -129,6 +129,28 @@ void AcousticROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel) {
     Log->critical(
         "internal error: attempted to link device to a wrong channel type");
   }
+}
+
+void AcousticROSCommsDevice::DoSetPosition(const tf::Vector3 &position) {
+  double x = position.getX(),
+         y = position.getY(),
+         z = position.getZ();
+  ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
+                                      &ns3::MobilityModel::SetPosition, _mobility,
+                                      ns3::Vector3D(x, y, z), 0);
+}
+
+
+void AcousticROSCommsDevice::_PositionUpdated(std::string context, ns3::Ptr<const MobilityModel> model)
+{
+  Vector position = model->GetPosition();
+
+  std::string datetime;
+  double secs;
+  _sim->GetSimTime(datetime, secs);
+
+  Info("({} secs; {}) {}: [x,y,z] = [{},{},{}]", secs, datetime,
+                   context, position.x, position.y, position.z);
 }
 
 void AcousticROSCommsDevice::DoStart() {

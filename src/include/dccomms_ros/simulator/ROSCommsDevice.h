@@ -5,6 +5,7 @@
 #include <dccomms/CommsDeviceService.h>
 #include <dccomms/Utils.h>
 #include <dccomms_ros/simulator/CommsChannel.h>
+#include <tf/transform_listener.h>
 
 using namespace dccomms;
 using namespace cpplogging;
@@ -28,6 +29,8 @@ public:
 
   void SetMaxBitRate(uint32_t bps);
   uint32_t GetMaxBitRate();
+
+  void SetPosition(const tf::Vector3 & position);
 
   virtual void SetLogName(std::string name);
   virtual void SetLogLevel(cpplogging::LogLevel);
@@ -56,6 +59,7 @@ protected:
   virtual void DoSend(PacketPtr dlf) = 0;
   virtual void DoLinkToChannel(CommsChannelPtr channel) = 0;
   virtual void DoStart() = 0;
+  virtual void DoSetPosition(const tf::Vector3 & position) = 0;
 
   ROSCommsSimulatorPtr _sim;
 

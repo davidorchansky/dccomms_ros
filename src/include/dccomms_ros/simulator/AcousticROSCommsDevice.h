@@ -24,6 +24,7 @@ protected:
   void DoSend(PacketPtr dlf);
   void DoLinkToChannel(CommsChannelPtr channel);
   void DoStart();
+  void DoSetPosition(const tf::Vector3 & position);
 
 private:
   ns3::Ptr<ns3::AquaSimChannel> _channel;
@@ -44,6 +45,7 @@ private:
   void _Recv(std::string context, ns3::Ptr<const ns3::Packet>);
   void _SendTrace(std::string context, ns3::Ptr<const ns3::Packet>);
   void _RxError(std::string context, ns3::Ptr<const ns3::Packet>);
+  void _PositionUpdated(std::string context, ns3::Ptr<const MobilityModel> model);
 };
 }
 #endif // COMMSNODE_H
