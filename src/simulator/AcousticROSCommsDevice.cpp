@@ -132,25 +132,24 @@ void AcousticROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel) {
 }
 
 void AcousticROSCommsDevice::DoSetPosition(const tf::Vector3 &position) {
-  double x = position.getX(),
-         y = position.getY(),
-         z = position.getZ();
-  ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
-                                      &ns3::MobilityModel::SetPosition, _mobility,
-                                      ns3::Vector3D(x, y, z));
+  if (_started) {
+    double x = position.getX(), y = position.getY(), z = position.getZ();
+    ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
+                                        &ns3::MobilityModel::SetPosition,
+                                        _mobility, ns3::Vector3D(x, y, z));
+  }
 }
 
-
-void AcousticROSCommsDevice::_PositionUpdated(std::string context, ns3::Ptr<const MobilityModel> model)
-{
+void AcousticROSCommsDevice::_PositionUpdated(
+    std::string context, ns3::Ptr<const MobilityModel> model) {
   Vector position = model->GetPosition();
 
   std::string datetime;
   double secs;
   _sim->GetSimTime(datetime, secs);
 
-  Info("({} secs; {}) {}: [x,y,z] = [{},{},{}]", secs, datetime,
-                   context, position.x, position.y, position.z);
+  Info("({} secs; {}) {}: [x,y,z] = [{},{},{}]", secs, datetime, context,
+       position.x, position.y, position.z);
 }
 
 void AcousticROSCommsDevice::DoStart() {
@@ -172,6 +171,10 @@ void AcousticROSCommsDevice::DoStart() {
   ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
                            "/DeviceList/0/Phy/RxError",
                        MakeCallback(&AcousticROSCommsDevice::_RxError, this));
+  Config::Connect(
+      "/NodeList/" + std::to_string(_nodeListIndex) +
+          "/$ns3::MobilityModel/CourseChange",
+      MakeCallback(&AcousticROSCommsDevice::_PositionUpdated, this));
   _started = true;
 }
 }

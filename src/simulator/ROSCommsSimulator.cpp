@@ -312,7 +312,7 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
   unsigned int showLogInterval = 10000;
   timer.Reset();
 
-  ros::Rate loop_rate(20);
+  ros::Rate loop_rate(5);
 
   std::string frameId0, frameId1;
   while (1) {
@@ -323,28 +323,49 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
 
     _devLinksMutex.lock();
     tf::StampedTransform transform;
-    for (VirtualDeviceLinkPtr link : _devLinks) {
-      double distance = 0;
-      try {
-        frameId0 = link->GetDevice0()->GetTfFrameId();
-        frameId1 = link->GetDevice1()->GetTfFrameId();
-
-        ros::Time now = ros::Time::now();
-
-        listener.lookupTransform(frameId0, frameId1, ros::Time(0), transform);
-        distance = transform.getOrigin().distance(tf::Vector3(0, 0, 0));
-        if (showLog)
-          Log->debug("Range between frame '{}' and '{}': {}", frameId0,
-                     frameId1, distance);
-      } catch (std::exception &e) {
-        distance = 0;
-        if (showLog)
-          Log->warn("An exception has ocurred in the link updater work: frames "
-                    "{}-{}: {}",
-                    frameId0, frameId1, std::string(e.what()));
+    for (std::pair<const uint32_t, Mac2DevMapPtr> type2Devs : _type2DevMap) {
+      Mac2DevMapPtr mac2DevMap = type2Devs.second;
+      for (std::pair<const uint32_t, ROSCommsDevicePtr> mac2Dev : *mac2DevMap) {
+        ROSCommsDevicePtr dev = mac2Dev.second;
+        std::string tfFrameId = dev->GetTfFrameId();
+        try {
+          ros::Time now = ros::Time::now();
+          listener.lookupTransform(tfFrameId, "/world", ros::Time(0),
+                                   transform);
+          tf::Vector3 position = transform.getOrigin();
+          dev->SetPosition(position);
+        } catch (std::exception &e) {
+          if (showLog)
+            Log->warn("An exception has ocurred in the link updater work: {}",
+                      std::string(e.what()));
+        }
       }
-      //_UpdateDevLinkFromRange(link, distance, showLog);
     }
+
+    //    for (VirtualDeviceLinkPtr link : _devLinks) {
+    //      double distance = 0;
+    //      try {
+    //        frameId0 = link->GetDevice0()->GetTfFrameId();
+    //        frameId1 = link->GetDevice1()->GetTfFrameId();
+
+    //        ros::Time now = ros::Time::now();
+
+    //        listener.lookupTransform(frameId0, frameId1, ros::Time(0),
+    //        transform);
+    //        distance = transform.getOrigin().distance(tf::Vector3(0, 0, 0));
+    //        if (showLog)
+    //          Log->debug("Range between frame '{}' and '{}': {}", frameId0,
+    //                     frameId1, distance);
+    //      } catch (std::exception &e) {
+    //        distance = 0;
+    //        if (showLog)
+    //          Log->warn("An exception has ocurred in the link updater work:
+    //          frames "
+    //                    "{}-{}: {}",
+    //                    frameId0, frameId1, std::string(e.what()));
+    //      }
+    //      //_UpdateDevLinkFromRange(link, distance, showLog);
+    //    }
     _devLinksMutex.unlock();
     loop_rate.sleep();
 
