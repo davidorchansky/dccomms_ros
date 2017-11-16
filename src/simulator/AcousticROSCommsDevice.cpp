@@ -137,7 +137,7 @@ void AcousticROSCommsDevice::DoSetPosition(const tf::Vector3 &position) {
          z = position.getZ();
   ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
                                       &ns3::MobilityModel::SetPosition, _mobility,
-                                      ns3::Vector3D(x, y, z), 0);
+                                      ns3::Vector3D(x, y, z));
 }
 
 
