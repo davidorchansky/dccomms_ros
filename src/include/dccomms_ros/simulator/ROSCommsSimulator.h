@@ -18,6 +18,8 @@
 #include <dccomms_ros_msgs/LinkDeviceToChannel.h>
 #include <dccomms_ros_msgs/RemoveDevice.h>
 #include <dccomms_ros_msgs/StartSimulation.h>
+#include <dccomms_ros_msgs/AddCustomDevice.h>
+#include <dccomms_ros_msgs/AddCustomChannel.h>
 #include <ros/ros.h>
 // end ROS
 
@@ -75,6 +77,10 @@ private:
                          dccomms_ros_msgs::LinkDeviceToChannel::Response &res);
   bool _AddChannel(dccomms_ros_msgs::AddChannel::Request &req,
                    dccomms_ros_msgs::AddChannel::Response &res);
+  bool _AddCustomChannel(dccomms_ros_msgs::AddCustomChannel::Request &req,
+                  dccomms_ros_msgs::AddCustomChannel::Response &res);
+  bool _AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req,
+                  dccomms_ros_msgs::AddCustomDevice::Response &res);
 
   void _AddDeviceToSet(std::string iddev, ROSCommsDevicePtr dev);
   bool _DeviceExists(std::string iddev);
@@ -87,7 +93,7 @@ private:
   CommsChannelPtr _GetChannel(int id);
 
   ros::ServiceServer _addDevService, _checkDevService, _addChannelService, _removeDevService,
-      _linkDeviceToChannelService, _startSimulationService;
+      _linkDeviceToChannelService, _startSimulationService, _addCustomDeviceService, _addCustomChannelService;
   ros::NodeHandle &_rosNode;
 
   std::mutex _devLinksMutex, _idDevMapMutex, _channelsMutex;

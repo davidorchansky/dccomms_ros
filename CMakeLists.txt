@@ -221,7 +221,9 @@ SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/ROSCommsDevice.cpp
         src/simulator/ROSCommsSimulator.cpp
         src/simulator/AcousticROSCommsDevice.cpp
+        src/simulator/CustomROSCommsDevice.cpp
         src/simulator/AcousticCommsChannel.cpp
+        src/simulator/CustomCommsChannel.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})

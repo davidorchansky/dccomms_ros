@@ -52,6 +52,8 @@ public:
   void LinkToChannel(CommsChannelPtr channel);
   CommsChannelPtr GetLinkedChannel();
 
+  tf::Vector3 GetPosition();
+
   virtual DEV_TYPE GetDevType() = 0;
 
 protected:
@@ -77,6 +79,7 @@ private:
   uint32_t _maxBitRate;
   uint32_t _millisPerByte;
   PacketBuilderPtr _pb;
+  tf::Vector3 _position;
 
   void _TxWork();
 };

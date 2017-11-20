@@ -4,6 +4,7 @@
 #include <dccomms_ros/simulator/AcousticCommsChannel.h>
 #include <dccomms_ros/simulator/AcousticROSCommsDevice.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
+#include <dccomms_ros/simulator/CustomROSCommsDevice.h>
 #include <dccomms_ros_msgs/AddDevice.h>
 #include <dccomms_ros_msgs/CheckDevice.h>
 #include <dccomms_ros_msgs/types.h>
@@ -107,7 +108,7 @@ bool ROSCommsSimulator::_RemoveDevice(RemoveDevice::Request &req,
 bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
                                    AddDevice::Response &res) {
   auto dccommsId = req.dccommsId;
-  DEV_TYPE deviceType = (DEV_TYPE)req.type;
+  DEV_TYPE deviceType = static_cast<DEV_TYPE>(req.type);
   auto mac = req.mac;
   auto frameId = req.frameId;
   auto maxBitRate = req.maxBitRate;
@@ -232,6 +233,77 @@ bool ROSCommsSimulator::_AddChannel(AddChannel::Request &req,
   return res.res;
 }
 
+bool ROSCommsSimulator::_AddCustomChannel(AddCustomChannel::Request &req,
+                                    AddCustomChannel::Response &res) {
+  CommsChannelPtr channel;
+  uint32_t id = req.id;
+  _channelMap[id] = channel;
+  return res.res;
+}
+
+bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
+                                   AddCustomDevice::Response &res) {
+
+  auto dccommsId = req.dccommsId;
+  auto mac = req.mac;
+  auto frameId = req.frameId;
+  auto maxBitRate = req.maxBitRate;
+
+  Log->info("Add device request received");
+
+  DEV_TYPE deviceType = DEV_TYPE::CUSTOM_DEV;
+  bool exists = false;
+  auto mac2DevMapIt = _type2DevMap.find(deviceType);
+  if (mac2DevMapIt != _type2DevMap.end()) {
+    Mac2DevMapPtr mac2DevMap = mac2DevMapIt->second;
+    auto devIt = mac2DevMap->find(mac);
+    if (devIt != mac2DevMap->end()) {
+      exists = true;
+      Log->error("Unable to add the device. A net device with the same MAC "
+                 "already exists: '{}'",
+                 devIt->second->GetDccommsId());
+    }
+  } else {
+    Mac2DevMapPtr mac2DevMap(new Mac2DevMap());
+    _type2DevMap[deviceType] = mac2DevMap;
+  }
+
+  if (!exists) {
+    auto devIt = _dccommsDevMap.find(dccommsId);
+    if (devIt != _dccommsDevMap.end()) {
+      exists = true;
+      Log->error(
+          "Unable to add the device. A net device with the same dccommsId "
+          "already exists: '{}'",
+          devIt->second->GetDccommsId());
+    }
+  }
+
+  if (!exists) {
+    CustomROSCommsDevicePtr dev =
+        dccomms::CreateObject<CustomROSCommsDevice>(_this, _packetBuilder);
+    dev->SetDccommsId(dccommsId);
+    dev->SetMac(mac);
+    dev->SetTfFrameId(frameId);
+    dev->SetMaxBitRate(maxBitRate);
+    //TODO: set remaining attributes
+
+    Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
+    (*mac2DevMap)[mac] = dev;
+    _dccommsDevMap[dev->GetDccommsId()] = dev;
+
+    Log->info("\nAdding device:\n{}", dev->ToString());
+    Simulator::Schedule(Seconds(0 + 0.01 * mac),
+                        MakeEvent(&ROSCommsDevice::Start, dev.get()));
+    res.res = true;
+
+  } else {
+    res.res = false;
+  }
+
+  return res.res;
+}
+
 void ROSCommsSimulator::StartROSInterface() {
   /*
    * http://www.boost.org/doc/libs/1_63_0/libs/bind/doc/html/bind.html#bind.purpose.using_bind_with_functions_and_fu
@@ -248,6 +320,10 @@ void ROSCommsSimulator::StartROSInterface() {
       "link_dev_to_channel", &ROSCommsSimulator::_LinkDevToChannel, this);
   _startSimulationService = _rosNode.advertiseService(
       "start_simulation", &ROSCommsSimulator::_StartSimulation, this);
+  _addCustomChannelService = _rosNode.advertiseService(
+      "add_custom_channel", &ROSCommsSimulator::_AddCustomChannel, this);
+  _addCustomDeviceService = _rosNode.advertiseService(
+      "add_custom_net_device", &ROSCommsSimulator::_AddCustomDevice, this);
   _linkUpdaterWorker.Start();
 }
 

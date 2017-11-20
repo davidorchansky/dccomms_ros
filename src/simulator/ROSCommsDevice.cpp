@@ -115,8 +115,11 @@ void ROSCommsDevice::FlushLogOn(cpplogging::LogLevel level) {
 void ROSCommsDevice::SetTfFrameId(const string &id) { _tfFrameId = id; }
 
 void ROSCommsDevice::SetPosition(const tf::Vector3 &position) {
+  _position = position;
   DoSetPosition(position);
 }
+
+tf::Vector3 ROSCommsDevice::GetPosition() { return _position; }
 
 std::string ROSCommsDevice::GetTfFrameId() { return _tfFrameId; }
 
