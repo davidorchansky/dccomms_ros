@@ -16,20 +16,20 @@ class CustomROSCommsDevice : public ROSCommsDevice {
 public:
   CustomROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr);
 
-  void SetTrTime(double trTimeMean, double trTimeSd = 0);
+  void SetBitRate(double trTimeMean, double trTimeSd = 0); //as bps
   void SetMinPktErrorRate(double minPktErrorRate);
   void SetPktErrorRateInc(double pktErrorRateInc);
   void SetMaxDistance(uint32_t d);
   void SetMinDistance(uint32_t d);
 
-  void GetTrTime(double &trTimeMean, double &trTimeSd);
+  void GetBitRate(double &trTimeMean, double &trTimeSd); //as bps
   double GetMinPktErrorRate();
   double GetPktErrorRateInc();
   uint32_t GetMaxDistance();
   uint32_t GetMinDistance();
 
   bool ErrOnNextPkt(double errRate);
-  double GetNextTt();
+  double GetNextTt(); // get next ms/byte
 
   virtual DEV_TYPE GetDevType();
 
@@ -46,7 +46,7 @@ protected:
 
 private:
   uint32_t _mac;
-  double _trTimeMean, _trTimeSd;
+  double _bitRateMean, _bitRateSd;
   double _minPktErrorRate, _pktErrorRateIncPerMeter;
 
   uint32_t _maxDistance, _minDistance;

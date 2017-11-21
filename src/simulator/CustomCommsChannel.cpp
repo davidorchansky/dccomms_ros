@@ -20,8 +20,8 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
                                     dccomms::PacketPtr pkt) {
   auto txpos = dev->GetPosition();
   auto pktSize = pkt->GetPacketSize();
-  auto trRate = dev->GetNextTt();
-  auto trTime = trRate * pktSize;
+  auto byteTrt = dev->GetNextTt();
+  auto trTime = pktSize * byteTrt;
 
   for (CustomROSCommsDevicePtr dst : _devices) {
     if (dst->GetMac() != dev->GetMac()) {

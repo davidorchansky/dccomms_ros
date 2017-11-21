@@ -9,15 +9,17 @@ CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
 
-void CustomROSCommsDevice::SetTrTime(double mean, double sd) {
-  _trTimeMean = mean;
-  _trTimeSd = sd;
-  _ttDist = NormalDist(mean, sd);
+void CustomROSCommsDevice::SetBitRate(double mean, double sd) {
+  _bitRateMean = mean;
+  _bitRateSd = sd;
+  auto _ttMean = 1 / (_bitRateMean / 8) * 1000;
+  auto _ttSd = _bitRateSd > 0 ? 1 / (_bitRateSd / 8) * 1000: 0;
+  _ttDist = NormalDist(_ttMean, _ttSd);
 }
 
-void CustomROSCommsDevice::GetTrTime(double &mean, double &sd) {
-  mean = _trTimeMean;
-  sd = _trTimeSd;
+void CustomROSCommsDevice::GetBitRate(double &mean, double &sd) {
+  mean = _bitRateMean;
+  sd = _bitRateSd;
 }
 
 void CustomROSCommsDevice::SetMinPktErrorRate(double minPktErrorRate) {
@@ -35,12 +37,12 @@ double CustomROSCommsDevice::GetPktErrorRateInc() {
 }
 
 double CustomROSCommsDevice::GetNextTt() {
-  auto trRate = _ttDist(_ttGenerator);
-  if (trRate < 0) {
-    Log->warn("trRate < 0: {} . Changing to its abs({}) value", trRate, trRate);
-    trRate = -trRate;
+  auto tt = _ttDist(_ttGenerator);
+  if (tt < 0) {
+    Log->warn("trRate < 0: {} . Changing to its abs({}) value", tt, tt);
+    tt = -tt;
   }
-  return trRate;
+  return tt;
 }
 
 bool CustomROSCommsDevice::ErrOnNextPkt(double errRate) {
