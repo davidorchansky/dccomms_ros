@@ -2,8 +2,8 @@
 #include <dccomms/TransportPDU.h>
 #include <dccomms/Utils.h>
 #include <dccomms_ros/simulator/AcousticCommsChannel.h>
-#include <dccomms_ros/simulator/CustomCommsChannel.h>
 #include <dccomms_ros/simulator/AcousticROSCommsDevice.h>
+#include <dccomms_ros/simulator/CustomCommsChannel.h>
 #include <dccomms_ros/simulator/CustomROSCommsDevice.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
 #include <dccomms_ros_msgs/AddDevice.h>
@@ -271,9 +271,9 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
     dev->SetMaxBitRate(maxBitRate);
-    // TODO: set remaining attributes
     dev->SetMaxDistance(req.maxDistance);
     dev->SetMinDistance(req.minDistance);
+    dev->SetMinPktErrorRate(req.minPktErrorRate);
     dev->SetPktErrorRateInc(req.pktErrorRateIncPerMeter);
     dev->SetBitRate(req.bitrate, req.bitrateSd);
     dev->SetMaxBitRate(req.maxBitRate);

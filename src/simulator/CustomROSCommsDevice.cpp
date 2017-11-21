@@ -5,7 +5,7 @@ namespace dccomms_ros {
 
 CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
                                            PacketBuilderPtr pb)
-    : ROSCommsDevice(sim, pb), _ownPtr(this) {}
+    : ROSCommsDevice(sim, pb), _ownPtr(this), _erDist(0.0, 1.0) {}
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
 
@@ -13,7 +13,7 @@ void CustomROSCommsDevice::SetBitRate(double mean, double sd) {
   _bitRateMean = mean;
   _bitRateSd = sd;
   auto _ttMean = 1 / (_bitRateMean / 8) * 1000;
-  auto _ttSd = _bitRateSd > 0 ? 1 / (_bitRateSd / 8) * 1000: 0;
+  auto _ttSd = _bitRateSd > 0 ? 1 / (_bitRateSd / 8) * 1000 : 0;
   _ttDist = NormalDist(_ttMean, _ttSd);
 }
 

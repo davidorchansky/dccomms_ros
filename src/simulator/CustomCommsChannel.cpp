@@ -22,6 +22,8 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
   auto pktSize = pkt->GetPacketSize();
   auto byteTrt = dev->GetNextTt();
   auto trTime = pktSize * byteTrt;
+  auto minErrRate = dev->GetMinPktErrorRate();
+  auto errRateInc = dev->GetPktErrorRateInc();
 
   for (CustomROSCommsDevicePtr dst : _devices) {
     if (dst->GetMac() != dev->GetMac()) {
@@ -29,6 +31,12 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
       auto distance = txpos.distance(rxpos);
       auto delay = _minPrTime + _prTimeIncPerMeter * distance;
       auto totalTime = static_cast<uint32_t>(ceil(delay + trTime));
+      auto errRate = minErrRate + errRateInc * distance;
+      auto error = dev->ErrOnNextPkt(errRate);
+      if (error) {
+        auto pBuffer = pkt->GetPayloadBuffer();
+        *pBuffer = ~*pBuffer;
+      }
       ns3::Simulator::ScheduleWithContext(
           dev->GetMac(), MilliSeconds(totalTime), &ROSCommsDevice::ReceiveFrame,
           dst.get(), pkt);
