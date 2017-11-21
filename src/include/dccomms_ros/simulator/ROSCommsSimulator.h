@@ -88,6 +88,8 @@ private:
 
   bool _StartSimulation(dccomms_ros_msgs::StartSimulation::Request &req,
                         dccomms_ros_msgs::StartSimulation::Response &res);
+
+  bool _CommonPreAddDev(const std::string & dccommsId, DEV_TYPE deviceType, uint32_t mac);
   ROSCommsDevicePtr _GetDevice(std::string iddev);
 
   CommsChannelPtr _GetChannel(int id);

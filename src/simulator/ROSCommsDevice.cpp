@@ -71,9 +71,9 @@ void ROSCommsDevice::_TxWork() {
     if (txdlf->PacketIsOk()) {
       // PACKET OK
       DoSend(txdlf);
-      //      uint32_t packetSize = txdlf->GetPacketSize();
-      //      uint32_t transmissionTime = packetSize * _millisPerByte;
-      //      std::this_thread::sleep_for(std::chrono::milliseconds(transmissionTime));
+      uint32_t packetSize = static_cast<uint32_t>(txdlf->GetPacketSize());
+      uint32_t transmissionTime = packetSize * _millisPerByte;
+      std::this_thread::sleep_for(std::chrono::milliseconds(transmissionTime));
     } else {
       // PACKET WITH ERRORS
     }

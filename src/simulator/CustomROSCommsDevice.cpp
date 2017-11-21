@@ -9,12 +9,13 @@ CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
 
-void CustomROSCommsDevice::SetTrTime(float mean, float sd) {
+void CustomROSCommsDevice::SetTrTime(double mean, double sd) {
   _trTimeMean = mean;
   _trTimeSd = sd;
+  _ttDist = NormalDist(mean, sd);
 }
 
-void CustomROSCommsDevice::GetTrTime(float &mean, float &sd) {
+void CustomROSCommsDevice::GetTrTime(double &mean, double &sd) {
   mean = _trTimeMean;
   sd = _trTimeSd;
 }
