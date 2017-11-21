@@ -11,21 +11,33 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr pb)
       pb, CommsDeviceService::IPHY_TYPE_PHY);
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
   _txdlf = _sim->GetPacketBuilder()->Create();
+  _commonStarted = false;
+  _position = tf::Vector3(0,0,0);
 }
 
 void ROSCommsDevice::_StartDeviceService() {
   auto startWorker = std::thread([this]() {
     _device->Start();
+    _commonStarted = true;
     _device->SetPhyLayerState(CommsDeviceService::READY);
   });
   startWorker.detach();
+
+  auto waitRemainingNodesToGetReadyWorker = std::thread([this]() {
+    while (!_sim->Ready())
+      std::this_thread::sleep_for(chrono::milliseconds(100));
+    _StartNodeWorker();
+  });
+
+  waitRemainingNodesToGetReadyWorker.detach();
 }
 
 void ROSCommsDevice::Start() {
   _StartDeviceService();
-  _StartNodeWorker();
   DoStart();
 }
+
+bool ROSCommsDevice::Started() { return _commonStarted && DoStarted(); }
 
 void ROSCommsDevice::_StartNodeWorker() { _txserv.Start(); }
 

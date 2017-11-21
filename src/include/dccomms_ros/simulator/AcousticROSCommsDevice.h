@@ -25,6 +25,7 @@ protected:
   void DoLinkToChannel(CommsChannelPtr channel);
   void DoStart();
   void DoSetPosition(const tf::Vector3 & position);
+  bool DoStarted();
 
 private:
   ns3::Ptr<ns3::AquaSimChannel> _channel;

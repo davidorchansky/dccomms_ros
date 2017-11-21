@@ -30,7 +30,7 @@ public:
   void SetMaxBitRate(uint32_t bps);
   uint32_t GetMaxBitRate();
 
-  void SetPosition(const tf::Vector3 & position);
+  void SetPosition(const tf::Vector3 &position);
 
   virtual void SetLogName(std::string name);
   virtual void SetLogLevel(cpplogging::LogLevel);
@@ -55,13 +55,15 @@ public:
   tf::Vector3 GetPosition();
 
   virtual DEV_TYPE GetDevType() = 0;
+  bool Started();
 
 protected:
   virtual void DoSetMac(uint32_t mac) = 0;
   virtual void DoSend(PacketPtr dlf) = 0;
   virtual void DoLinkToChannel(CommsChannelPtr channel) = 0;
   virtual void DoStart() = 0;
-  virtual void DoSetPosition(const tf::Vector3 & position) = 0;
+  virtual void DoSetPosition(const tf::Vector3 &position) = 0;
+  virtual bool DoStarted() = 0;
 
   ROSCommsSimulatorPtr _sim;
 
@@ -82,6 +84,8 @@ private:
   tf::Vector3 _position;
 
   void _TxWork();
+
+  bool _commonStarted;
 };
 }
 #endif // COMMSNODE_H

@@ -73,6 +73,7 @@ void CustomROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel) {
   }
 }
 void CustomROSCommsDevice::DoStart() {}
+bool CustomROSCommsDevice::DoStarted() { return true; }
 void CustomROSCommsDevice::DoSetPosition(const tf::Vector3 &position) {
   _position = position;
 }

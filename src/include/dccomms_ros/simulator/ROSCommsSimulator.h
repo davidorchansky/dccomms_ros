@@ -13,13 +13,13 @@
 
 // ROS
 #include <dccomms_ros_msgs/AddChannel.h>
+#include <dccomms_ros_msgs/AddCustomChannel.h>
+#include <dccomms_ros_msgs/AddCustomDevice.h>
 #include <dccomms_ros_msgs/AddDevice.h>
 #include <dccomms_ros_msgs/CheckDevice.h>
 #include <dccomms_ros_msgs/LinkDeviceToChannel.h>
 #include <dccomms_ros_msgs/RemoveDevice.h>
 #include <dccomms_ros_msgs/StartSimulation.h>
-#include <dccomms_ros_msgs/AddCustomDevice.h>
-#include <dccomms_ros_msgs/AddCustomChannel.h>
 #include <ros/ros.h>
 // end ROS
 
@@ -56,6 +56,7 @@ public:
 
   void GetSimTime(std::string &datetime, double &secsFromStart);
 
+  bool Ready();
 private:
   const char _timeFormat[100] = "%Y-%m-%d %H:%M:%S";
   void _Run();
@@ -78,9 +79,9 @@ private:
   bool _AddChannel(dccomms_ros_msgs::AddChannel::Request &req,
                    dccomms_ros_msgs::AddChannel::Response &res);
   bool _AddCustomChannel(dccomms_ros_msgs::AddCustomChannel::Request &req,
-                  dccomms_ros_msgs::AddCustomChannel::Response &res);
+                         dccomms_ros_msgs::AddCustomChannel::Response &res);
   bool _AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req,
-                  dccomms_ros_msgs::AddCustomDevice::Response &res);
+                        dccomms_ros_msgs::AddCustomDevice::Response &res);
 
   void _AddDeviceToSet(std::string iddev, ROSCommsDevicePtr dev);
   bool _DeviceExists(std::string iddev);
@@ -89,13 +90,15 @@ private:
   bool _StartSimulation(dccomms_ros_msgs::StartSimulation::Request &req,
                         dccomms_ros_msgs::StartSimulation::Response &res);
 
-  bool _CommonPreAddDev(const std::string & dccommsId, DEV_TYPE deviceType, uint32_t mac);
+  bool _CommonPreAddDev(const std::string &dccommsId, DEV_TYPE deviceType,
+                        uint32_t mac);
   ROSCommsDevicePtr _GetDevice(std::string iddev);
 
   CommsChannelPtr _GetChannel(int id);
 
-  ros::ServiceServer _addDevService, _checkDevService, _addChannelService, _removeDevService,
-      _linkDeviceToChannelService, _startSimulationService, _addCustomDeviceService, _addCustomChannelService;
+  ros::ServiceServer _addDevService, _checkDevService, _addChannelService,
+      _removeDevService, _linkDeviceToChannelService, _startSimulationService,
+      _addCustomDeviceService, _addCustomChannelService;
   ros::NodeHandle &_rosNode;
 
   std::mutex _devLinksMutex, _idDevMapMutex, _channelsMutex;
@@ -104,6 +107,7 @@ private:
   ServiceThread<ROSCommsSimulator> _linkUpdaterWorker;
   void _LinkUpdaterWork();
   void _IsAliveWork();
+
   ////////////////////
   VirtualDevicesLinks _devLinks;
   Type2DevMapMap _type2DevMap;
@@ -112,6 +116,7 @@ private:
   Id2ChannelMap _channelMap;
   //////////
   ROSCommsSimulatorPtr _this;
+  bool _started;
 };
 }
 #endif // WHROVSIMULATOR_H

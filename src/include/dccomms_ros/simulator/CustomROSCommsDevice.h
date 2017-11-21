@@ -43,6 +43,7 @@ protected:
   virtual void DoLinkToChannel(CommsChannelPtr channel);
   virtual void DoStart();
   virtual void DoSetPosition(const tf::Vector3 &position);
+  virtual bool DoStarted();
 
 private:
   uint32_t _mac;

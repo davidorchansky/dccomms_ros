@@ -155,7 +155,7 @@ bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
                                           LinkDeviceToChannel::Response &res) {
   ROSCommsDevicePtr dev = _GetDevice(req.dccommsId);
   CommsChannelPtr channel = _GetChannel(req.channelId);
-  if (!dev) {
+  if (!dev || dev->GetLinkedChannel()) {
     res.res = false;
     return res.res;
   }
@@ -191,13 +191,16 @@ bool ROSCommsSimulator::_AddChannel(AddChannel::Request &req,
   CommsChannelPtr channel;
   CHANNEL_TYPE type = (CHANNEL_TYPE)req.type;
   uint32_t id = req.id;
+  res.res = false;
   switch (type) {
   case ACOUSTIC_UNDERWATER_CHANNEL: {
-    auto acousticChannel =
-        dccomms::CreateObject<dccomms_ros::AcousticCommsChannel>(id);
-    channel = acousticChannel;
-    _channelMap[id] = channel;
-    res.res = true;
+    if (!_channelMap[id]) {
+      auto acousticChannel =
+          dccomms::CreateObject<dccomms_ros::AcousticCommsChannel>(id);
+      channel = acousticChannel;
+      _channelMap[id] = channel;
+      res.res = true;
+    }
     break;
   }
   case CUSTOM_CHANNEL:
@@ -208,16 +211,18 @@ bool ROSCommsSimulator::_AddChannel(AddChannel::Request &req,
     return false;
     break;
   }
-  _channelMap[id] = channel;
   return res.res;
 }
 
 bool ROSCommsSimulator::_AddCustomChannel(AddCustomChannel::Request &req,
                                           AddCustomChannel::Response &res) {
   uint32_t id = req.id;
-  CommsChannelPtr channel = dccomms::CreateObject<CustomCommsChannel>(id);
-  _channelMap[id] = channel;
-  res.res = true;
+  if (!_channelMap[id]) {
+    CommsChannelPtr channel = dccomms::CreateObject<CustomCommsChannel>(id);
+    _channelMap[id] = channel;
+    res.res = true;
+  } else
+    res.res = false;
   return res.res;
 }
 
@@ -320,8 +325,12 @@ void ROSCommsSimulator::StartROSInterface() {
 bool ROSCommsSimulator::_StartSimulation(
     dccomms_ros_msgs::StartSimulation::Request &req,
     dccomms_ros_msgs::StartSimulation::Response &res) {
-  _Run();
-  res.res = true;
+  if (!_started) {
+    _Run();
+    res.res = true;
+    _started = true;
+  } else
+    res.res = false;
   return res.res;
 }
 
@@ -355,6 +364,17 @@ void ROSCommsSimulator::_IsAliveWork() {
   Info("Is alive...");
   Simulator::Schedule(Seconds(1),
                       MakeEvent(&ROSCommsSimulator::_IsAliveWork, this));
+}
+
+bool ROSCommsSimulator::Ready() {
+  bool ready = true;
+  for (auto dpair : _dccommsDevMap) {
+    if (!dpair.second->Started()) {
+      ready = false;
+      break;
+    }
+  }
+  return ready;
 }
 
 void ROSCommsSimulator::_Run() {

@@ -177,4 +177,6 @@ void AcousticROSCommsDevice::DoStart() {
       MakeCallback(&AcousticROSCommsDevice::_PositionUpdated, this));
   _started = true;
 }
+
+bool AcousticROSCommsDevice::DoStarted() { return _started; }
 }
