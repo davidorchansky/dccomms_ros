@@ -106,8 +106,8 @@ bool ROSCommsSimulator::_RemoveDevice(RemoveDevice::Request &req,
   return true;
 }
 
-bool ROSCommsSimulator::_AddDevice(AddDevice::Request &req,
-                                   AddDevice::Response &res) {
+bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
+                                   AddAcousticDevice::Response &res) {
   auto dccommsId = req.dccommsId;
   DEV_TYPE deviceType = static_cast<DEV_TYPE>(req.type);
   auto mac = req.mac;
@@ -186,8 +186,8 @@ bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
   return res.res;
 }
 
-bool ROSCommsSimulator::_AddChannel(AddChannel::Request &req,
-                                    AddChannel::Response &res) {
+bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
+                                    AddAcousticChannel::Response &res) {
   CommsChannelPtr channel;
   CHANNEL_TYPE type = (CHANNEL_TYPE)req.type;
   uint32_t id = req.id;
@@ -304,9 +304,9 @@ void ROSCommsSimulator::StartROSInterface() {
    * http://www.boost.org/doc/libs/1_63_0/libs/bind/doc/html/bind.html#bind.purpose.using_bind_with_functions_and_fu
    */
   _addDevService = _rosNode.advertiseService(
-      "add_net_device", &ROSCommsSimulator::_AddDevice, this);
+      "add_acoustic_net_device", &ROSCommsSimulator::_AddAcousticDevice, this);
   _addChannelService = _rosNode.advertiseService(
-      "add_channel", &ROSCommsSimulator::_AddChannel, this);
+      "add_acoustic_channel", &ROSCommsSimulator::_AddAcousticChannel, this);
   _checkDevService = _rosNode.advertiseService(
       "check_net_device", &ROSCommsSimulator::_CheckDevice, this);
   _removeDevService = _rosNode.advertiseService(

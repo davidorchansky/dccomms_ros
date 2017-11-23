@@ -12,10 +12,10 @@
 #include <unordered_map>
 
 // ROS
-#include <dccomms_ros_msgs/AddChannel.h>
+#include <dccomms_ros_msgs/AddAcousticChannel.h>
+#include <dccomms_ros_msgs/AddAcousticDevice.h>
 #include <dccomms_ros_msgs/AddCustomChannel.h>
 #include <dccomms_ros_msgs/AddCustomDevice.h>
-#include <dccomms_ros_msgs/AddDevice.h>
 #include <dccomms_ros_msgs/CheckDevice.h>
 #include <dccomms_ros_msgs/LinkDeviceToChannel.h>
 #include <dccomms_ros_msgs/RemoveDevice.h>
@@ -68,16 +68,16 @@ private:
   std::function<void(int, dccomms::PacketPtr)> _TransmitPDUCb, _ReceivePDUCb,
       _ErrorPDUCb;
 
-  bool _AddDevice(dccomms_ros_msgs::AddDevice::Request &req,
-                  dccomms_ros_msgs::AddDevice::Response &res);
+  bool _AddAcousticDevice(dccomms_ros_msgs::AddAcousticDevice::Request &req,
+                  dccomms_ros_msgs::AddAcousticDevice::Response &res);
   bool _CheckDevice(dccomms_ros_msgs::CheckDevice::Request &req,
                     dccomms_ros_msgs::CheckDevice::Response &res);
   bool _RemoveDevice(dccomms_ros_msgs::RemoveDevice::Request &req,
                      dccomms_ros_msgs::RemoveDevice::Response &res);
   bool _LinkDevToChannel(dccomms_ros_msgs::LinkDeviceToChannel::Request &req,
                          dccomms_ros_msgs::LinkDeviceToChannel::Response &res);
-  bool _AddChannel(dccomms_ros_msgs::AddChannel::Request &req,
-                   dccomms_ros_msgs::AddChannel::Response &res);
+  bool _AddAcousticChannel(dccomms_ros_msgs::AddAcousticChannel::Request &req,
+                   dccomms_ros_msgs::AddAcousticChannel::Response &res);
   bool _AddCustomChannel(dccomms_ros_msgs::AddCustomChannel::Request &req,
                          dccomms_ros_msgs::AddCustomChannel::Response &res);
   bool _AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req,
