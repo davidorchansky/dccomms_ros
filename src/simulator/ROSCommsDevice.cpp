@@ -24,7 +24,7 @@ void ROSCommsDevice::_StartDeviceService() {
   startWorker.detach();
 
   auto waitRemainingNodesToGetReadyWorker = std::thread([this]() {
-    while (!_sim->Ready())
+    while (!_sim->Ready(this->GetDevType()))
       std::this_thread::sleep_for(chrono::milliseconds(100));
     _StartNodeWorker();
   });

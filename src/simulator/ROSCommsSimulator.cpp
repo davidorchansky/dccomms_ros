@@ -391,10 +391,10 @@ void ROSCommsSimulator::_IsAliveWork() {
                       MakeEvent(&ROSCommsSimulator::_IsAliveWork, this));
 }
 
-bool ROSCommsSimulator::Ready() {
+bool ROSCommsSimulator::Ready(DEV_TYPE devType) {
   bool ready = true;
   for (auto dpair : _dccommsDevMap) {
-    if (!dpair.second->Started()) {
+    if (dpair.second->GetDevType() == devType && !dpair.second->Started()) {
       ready = false;
       break;
     }

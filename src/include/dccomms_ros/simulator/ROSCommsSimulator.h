@@ -57,7 +57,7 @@ public:
 
   void GetSimTime(std::string &datetime, double &secsFromStart);
 
-  bool Ready();
+  bool Ready(DEV_TYPE);
 private:
   const char _timeFormat[100] = "%Y-%m-%d %H:%M:%S";
   void _Run();
