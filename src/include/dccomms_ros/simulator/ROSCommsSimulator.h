@@ -17,6 +17,7 @@
 #include <dccomms_ros_msgs/AddCustomChannel.h>
 #include <dccomms_ros_msgs/AddCustomDevice.h>
 #include <dccomms_ros_msgs/CheckDevice.h>
+#include <dccomms_ros_msgs/CheckChannel.h>
 #include <dccomms_ros_msgs/LinkDeviceToChannel.h>
 #include <dccomms_ros_msgs/RemoveDevice.h>
 #include <dccomms_ros_msgs/StartSimulation.h>
@@ -72,6 +73,8 @@ private:
                   dccomms_ros_msgs::AddAcousticDevice::Response &res);
   bool _CheckDevice(dccomms_ros_msgs::CheckDevice::Request &req,
                     dccomms_ros_msgs::CheckDevice::Response &res);
+  bool _CheckChannel(dccomms_ros_msgs::CheckChannel::Request &req,
+                    dccomms_ros_msgs::CheckChannel::Response &res);
   bool _RemoveDevice(dccomms_ros_msgs::RemoveDevice::Request &req,
                      dccomms_ros_msgs::RemoveDevice::Response &res);
   bool _LinkDevToChannel(dccomms_ros_msgs::LinkDeviceToChannel::Request &req,
@@ -85,6 +88,7 @@ private:
 
   void _AddDeviceToSet(std::string iddev, ROSCommsDevicePtr dev);
   bool _DeviceExists(std::string iddev);
+  bool _ChannelExists(uint32_t id);
   void _RemoveDeviceFromSet(std::string iddev);
 
   bool _StartSimulation(dccomms_ros_msgs::StartSimulation::Request &req,
@@ -98,7 +102,7 @@ private:
 
   ros::ServiceServer _addDevService, _checkDevService, _addChannelService,
       _removeDevService, _linkDeviceToChannelService, _startSimulationService,
-      _addCustomDeviceService, _addCustomChannelService;
+      _addCustomDeviceService, _addCustomChannelService, _checkChannelService;
   ros::NodeHandle &_rosNode;
 
   std::mutex _devLinksMutex, _idDevMapMutex, _channelsMutex;

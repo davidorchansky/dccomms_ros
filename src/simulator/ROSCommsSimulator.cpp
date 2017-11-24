@@ -92,6 +92,13 @@ bool ROSCommsSimulator::_DeviceExists(std::string iddev) {
   return exists;
 }
 
+bool ROSCommsSimulator::_CheckChannel(CheckChannel::Request &req,
+                                      CheckChannel::Response &res) {
+  auto id = req.id;
+  res.exists = _ChannelExists(id);
+  return true;
+}
+
 ROSCommsDevicePtr ROSCommsSimulator::_GetDevice(std::string iddev) {
   ROSCommsDevicePtr dev;
   auto devIt = _dccommsDevMap.find(iddev);
@@ -107,7 +114,7 @@ bool ROSCommsSimulator::_RemoveDevice(RemoveDevice::Request &req,
 }
 
 bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
-                                   AddAcousticDevice::Response &res) {
+                                           AddAcousticDevice::Response &res) {
   auto dccommsId = req.dccommsId;
   DEV_TYPE deviceType = static_cast<DEV_TYPE>(req.type);
   auto mac = req.mac;
@@ -141,6 +148,10 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
   }
 
   return res.res;
+}
+
+bool ROSCommsSimulator::_ChannelExists(uint32_t id) {
+  return _GetChannel(id) ? true : false;
 }
 
 CommsChannelPtr ROSCommsSimulator::_GetChannel(int id) {
@@ -182,12 +193,17 @@ bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
   }
   if (res.res) {
     dev->LinkToChannel(channel);
+    Log->info("dev {} linked to channel {}", dev->GetDccommsId(),
+              channel->GetId());
+  } else {
+    Log->error("error linking dev {} to channel {}", dev->GetDccommsId(),
+               channel->GetId());
   }
   return res.res;
 }
 
 bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
-                                    AddAcousticChannel::Response &res) {
+                                            AddAcousticChannel::Response &res) {
   CommsChannelPtr channel;
   CHANNEL_TYPE type = (CHANNEL_TYPE)req.type;
   uint32_t id = req.id;
@@ -200,6 +216,7 @@ bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
       channel = acousticChannel;
       _channelMap[id] = channel;
       res.res = true;
+      Log->info("acoustic channel {} added", id);
     }
     break;
   }
@@ -211,6 +228,9 @@ bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
     return false;
     break;
   }
+  if (!res.res) {
+    Log->error("error adding acoustic channel {}", id);
+  }
   return res.res;
 }
 
@@ -221,8 +241,11 @@ bool ROSCommsSimulator::_AddCustomChannel(AddCustomChannel::Request &req,
     CommsChannelPtr channel = dccomms::CreateObject<CustomCommsChannel>(id);
     _channelMap[id] = channel;
     res.res = true;
-  } else
+    Log->info("custom channel {} added", id);
+  } else {
+    Log->error("error adding custom channel {}", id);
     res.res = false;
+  }
   return res.res;
 }
 
@@ -309,6 +332,8 @@ void ROSCommsSimulator::StartROSInterface() {
       "add_acoustic_channel", &ROSCommsSimulator::_AddAcousticChannel, this);
   _checkDevService = _rosNode.advertiseService(
       "check_net_device", &ROSCommsSimulator::_CheckDevice, this);
+  _checkChannelService = _rosNode.advertiseService(
+      "check_channel", &ROSCommsSimulator::_CheckChannel, this);
   _removeDevService = _rosNode.advertiseService(
       "remove_net_device", &ROSCommsSimulator::_RemoveDevice, this);
   _linkDeviceToChannelService = _rosNode.advertiseService(
