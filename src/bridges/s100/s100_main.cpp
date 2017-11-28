@@ -94,12 +94,12 @@ int main(int argc, char **argv) {
     Log->Info("modem baudrate: {}", modemBaudrate);
   }
 
-  std::string ns;
-  if (!nh.getParam("ns", ns)) {
-    Log->Error("Failed to get param 'ns'");
+  std::string dccommsId;
+  if (!nh.getParam("ns", dccommsId)) {
+    Log->Error("Failed to get param 'dccommsId'");
     return 1;
   } else {
-    Log->Info("namespace: {}", ns);
+    Log->Info("dccommsId: {}", dccommsId);
   }
 
   setSignals();
@@ -116,7 +116,7 @@ int main(int argc, char **argv) {
   comms->FlushLogOn(logLevel);
   stream->FlushLogOn(logLevel);
 
-  comms->SetCommsDeviceId(ns);
+  comms->SetCommsDeviceId(dccommsId);
   comms->SetLogName("S100Bridge");
   stream->SetLogName(comms->GetLogName() + ":S100Stream");
 
