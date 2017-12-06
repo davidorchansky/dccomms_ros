@@ -27,7 +27,7 @@ public:
   std::string GetDccommsId();
   void SetDccommsId(const std::string name);
 
-  void SetMaxBitRate(uint32_t bps);
+  void SetBitRate(uint32_t bps);
   uint32_t GetMaxBitRate();
 
   void SetPosition(const tf::Vector3 &position);

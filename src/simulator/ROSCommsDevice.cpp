@@ -47,7 +47,7 @@ void ROSCommsDevice::ReceiveFrame(PacketPtr dlf) {
   _receiveFrameMutex.unlock();
 }
 
-void ROSCommsDevice::SetMaxBitRate(uint32_t v) {
+void ROSCommsDevice::SetBitRate(uint32_t v) {
   _maxBitRate = v; // bps
   _millisPerByte = static_cast<uint32_t>(std::round(1000. / _maxBitRate * 8));
 }

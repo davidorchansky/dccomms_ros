@@ -119,7 +119,7 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
   DEV_TYPE deviceType = static_cast<DEV_TYPE>(req.type);
   auto mac = req.mac;
   auto frameId = req.frameId;
-  auto maxBitRate = req.maxBitRate;
+  auto bitrate = req.bitrate;
   // auto energyModel = req.energyModel;
 
   Log->info("Add device request received");
@@ -132,7 +132,7 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
-    dev->SetMaxBitRate(maxBitRate);
+    dev->SetBitRate(bitrate);
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;
@@ -285,7 +285,6 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
   auto dccommsId = req.dccommsId;
   auto mac = req.mac;
   auto frameId = req.frameId;
-  auto maxBitRate = req.maxBitRate;
   DEV_TYPE deviceType = DEV_TYPE::CUSTOM_DEV;
 
   bool exists = _CommonPreAddDev(dccommsId, deviceType, mac);
@@ -298,13 +297,12 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
-    dev->SetMaxBitRate(maxBitRate);
+    dev->SetBitRate(req.bitrate);
     dev->SetMaxDistance(req.maxDistance);
     dev->SetMinDistance(req.minDistance);
     dev->SetMinPktErrorRate(req.minPktErrorRate);
     dev->SetPktErrorRateInc(req.pktErrorRateIncPerMeter);
     dev->SetBitRate(req.bitrate, req.bitrateSd);
-    dev->SetMaxBitRate(req.maxBitRate);
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;
