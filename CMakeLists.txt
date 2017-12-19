@@ -250,35 +250,4 @@ target_include_directories(ns3-as-testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 ###############################################
 
 
-###############################################
-####### UNCOMMENT THE FOLLOWING BLOCK #########
-#######  TO ENABLE comms tests BUILD  #########
-###############################################
-add_executable (master
-    testing/comms/master.cpp
-)
-target_link_libraries(master
-    ${DCCOMMS_UTILS_GIT}
-    ${catkin_LIBRARIES}
-    )
-target_include_directories(master PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${catkin_INCLUDE_DIRS}
-    )
-
-add_executable (slave
-    testing/comms/slave.cpp
- )
-target_link_libraries(slave
-    ${DCCOMMS_UTILS_GIT}
-    ${catkin_LIBRARIES}
-    )
-target_include_directories(slave PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${catkin_INCLUDE_DIRS}
-    )
-###############################################
-########### END comms tests BUILD #############
-###############################################
-
 message("End ${PROJECT_NAME_ORIG}")
