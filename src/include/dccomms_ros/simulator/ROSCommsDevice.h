@@ -28,7 +28,6 @@ public:
   void SetDccommsId(const std::string name);
 
   void SetBitRate(uint32_t bps);
-  uint32_t GetMaxBitRate();
 
   void SetPosition(const tf::Vector3 &position);
 
@@ -78,7 +77,7 @@ private:
   PacketPtr _txdlf;
   std::string _name, _tfFrameId;
   uint32_t _mac;
-  uint32_t _maxBitRate;
+  uint32_t _bitRate;
   uint32_t _millisPerByte;
   PacketBuilderPtr _pb;
   tf::Vector3 _position;

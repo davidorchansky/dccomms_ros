@@ -302,7 +302,7 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     dev->SetMinDistance(req.minDistance);
     dev->SetMinPktErrorRate(req.minPktErrorRate);
     dev->SetPktErrorRateInc(req.pktErrorRateIncPerMeter);
-    dev->SetBitRate(req.bitrate, req.bitrateSd);
+    dev->SetVariableBitRate(req.bitrate, req.bitrateSd);
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;

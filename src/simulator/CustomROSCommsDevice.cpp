@@ -9,7 +9,7 @@ CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
 
-void CustomROSCommsDevice::SetBitRate(double mean, double sd) {
+void CustomROSCommsDevice::SetVariableBitRate(double mean, double sd) {
   _bitRateMean = mean;
   _bitRateSd = sd;
   auto _ttMean = 1 / (_bitRateMean / 8) * 1000;

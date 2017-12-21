@@ -48,8 +48,8 @@ void ROSCommsDevice::ReceiveFrame(PacketPtr dlf) {
 }
 
 void ROSCommsDevice::SetBitRate(uint32_t v) {
-  _maxBitRate = v; // bps
-  _millisPerByte = static_cast<uint32_t>(std::round(1000. / _maxBitRate * 8));
+  _bitRate = v; // bps
+  _millisPerByte = static_cast<uint32_t>(std::round(1000. / _bitRate * 8));
 }
 
 void ROSCommsDevice::SetDccommsId(const std::string name) {

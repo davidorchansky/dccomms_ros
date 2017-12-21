@@ -16,7 +16,7 @@ class CustomROSCommsDevice : public ROSCommsDevice {
 public:
   CustomROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr);
 
-  void SetBitRate(double trTimeMean, double trTimeSd = 0); //as bps
+  void SetVariableBitRate(double trTimeMean, double trTimeSd = 0); //as bps
   void SetMinPktErrorRate(double minPktErrorRate);
   void SetPktErrorRateInc(double pktErrorRateInc);
   void SetMaxDistance(uint32_t d);
