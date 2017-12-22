@@ -100,28 +100,6 @@ find_package(catkin REQUIRED COMPONENTS
 #   cfg/DynReconf2.cfg
 # )
 
-###################################
-## catkin specific configuration ##
-###################################
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if you package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-  INCLUDE_DIRS src/include
-#  LIBRARIES dccomms_ros
-  CATKIN_DEPENDS 
-	roscpp 
-	rospy
-	std_msgs 
-	actionlib_msgs
-        message_runtime
-#  DEPENDS system_lib
-)
-
-roslaunch_add_file_check(launch)
 
 #http://stackoverflow.com/questions/7787823/cmake-how-to-get-the-name-of-all-subdirectories-of-a-directory
 function(GETPROJECTS result curdir)
@@ -134,11 +112,6 @@ function(GETPROJECTS result curdir)
   SET(${result} ${dirlist} PARENT_SCOPE)
 endfunction()
 
-
-###########
-## Build ##
-###########
-
 ####### HANDLE DEPENDENCIES ######
 
 SET(${PROJECT_NAME}_DEPS_DIR "modules")
@@ -149,45 +122,24 @@ FOREACH(subdir ${${PROJECT_NAME}_DEPS})
         add_subdirectory(${${PROJECT_NAME}_DEPS_DIR}/${subdir})
 ENDFOREACH()
 
-SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++14 ")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 
 SET(${PROJECT_NAME}_INCLUDE_DIRS
-    "src/include"
-    "modules/ns-3-dev/build"
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/build
+    ${${DCCOMMS_UTILS_GIT}_INCLUDE_DIRS}
     ${catkin_INCLUDE_DIRS}
     )
 
+SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++14 ")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 
 SET(S100BRIDGE s100_bridge)
 add_executable(${S100BRIDGE} src/bridges/s100/s100_main.cpp)
 target_include_directories(${S100BRIDGE} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${S100BRIDGE} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 
-###############################################
-####### UNCOMMENT THE FOLLOWING BLOCK #########
-#######     TO ENABLE netsim BUILD    #########
-###############################################
+SET(NS3_BUILD ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/build/)
 
-
-
-SET(NS3_BUILD "modules/ns-3-dev/build/")
-link_directories(${NS3_BUILD})
-
-#find_library(NS3_CORE_LIB libns3-dev-core-debug.so)
-#find_library(NS3_NETWORK_LIB libns3-dev-network-debug.so)
-#find_library(NS3_ENERGY_LIB libns3-dev-energy-debug.so)
-#find_library(NS3_MOBILITY_LIB libns3-dev-mobility-debug.so)
-#find_library(NS3_INTERNET_LIB libns3-dev-internet-debug.s)
-#find_library(NS3_INTERNET_APPS_LIB libns3-dev-internet-apps-debug.so)
-#find_library(NS3_AQUASIM_LIB libns3-dev-aqua-sim-ng-debug.so)
-#SET(NS3_LIBS
-#    ${NS3_AQUASIM_LIB}
-#    ${NS3_NETWORK_LIB}
-#    ${NS3_CORE_LIB}
-#)
-
-SET(NS3_BUILD "/home/diego/programming/catkin_ws/src/dccomms_ros/modules/ns-3-dev/build/")
 SET(NS3_LIBS
     libns3-dev-antenna-debug.so                libns3-dev-flow-monitor-test-debug.so      libns3-dev-propagation-debug.so
     libns3-dev-antenna-test-debug.so           libns3-dev-internet-apps-debug.so          libns3-dev-propagation-test-debug.so
@@ -215,8 +167,16 @@ SET(NS3_LIBS
     libns3-dev-flow-monitor-debug.so           libns3-dev-point-to-point-test-debug.so    libns3-dev-wimax-test-debug.so
 )
 
-
+#Catkin do not export well relative paths to libraries: https://github.com/ros/catkin/issues/535
+#link_directories(${NS3_BUILD})
+#So it's better to specify the full path to each .so if the the *.so are not in the common directories (see ldconfig)
 message("NS3 modules: ${NS3_LIBS}")
+SET(ns3liblist "")
+FOREACH(lib ${NS3_LIBS})
+SET(path ${NS3_BUILD}/${lib})
+LIST(APPEND ns3liblist ${path})
+ENDFOREACH()
+
 SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/ROSCommsDevice.cpp
         src/simulator/ROSCommsSimulator.cpp
@@ -228,7 +188,7 @@ SET(${PROJECT_NAME}_CPP_FILES
 
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME}  ${NS3_LIBS} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
+target_link_libraries(${PROJECT_NAME}  ${ns3liblist} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 
 
 SET(SIM netsim)
@@ -248,6 +208,31 @@ target_include_directories(ns3-as-testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 ###############################################
 ############ END netsim BUILD #################
 ###############################################
+
+###################################
+## catkin specific configuration ##
+###################################
+
+## The catkin_package macro generates cmake config files for your package
+## Declare things to be passed to dependent projects
+## INCLUDE_DIRS: uncomment this if you package contains header files
+## LIBRARIES: libraries you create in this project that dependent projects also need
+## CATKIN_DEPENDS: catkin_packages dependent projects also need
+## DEPENDS: system dependencies of this project that dependent projects also need
+catkin_package(
+  INCLUDE_DIRS ${${PROJECT_NAME}_INCLUDE_DIRS}
+  LIBRARIES ${PROJECT_NAME} ${${DCCOMMS_UTILS_GIT}_LIBRARIES} ${ns3liblist}
+  CATKIN_DEPENDS
+        roscpp
+        rospy
+        std_msgs
+        actionlib_msgs
+        message_runtime
+        dccomms_ros_msgs
+#  DEPENDS system_lib
+)
+
+roslaunch_add_file_check(launch)
 
 
 message("End ${PROJECT_NAME_ORIG}")
