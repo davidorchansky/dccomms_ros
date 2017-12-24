@@ -191,8 +191,8 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS
 target_link_libraries(${PROJECT_NAME}  ${ns3liblist} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 
 
-SET(SIM netsim)
-add_executable (${SIM} src/simulator/main/netsim.cpp)
+SET(SIM netsim_example1)
+add_executable (${SIM} src/simulator/main/netsim_example1.cpp)
 target_link_libraries(${SIM} ${PROJECT_NAME})
 
 #target_compile_options(pruebas PUBLIC "")
