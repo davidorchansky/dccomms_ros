@@ -22,11 +22,9 @@ using namespace dccomms;
 using namespace dccomms_ros_msgs;
 
 namespace dccomms_ros {
-ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle &rosNode,
-                                     PacketBuilderPtr packetBuilder)
+ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle &rosNode)
     : _rosNode(rosNode), _linkUpdaterWorker(this),
       _this(ROSCommsSimulatorPtr(this)) {
-  _packetBuilder = packetBuilder;
   SetLogName("CommsSimulator");
   LogToConsole(true);
   FlushLogOn(cpplogging::LogLevel::info);
@@ -34,8 +32,28 @@ ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle &rosNode,
   _Init();
 }
 
-PacketBuilderPtr ROSCommsSimulator::GetPacketBuilder() {
-  return _packetBuilder;
+PacketBuilderPtr
+ROSCommsSimulator::GetPacketBuilder(const std::string &dccommsId,
+                                    PACKET_TYPE type) {
+  DevicePacketBuilder dpb;
+  auto it = _packetBuilderMap.find(dccommsId);
+  if (it != _packetBuilderMap.end())
+    dpb = it->second;
+  if (type == RX_PACKET)
+    return dpb.rxpb;
+  else if (type == TX_PACKET)
+    return dpb.txpb;
+}
+
+void ROSCommsSimulator::SetPacketBuilder(const string &dccommsId,
+                                         PACKET_TYPE type,
+                                         PacketBuilderPtr pb) {
+  DevicePacketBuilder dpb = _packetBuilderMap[dccommsId];
+  if (type == RX_PACKET)
+    dpb.rxpb = pb;
+  else
+    dpb.txpb = pb;
+  _packetBuilderMap[dccommsId] = dpb;
 }
 
 void ROSCommsSimulator::SetTransmitPDUCb(
@@ -458,5 +476,36 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
       timer.Reset();
     }
   }
+}
+
+bool ROSCommsSimulator::AddAcousticDevice(
+    dccomms_ros_msgs::AddAcousticDevice::Request &req) {
+  dccomms_ros_msgs::AddAcousticDevice::Response res;
+  return _AddAcousticDevice(req, res);
+}
+bool ROSCommsSimulator::LinkDevToChannel(
+    dccomms_ros_msgs::LinkDeviceToChannel::Request &req) {
+  dccomms_ros_msgs::LinkDeviceToChannel::Response res;
+  return _LinkDevToChannel(req, res);
+}
+bool ROSCommsSimulator::AddAcousticChannel(
+    dccomms_ros_msgs::AddAcousticChannel::Request &req) {
+  dccomms_ros_msgs::AddAcousticChannel::Response res;
+  return _AddAcousticChannel(req, res);
+}
+bool ROSCommsSimulator::AddCustomChannel(
+    dccomms_ros_msgs::AddCustomChannel::Request &req) {
+  dccomms_ros_msgs::AddCustomChannel::Response res;
+  return _AddCustomChannel(req, res);
+}
+bool ROSCommsSimulator::AddCustomDevice(
+    dccomms_ros_msgs::AddCustomDevice::Request &req) {
+  dccomms_ros_msgs::AddCustomDevice::Response res;
+  return _AddCustomDevice(req, res);
+}
+bool ROSCommsSimulator::StartSimulation() {
+  dccomms_ros_msgs::StartSimulation::Request req;
+  dccomms_ros_msgs::StartSimulation::Response res;
+  return _StartSimulation(req, res);
 }
 }

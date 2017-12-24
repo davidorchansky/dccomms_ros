@@ -62,7 +62,7 @@ void AcousticROSCommsDevice::_Recv(std::string context,
     char ser[5000];
     auto size = packet->GetSize();
     packet->CopyData((uint8_t *)ser, size);
-    auto dccommsPacket = _sim->GetPacketBuilder()->CreateFromBuffer(ser);
+    auto dccommsPacket = _rxpb->CreateFromBuffer(ser);
     Info("({} secs; {}) {}: (Own Addr: {} Dest. Addr: {}) Received packet from "
          "{} ({} forwards) ({} bytes)",
          secs, datetime, context, GetMac(), daddr, saddr, numForwards, psize);

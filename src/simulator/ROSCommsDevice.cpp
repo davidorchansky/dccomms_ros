@@ -10,9 +10,8 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr pb)
   _device = CommsDeviceService::BuildCommsDeviceService(
       pb, CommsDeviceService::IPHY_TYPE_PHY);
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
-  _txdlf = _sim->GetPacketBuilder()->Create();
   _commonStarted = false;
-  _position = tf::Vector3(0,0,0);
+  _position = tf::Vector3(0, 0, 0);
 }
 
 void ROSCommsDevice::_StartDeviceService() {
@@ -54,6 +53,9 @@ void ROSCommsDevice::SetBitRate(uint32_t v) {
 
 void ROSCommsDevice::SetDccommsId(const std::string name) {
   _name = name;
+  _txpb = _sim->GetPacketBuilder(_name, TX_PACKET);
+  _rxpb = _sim->GetPacketBuilder(_name, RX_PACKET);
+  _txdlf = _txpb->Create();
   _device->SetCommsDeviceId(_name);
 }
 
@@ -78,8 +80,7 @@ void ROSCommsDevice::_TxWork() {
   _device->SetPhyLayerState(CommsDeviceService::BUSY);
   do {
     _device >> _txdlf;
-    PacketPtr txdlf =
-        _sim->GetPacketBuilder()->CreateFromBuffer(_txdlf->GetBuffer());
+    PacketPtr txdlf = _txpb->CreateFromBuffer(_txdlf->GetBuffer());
     if (txdlf->PacketIsOk()) {
       // PACKET OK
       DoSend(txdlf);

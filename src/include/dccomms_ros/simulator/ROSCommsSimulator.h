@@ -16,8 +16,8 @@
 #include <dccomms_ros_msgs/AddAcousticDevice.h>
 #include <dccomms_ros_msgs/AddCustomChannel.h>
 #include <dccomms_ros_msgs/AddCustomDevice.h>
-#include <dccomms_ros_msgs/CheckDevice.h>
 #include <dccomms_ros_msgs/CheckChannel.h>
+#include <dccomms_ros_msgs/CheckDevice.h>
 #include <dccomms_ros_msgs/LinkDeviceToChannel.h>
 #include <dccomms_ros_msgs/RemoveDevice.h>
 #include <dccomms_ros_msgs/StartSimulation.h>
@@ -29,6 +29,12 @@ using namespace cpplogging;
 
 namespace dccomms_ros {
 
+enum PACKET_TYPE { TX_PACKET, RX_PACKET };
+
+struct DevicePacketBuilder {
+  PacketBuilderPtr txpb, rxpb;
+};
+typedef std::unordered_map<std::string, DevicePacketBuilder> PacketBuilderMap;
 typedef std::unordered_map<uint32_t, ROSCommsDevicePtr> Mac2DevMap;
 typedef std::shared_ptr<Mac2DevMap> Mac2DevMapPtr;
 typedef std::unordered_map<uint32_t, Mac2DevMapPtr> Type2DevMapMap;
@@ -45,9 +51,8 @@ typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 
 class ROSCommsSimulator : public virtual Logger {
 public:
-  ROSCommsSimulator(ros::NodeHandle &rosnode, PacketBuilderPtr packetBuilder);
+  ROSCommsSimulator(ros::NodeHandle &rosnode);
   void StartROSInterface();
-  PacketBuilderPtr GetPacketBuilder();
 
   void
   SetTransmitPDUCb(std::function<void(int linkType, dccomms::PacketPtr)> cb);
@@ -57,7 +62,20 @@ public:
 
   void GetSimTime(std::string &datetime, double &secsFromStart);
 
+  PacketBuilderPtr GetPacketBuilder(const std::string &dccommsId,
+                                    PACKET_TYPE type);
+  void SetPacketBuilder(const std::string &dccommsId, PACKET_TYPE type,
+                        PacketBuilderPtr pb);
+
   bool Ready(DEV_TYPE);
+
+  bool AddAcousticDevice(dccomms_ros_msgs::AddAcousticDevice::Request & req);
+  bool LinkDevToChannel(dccomms_ros_msgs::LinkDeviceToChannel::Request &req);
+  bool AddAcousticChannel(dccomms_ros_msgs::AddAcousticChannel::Request &req);
+  bool AddCustomChannel(dccomms_ros_msgs::AddCustomChannel::Request &req);
+  bool AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req);
+  bool StartSimulation();
+
 private:
   const char _timeFormat[100] = "%Y-%m-%d %H:%M:%S";
   void _Run();
@@ -70,17 +88,17 @@ private:
       _ErrorPDUCb;
 
   bool _AddAcousticDevice(dccomms_ros_msgs::AddAcousticDevice::Request &req,
-                  dccomms_ros_msgs::AddAcousticDevice::Response &res);
+                          dccomms_ros_msgs::AddAcousticDevice::Response &res);
   bool _CheckDevice(dccomms_ros_msgs::CheckDevice::Request &req,
                     dccomms_ros_msgs::CheckDevice::Response &res);
   bool _CheckChannel(dccomms_ros_msgs::CheckChannel::Request &req,
-                    dccomms_ros_msgs::CheckChannel::Response &res);
+                     dccomms_ros_msgs::CheckChannel::Response &res);
   bool _RemoveDevice(dccomms_ros_msgs::RemoveDevice::Request &req,
                      dccomms_ros_msgs::RemoveDevice::Response &res);
   bool _LinkDevToChannel(dccomms_ros_msgs::LinkDeviceToChannel::Request &req,
                          dccomms_ros_msgs::LinkDeviceToChannel::Response &res);
   bool _AddAcousticChannel(dccomms_ros_msgs::AddAcousticChannel::Request &req,
-                   dccomms_ros_msgs::AddAcousticChannel::Response &res);
+                           dccomms_ros_msgs::AddAcousticChannel::Response &res);
   bool _AddCustomChannel(dccomms_ros_msgs::AddCustomChannel::Request &req,
                          dccomms_ros_msgs::AddCustomChannel::Response &res);
   bool _AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req,
@@ -121,6 +139,8 @@ private:
   //////////
   ROSCommsSimulatorPtr _this;
   bool _started;
+
+  PacketBuilderMap _packetBuilderMap;
 };
 }
 #endif // WHROVSIMULATOR_H

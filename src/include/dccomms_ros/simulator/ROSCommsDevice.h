@@ -65,6 +65,7 @@ protected:
   virtual bool DoStarted() = 0;
 
   ROSCommsSimulatorPtr _sim;
+  PacketBuilderPtr _txpb, _rxpb;
 
 private:
   void _StartDeviceService();
