@@ -4,8 +4,9 @@
 namespace dccomms_ros {
 
 CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
-                                           PacketBuilderPtr pb)
-    : ROSCommsDevice(sim, pb), _ownPtr(this), _erDist(0.0, 1.0) {}
+                                           PacketBuilderPtr txpb,
+                                           PacketBuilderPtr rxpb)
+    : ROSCommsDevice(sim, txpb, rxpb), _ownPtr(this), _erDist(0.0, 1.0) {}
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
 

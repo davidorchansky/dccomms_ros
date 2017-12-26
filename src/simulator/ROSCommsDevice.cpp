@@ -5,10 +5,12 @@
 
 namespace dccomms_ros {
 
-ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr pb)
-    : _sim(s), _pb(pb), _txserv(this) {
+ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb, PacketBuilderPtr rxpb)
+    : _sim(s), _txserv(this) {
+  _rxpb = rxpb;
+  _txpb = txpb;
   _device = CommsDeviceService::BuildCommsDeviceService(
-      pb, CommsDeviceService::IPHY_TYPE_PHY);
+      _rxpb, CommsDeviceService::IPHY_TYPE_PHY);
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
   _commonStarted = false;
   _position = tf::Vector3(0, 0, 0);
@@ -53,8 +55,6 @@ void ROSCommsDevice::SetBitRate(uint32_t v) {
 
 void ROSCommsDevice::SetDccommsId(const std::string name) {
   _name = name;
-  _txpb = _sim->GetPacketBuilder(_name, TX_PACKET);
-  _rxpb = _sim->GetPacketBuilder(_name, RX_PACKET);
   _txdlf = _txpb->Create();
   _device->SetCommsDeviceId(_name);
 }

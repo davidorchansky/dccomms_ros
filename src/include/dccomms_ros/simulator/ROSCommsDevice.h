@@ -20,7 +20,7 @@ typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 
 class ROSCommsDevice : public virtual Logger {
 public:
-  ROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr);
+  ROSCommsDevice(ROSCommsSimulatorPtr,  PacketBuilderPtr txpb, PacketBuilderPtr rxpb);
 
   CommsDeviceServicePtr GetService();
   void ReceiveFrame(PacketPtr);
@@ -80,7 +80,6 @@ private:
   uint32_t _mac;
   uint32_t _bitRate;
   uint32_t _millisPerByte;
-  PacketBuilderPtr _pb;
   tf::Vector3 _position;
 
   void _TxWork();

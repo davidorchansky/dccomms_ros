@@ -125,7 +125,7 @@ private:
 
   std::mutex _devLinksMutex, _idDevMapMutex, _channelsMutex;
 
-  PacketBuilderPtr _packetBuilder;
+  PacketBuilderPtr _defaultPacketBuilder;
   ServiceThread<ROSCommsSimulator> _linkUpdaterWorker;
   void _LinkUpdaterWork();
   void _IsAliveWork();

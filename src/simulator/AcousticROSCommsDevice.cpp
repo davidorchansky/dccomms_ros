@@ -8,8 +8,9 @@
 namespace dccomms_ros {
 
 AcousticROSCommsDevice::AcousticROSCommsDevice(ROSCommsSimulatorPtr s,
-                                               PacketBuilderPtr pb)
-    : ROSCommsDevice(s, pb) {
+                                               PacketBuilderPtr txpb,
+                                               PacketBuilderPtr rxpb)
+    : ROSCommsDevice(s, txpb, rxpb) {
   _started = false;
   _nodeListIndex = ns3::NodeList::GetNNodes();
   _node = ns3::CreateObject<ns3::Node>();

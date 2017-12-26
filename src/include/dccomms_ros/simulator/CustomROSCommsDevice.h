@@ -14,7 +14,7 @@ typedef std::shared_ptr<CustomROSCommsDevice> CustomROSCommsDevicePtr;
 
 class CustomROSCommsDevice : public ROSCommsDevice {
 public:
-  CustomROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr);
+  CustomROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr txpb, PacketBuilderPtr rxpb);
 
   void SetVariableBitRate(double trTimeMean, double trTimeSd = 0); //as bps
   void SetMinPktErrorRate(double minPktErrorRate);

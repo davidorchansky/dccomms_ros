@@ -145,8 +145,10 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
   bool exists = _CommonPreAddDev(dccommsId, deviceType, mac);
 
   if (!exists) {
+    auto txpb = GetPacketBuilder(dccommsId, TX_PACKET);
+    auto rxpb = GetPacketBuilder(dccommsId, RX_PACKET);
     ROSCommsDevicePtr dev =
-        dccomms::CreateObject<AcousticROSCommsDevice>(_this, _packetBuilder);
+        dccomms::CreateObject<AcousticROSCommsDevice>(_this, txpb, rxpb);
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
@@ -310,8 +312,10 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
   Log->info("Add device request received");
 
   if (!exists) {
+    auto txpb = GetPacketBuilder(dccommsId, TX_PACKET);
+    auto rxpb = GetPacketBuilder(dccommsId, RX_PACKET);
     CustomROSCommsDevicePtr dev =
-        dccomms::CreateObject<CustomROSCommsDevice>(_this, _packetBuilder);
+        dccomms::CreateObject<CustomROSCommsDevice>(_this, txpb, rxpb);
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
