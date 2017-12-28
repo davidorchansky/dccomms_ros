@@ -5,12 +5,14 @@
 
 namespace dccomms_ros {
 
-ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb, PacketBuilderPtr rxpb)
+ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
+                               PacketBuilderPtr rxpb)
     : _sim(s), _txserv(this) {
   _rxpb = rxpb;
   _txpb = txpb;
   _device = CommsDeviceService::BuildCommsDeviceService(
-      _rxpb, CommsDeviceService::IPHY_TYPE_PHY);
+      _txpb, CommsDeviceService::IPHY_TYPE_PHY);
+  _device->SetLogLevel(LogLevel::info);
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
   _commonStarted = false;
   _position = tf::Vector3(0, 0, 0);
@@ -88,7 +90,7 @@ void ROSCommsDevice::_TxWork() {
       uint32_t transmissionTime = packetSize * _millisPerByte;
       std::this_thread::sleep_for(std::chrono::milliseconds(transmissionTime));
     } else {
-      // PACKET WITH ERRORS
+      Log->critical("packet received with errors from the upper layer!");
     }
   } while (_device->GetRxFifoSize() > 0);
 
