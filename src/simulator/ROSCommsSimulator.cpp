@@ -153,6 +153,7 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
     dev->SetBitRate(bitrate);
+    dev->SetMaxTxFifoSize(req.maxTxFifoSize);
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;
@@ -325,6 +326,7 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     dev->SetMinPktErrorRate(req.minPktErrorRate);
     dev->SetPktErrorRateInc(req.pktErrorRateIncPerMeter);
     dev->SetVariableBitRate(req.bitrate, req.bitrateSd);
+    dev->SetMaxTxFifoSize(req.maxTxFifoSize);
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;

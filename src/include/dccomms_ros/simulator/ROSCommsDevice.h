@@ -30,6 +30,7 @@ public:
   void SetBitRate(uint32_t bps);
 
   void SetPosition(const tf::Vector3 &position);
+  void SetMaxTxFifoSize(uint32_t size);
 
   virtual void SetLogName(std::string name);
   virtual void SetLogLevel(cpplogging::LogLevel);

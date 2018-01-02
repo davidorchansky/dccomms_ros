@@ -63,6 +63,9 @@ void ROSCommsDevice::SetDccommsId(const std::string name) {
 
 std::string ROSCommsDevice::GetDccommsId() { return _name; }
 
+void ROSCommsDevice::SetMaxTxFifoSize(uint32_t size) {
+  _device->SetMaxQueueSize(size);
+}
 void ROSCommsDevice::SetMac(uint32_t mac) {
   _mac = mac;
   DoSetMac(_mac);
@@ -80,8 +83,13 @@ uint32_t ROSCommsDevice::GetMac() { return _mac; }
 void ROSCommsDevice::_TxWork() {
   _device->WaitForFramesFromRxFifo();
   _device->SetPhyLayerState(CommsDeviceService::BUSY);
+  unsigned int txFifoSize;
   do {
     _device >> _txdlf;
+    txFifoSize = _device->GetRxFifoSize();
+    Log->info("(dccommsId: {}) received packet from the upper layer. tx fifo "
+              "size: {} bytes",
+              GetDccommsId(), txFifoSize);
     PacketPtr txdlf = _txpb->CreateFromBuffer(_txdlf->GetBuffer());
     if (txdlf->PacketIsOk()) {
       // PACKET OK
@@ -92,7 +100,7 @@ void ROSCommsDevice::_TxWork() {
     } else {
       Log->critical("packet received with errors from the upper layer!");
     }
-  } while (_device->GetRxFifoSize() > 0);
+  } while (txFifoSize > 0);
 
   _device->SetPhyLayerState(CommsDeviceService::READY);
 }

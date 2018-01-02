@@ -71,6 +71,7 @@ int main(int argc, char **argv) {
   dccomms_ros_msgs::AddCustomDeviceRequest acdreq1;
   acdreq1.dccommsId = "rov";
   acdreq1.bitrate = 500;
+  acdreq1.maxTxFifoSize = 512; //bytes
   acdreq1.mac = 1;
   acdreq1.maxDistance = 99999999;
   acdreq1.minDistance = 0;
@@ -87,8 +88,8 @@ int main(int argc, char **argv) {
   ldc1.dccommsId = "rov";
 
   dccomms_ros_msgs::LinkDeviceToChannelRequest ldc2;
-  ldc1.channelId = 0;
-  ldc1.dccommsId = "operator";
+  ldc2.channelId = 0;
+  ldc2.dccommsId = "operator";
 
   sim->LinkDevToChannel(ldc1);
   sim->LinkDevToChannel(ldc2);
