@@ -133,6 +133,31 @@ SET(${PROJECT_NAME}_INCLUDE_DIRS
 SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++14 ")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 
+###################################
+## catkin specific configuration ##
+###################################
+
+## The catkin_package macro generates cmake config files for your package
+## Declare things to be passed to dependent projects
+## INCLUDE_DIRS: uncomment this if you package contains header files
+## LIBRARIES: libraries you create in this project that dependent projects also need
+## CATKIN_DEPENDS: catkin_packages dependent projects also need
+## DEPENDS: system dependencies of this project that dependent projects also need
+catkin_package(
+  INCLUDE_DIRS ${${PROJECT_NAME}_INCLUDE_DIRS}
+  LIBRARIES ${PROJECT_NAME} ${${DCCOMMS_UTILS_GIT}_LIBRARIES} ${ns3liblist}
+  CATKIN_DEPENDS
+        roscpp
+        rospy
+        std_msgs
+        actionlib_msgs
+        message_runtime
+        dccomms_ros_msgs
+#  DEPENDS system_lib
+)
+
+roslaunch_add_file_check(launch)
+
 SET(S100BRIDGE s100_bridge)
 add_executable(${S100BRIDGE} src/bridges/s100/s100_main.cpp)
 target_include_directories(${S100BRIDGE} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
@@ -208,31 +233,6 @@ target_include_directories(ns3-as-testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 ###############################################
 ############ END netsim BUILD #################
 ###############################################
-
-###################################
-## catkin specific configuration ##
-###################################
-
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if you package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-  INCLUDE_DIRS ${${PROJECT_NAME}_INCLUDE_DIRS}
-  LIBRARIES ${PROJECT_NAME} ${${DCCOMMS_UTILS_GIT}_LIBRARIES} ${ns3liblist}
-  CATKIN_DEPENDS
-        roscpp
-        rospy
-        std_msgs
-        actionlib_msgs
-        message_runtime
-        dccomms_ros_msgs
-#  DEPENDS system_lib
-)
-
-roslaunch_add_file_check(launch)
 
 
 message("End ${PROJECT_NAME_ORIG}")
