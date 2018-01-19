@@ -6,7 +6,6 @@
  * with crc16.
  */
 
-
 #include <cstdio>
 #include <cstdio>
 #include <iostream>
@@ -23,30 +22,46 @@ using namespace dccomms;
 using namespace dccomms_ros;
 using namespace std;
 
-static std::shared_ptr<spd::logger> Log =
-    spd::stdout_color_mt("CommsSimulatorTest");
-ROSCommsSimulator *sim;
-
 int main(int argc, char **argv) {
-  //// GET PARAMS
   ros::init(argc, argv, "dccomms_netsim");
   ros::NodeHandle nh("~");
-
   auto packetBuilder =
       dccomms::CreateObject<dccomms::DataLinkFramePacketBuilder>(
           dccomms::DataLinkFrame::crc16);
+  auto Log = cpplogging::CreateLogger("netsim_example2");
 
   auto sim = dccomms::CreateObject<ROSCommsSimulator>(nh);
   sim->SetLogName("netsim");
   sim->LogToFile("netsim_log");
 
-  Log->set_level(spdlog::level::debug);
-  Log->flush_on(spd::level::info);
-
   sim->SetDefaultPacketBuilder(packetBuilder);
 
+  // Print log messages in callbacks
+  sim->SetTransmitPDUCb([Log](ROSCommsDevice *dev, PacketPtr pkt) {
+    Log->Info("Dev '{}': transmitting PDU to address {}", dev->GetDccommsId(),
+              pkt->GetDestAddr());
+  });
+  sim->SetReceivePDUCb([Log](ROSCommsDevice *dev, PacketPtr pkt) {
+    Log->Info("Dev '{}': received PDU from address {}", dev->GetDccommsId(),
+              pkt->GetSrcAddr());
+
+  });
+  sim->SetErrorPDUCb([Log](ROSCommsDevice *dev, PacketPtr pkt) {
+    Log->Warn("Dev '{}': received PDU with errors from address {}",
+              dev->GetDccommsId(), pkt->GetSrcAddr());
+
+  });
+  int printPositionPeriod = 50;
+  sim->SetPositionUpdatedCb(
+      [Log](ROSCommsDevicePtr dev, tf::Vector3 pos) {
+        Log->Debug("Dev '{}': P: [{},{},{}]", dev->GetDccommsId(),
+                   pos.x(), pos.y(), pos.z());
+
+      },
+      printPositionPeriod); // Print the position of each device at a minimum period of printPositionPeriod ms
+
   sim->StartROSInterface();
-  Log->info("ROS Interface started.");
+  Log->Info("ROS Interface started.");
 
   ros::Rate loop_rate(30);
   while (ros::ok()) {

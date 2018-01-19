@@ -45,6 +45,10 @@ bool ROSCommsDevice::Started() { return _commonStarted && DoStarted(); }
 void ROSCommsDevice::_StartNodeWorker() { _txserv.Start(); }
 
 void ROSCommsDevice::ReceiveFrame(PacketPtr dlf) {
+  if(dlf->PacketIsOk())
+    _sim->ReceivePDUCb(this, dlf);
+  else
+    _sim->ErrorPDUCb(this, dlf);
   _receiveFrameMutex.lock();
   _device << dlf;
   _receiveFrameMutex.unlock();
@@ -90,12 +94,13 @@ void ROSCommsDevice::_TxWork() {
   do {
     _device >> _txdlf;
     txFifoSize = _device->GetRxFifoSize();
-    Log->info("(dccommsId: {}) received packet from the upper layer. tx fifo "
-              "size: {} bytes",
-              GetDccommsId(), txFifoSize);
+//    Log->info("(dccommsId: {}) received packet from the upper layer. tx fifo "
+//              "size: {} bytes",
+//              GetDccommsId(), txFifoSize);
     PacketPtr txdlf = _txpb->CreateFromBuffer(_txdlf->GetBuffer());
     if (txdlf->PacketIsOk()) {
       // PACKET OK
+      _sim->TransmitPDUCb(this, txdlf);
       DoSend(txdlf);
       uint32_t packetSize = static_cast<uint32_t>(txdlf->GetPacketSize());
       uint32_t transmissionTime = packetSize * _millisPerByte;

@@ -55,10 +55,11 @@ public:
   void StartROSInterface();
 
   void
-  SetTransmitPDUCb(std::function<void(int linkType, dccomms::PacketPtr)> cb);
+  SetTransmitPDUCb(std::function<void(ROSCommsDevice* txdev, dccomms::PacketPtr)> cb);
   void
-  SetReceivePDUCb(std::function<void(int linkType, dccomms::PacketPtr)> cb);
-  void SetErrorPDUCb(std::function<void(int linkType, dccomms::PacketPtr)> cb);
+  SetReceivePDUCb(std::function<void(ROSCommsDevice* rxdev, dccomms::PacketPtr)> cb);
+  void SetErrorPDUCb(std::function<void(ROSCommsDevice* rxdev, dccomms::PacketPtr)> cb);
+  void SetPositionUpdatedCb(std::function<void(ROSCommsDevicePtr dev, tf::Vector3)> cb, double cbMinPeriod, uint32_t positionUpdateRate = 10); //callback period = ms ; update rate = Hz
 
   void GetSimTime(std::string &datetime, double &secsFromStart);
 
@@ -79,6 +80,7 @@ public:
   bool AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req);
   bool StartSimulation();
 
+  friend class ROSCommsDevice;
 private:
   const char _timeFormat[100] = "%Y-%m-%d %H:%M:%S";
   void _Run();
@@ -87,8 +89,9 @@ private:
   std::chrono::high_resolution_clock::time_point _startPoint;
   void _SetSimulationStartDateTime();
 
-  std::function<void(int, dccomms::PacketPtr)> _TransmitPDUCb, _ReceivePDUCb,
-      _ErrorPDUCb;
+  std::function<void(ROSCommsDevice* dev, dccomms::PacketPtr)> TransmitPDUCb, ReceivePDUCb,
+      ErrorPDUCb;
+  std::function<void(ROSCommsDevicePtr dev, tf::Vector3)> PositionUpdatedCb;
 
   bool _AddAcousticDevice(dccomms_ros_msgs::AddAcousticDevice::Request &req,
                           dccomms_ros_msgs::AddAcousticDevice::Response &res);
@@ -142,6 +145,8 @@ private:
   //////////
   ROSCommsSimulatorPtr _this;
   bool _started;
+  double _positionUpdatedCbMinPeriod;
+  uint32_t _updatePositionRate;
 
   PacketBuilderMap _packetBuilderMap;
 };

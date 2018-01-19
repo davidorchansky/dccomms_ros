@@ -57,23 +57,33 @@ void ROSCommsSimulator::SetPacketBuilder(const string &dccommsId,
 }
 
 void ROSCommsSimulator::SetTransmitPDUCb(
-    std::function<void(int, PacketPtr)> cb) {
-  _TransmitPDUCb = cb;
+    std::function<void(ROSCommsDevice *, dccomms::PacketPtr)> cb) {
+  TransmitPDUCb = cb;
 }
 
 void ROSCommsSimulator::SetReceivePDUCb(
-    std::function<void(int, PacketPtr)> cb) {
-  _ReceivePDUCb = cb;
+    std::function<void(ROSCommsDevice *, dccomms::PacketPtr)> cb) {
+  ReceivePDUCb = cb;
 }
 
-void ROSCommsSimulator::SetErrorPDUCb(std::function<void(int, PacketPtr)> cb) {
-  _ErrorPDUCb = cb;
+void ROSCommsSimulator::SetErrorPDUCb(
+    std::function<void(ROSCommsDevice *, dccomms::PacketPtr)> cb) {
+  ErrorPDUCb = cb;
+}
+
+void ROSCommsSimulator::SetPositionUpdatedCb(
+    std::function<void(ROSCommsDevicePtr dev, tf::Vector3)> cb,
+    double cbMinPeriod, uint32_t positionUpdateRate) {
+  PositionUpdatedCb = cb;
+  _positionUpdatedCbMinPeriod = cbMinPeriod;
+  _updatePositionRate = positionUpdateRate;
 }
 
 void ROSCommsSimulator::_Init() {
-  _TransmitPDUCb = [](int linkType, PacketPtr pdu) {};
-  _ReceivePDUCb = [](int linkType, PacketPtr pdu) {};
-  _ErrorPDUCb = [](int linkType, PacketPtr pdu) {};
+  SetTransmitPDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
+  SetReceivePDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
+  SetErrorPDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
+  SetPositionUpdatedCb([](ROSCommsDevicePtr dev, tf::Vector3 pos) {}, 1000);
   GlobalValue::Bind("SimulatorImplementationType",
                     StringValue("ns3::RealtimeSimulatorImpl"));
 }
@@ -448,18 +458,18 @@ void ROSCommsSimulator::_Run() {
 void ROSCommsSimulator::_LinkUpdaterWork() {
   tf::TransformListener listener;
 
-  dccomms::Timer timer;
-  bool showLog = false;
-  unsigned int showLogInterval = 10000;
-  timer.Reset();
+  dccomms::Timer showLogTimer;
+  bool callPositionUpdatedCb = false;
+  unsigned int positionUpdatedCbInterval = _positionUpdatedCbMinPeriod;
+  showLogTimer.Reset();
 
-  ros::Rate loop_rate(5);
+  ros::Rate loop_rate(_updatePositionRate);
 
   std::string frameId0, frameId1;
   while (1) {
 
-    if (timer.Elapsed() > showLogInterval) {
-      showLog = true;
+    if (showLogTimer.Elapsed() > positionUpdatedCbInterval) {
+      callPositionUpdatedCb = true;
     }
 
     _devLinksMutex.lock();
@@ -475,8 +485,10 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
                                    transform);
           tf::Vector3 position = transform.getOrigin();
           dev->SetPosition(position);
+          if(callPositionUpdatedCb)
+            PositionUpdatedCb(dev, position);
         } catch (std::exception &e) {
-          if (showLog)
+          if (callPositionUpdatedCb)
             Log->warn("An exception has ocurred in the link updater work: {}",
                       std::string(e.what()));
         }
@@ -485,9 +497,9 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
     _devLinksMutex.unlock();
     loop_rate.sleep();
 
-    if (showLog) {
-      showLog = false;
-      timer.Reset();
+    if (callPositionUpdatedCb) {
+      callPositionUpdatedCb = false;
+      showLogTimer.Reset();
     }
   }
 }
