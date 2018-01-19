@@ -31,6 +31,7 @@ public:
 
   void SetPosition(const tf::Vector3 &position);
   void SetMaxTxFifoSize(uint32_t size);
+  uint32_t GetMaxTxFifoSize();
 
   virtual void SetLogName(std::string name);
   virtual void SetLogLevel(cpplogging::LogLevel);

@@ -216,9 +216,11 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS
 target_link_libraries(${PROJECT_NAME}  ${ns3liblist} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 
 
-SET(SIM netsim_example1)
-add_executable (${SIM} src/simulator/main/netsim_example1.cpp)
-target_link_libraries(${SIM} ${PROJECT_NAME})
+add_executable (netsim_example1 src/simulator/main/netsim_example1.cpp)
+target_link_libraries(netsim_example1 ${PROJECT_NAME})
+
+add_executable (netsim_example2 src/simulator/main/netsim_example2.cpp)
+target_link_libraries(netsim_example2 ${PROJECT_NAME})
 
 #target_compile_options(pruebas PUBLIC "")
 #https://cmake.org/cmake/help/v3.4/command/find_library.html

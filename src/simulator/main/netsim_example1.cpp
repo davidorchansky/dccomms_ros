@@ -1,3 +1,11 @@
+/*
+ * This example configures a simple network
+ * and then starts the simulation by code.
+ * All packets are of the type dccomms::DataLinkFrame
+ * with crc16
+ */
+
+
 #include <cstdio>
 #include <cstdio>
 #include <iostream>
@@ -18,22 +26,7 @@ static std::shared_ptr<spd::logger> Log =
     spd::stdout_color_mt("CommsSimulatorTest");
 ROSCommsSimulator *sim;
 
-void SIGINT_handler(int sig) {
-  printf("Received %d signal\n", sig);
-  printf("Log messages flushed.\n");
-  exit(0);
-}
-
-void setSignals() {
-  if (signal(SIGINT, SIGINT_handler) == SIG_ERR) {
-    printf("SIGINT install error\n");
-    exit(1);
-  }
-}
-
 int main(int argc, char **argv) {
-  setSignals();
-
   //// GET PARAMS
   ros::init(argc, argv, "dccomms_netsim");
   ros::NodeHandle nh("~");
@@ -51,8 +44,6 @@ int main(int argc, char **argv) {
 
   Log->set_level(spdlog::level::debug);
   Log->flush_on(spd::level::info);
-
-  // sim->SetPacketBuilder(packetBuilder);
 
   sim->SetPacketBuilder("rov", PACKET_TYPE::TX_PACKET, rovTxPacketBuilder);
   sim->SetPacketBuilder("rov", PACKET_TYPE::RX_PACKET, operatorTxPacketBuilder);
@@ -95,8 +86,10 @@ int main(int argc, char **argv) {
   sim->LinkDevToChannel(ldc2);
 
   sim->StartSimulation();
+  Log->info("Simulation started");
 
   sim->StartROSInterface();
+  Log->info("ROS Interface started");
 
   ros::Rate loop_rate(30);
   while (ros::ok()) {

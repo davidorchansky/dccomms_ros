@@ -66,10 +66,13 @@ public:
                                     PACKET_TYPE type);
   void SetPacketBuilder(const std::string &dccommsId, PACKET_TYPE type,
                         PacketBuilderPtr pb);
-
+  void SetDefaultPacketBuilder(PacketBuilderPtr pb) {
+    _defaultPacketBuilder = pb;
+  }
+  PacketBuilderPtr GetDefaultPacketBuilder() { return _defaultPacketBuilder; }
   bool Ready(DEV_TYPE);
 
-  bool AddAcousticDevice(dccomms_ros_msgs::AddAcousticDevice::Request & req);
+  bool AddAcousticDevice(dccomms_ros_msgs::AddAcousticDevice::Request &req);
   bool LinkDevToChannel(dccomms_ros_msgs::LinkDeviceToChannel::Request &req);
   bool AddAcousticChannel(dccomms_ros_msgs::AddAcousticChannel::Request &req);
   bool AddCustomChannel(dccomms_ros_msgs::AddCustomChannel::Request &req);

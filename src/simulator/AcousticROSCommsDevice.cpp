@@ -82,6 +82,7 @@ void AcousticROSCommsDevice::_Recv(std::string context,
 void AcousticROSCommsDevice::_RxError(std::string context,
                                       ns3::Ptr<const ns3::Packet> pkt) {
   Warn("Packet received with errors!");
+  //TODO: send the packet to de upper layer despite the errors
 }
 
 DEV_TYPE AcousticROSCommsDevice::GetDevType() {

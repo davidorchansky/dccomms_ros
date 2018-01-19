@@ -146,7 +146,11 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
 
   if (!exists) {
     auto txpb = GetPacketBuilder(dccommsId, TX_PACKET);
+    if (!txpb)
+      txpb = GetDefaultPacketBuilder();
     auto rxpb = GetPacketBuilder(dccommsId, RX_PACKET);
+    if (!rxpb)
+      rxpb = GetDefaultPacketBuilder();
     ROSCommsDevicePtr dev =
         dccomms::CreateObject<AcousticROSCommsDevice>(_this, txpb, rxpb);
     dev->SetDccommsId(dccommsId);
@@ -214,8 +218,8 @@ bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
   }
   if (res.res) {
     dev->LinkToChannel(channel);
-    Log->info("dev {} linked to channel {}", dev->GetDccommsId(),
-              channel->GetId());
+    Log->info("dev {} linked to channel {}:\n{}", dev->GetDccommsId(),
+              channel->GetId(), dev->ToString());
   } else {
     Log->error("error linking dev {} to channel {}", dev->GetDccommsId(),
                channel->GetId());
@@ -314,7 +318,11 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
 
   if (!exists) {
     auto txpb = GetPacketBuilder(dccommsId, TX_PACKET);
+    if (!txpb)
+      txpb = GetDefaultPacketBuilder();
     auto rxpb = GetPacketBuilder(dccommsId, RX_PACKET);
+    if (!rxpb)
+      rxpb = GetDefaultPacketBuilder();
     CustomROSCommsDevicePtr dev =
         dccomms::CreateObject<CustomROSCommsDevice>(_this, txpb, rxpb);
     dev->SetDccommsId(dccommsId);

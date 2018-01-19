@@ -66,6 +66,9 @@ std::string ROSCommsDevice::GetDccommsId() { return _name; }
 void ROSCommsDevice::SetMaxTxFifoSize(uint32_t size) {
   _device->SetMaxQueueSize(size);
 }
+
+uint32_t ROSCommsDevice::GetMaxTxFifoSize() { return _device->GetMaxQueueSize(); }
+
 void ROSCommsDevice::SetMac(uint32_t mac) {
   _mac = mac;
   DoSetMac(_mac);
@@ -160,9 +163,10 @@ std::string ROSCommsDevice::ToString() {
                                       "\tMAC ....................... %d\n"
                                       "\tDevice type ............... %s\n"
                                       "\tFrame ID: ................. '%s'\n"
-                                      "\tChannel: .................. '%s'",
+                                      "\tChannel: .................. '%s'\n"
+                                      "\tTx Fifo Size: ............. %d bytes",
                    _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
-                   _tfFrameId.c_str(), channelLinked.c_str());
+                   _tfFrameId.c_str(), channelLinked.c_str(), GetMaxTxFifoSize());
   return std::string(buff);
 }
 }
