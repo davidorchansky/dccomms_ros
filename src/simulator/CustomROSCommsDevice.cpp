@@ -1,20 +1,24 @@
 #include <dccomms_ros/simulator/CustomCommsChannel.h>
 #include <dccomms_ros/simulator/CustomROSCommsDevice.h>
+#include <ns3/core-module.h>
+#include <ns3/simulator.h>
 
 namespace dccomms_ros {
 
 CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
                                            PacketBuilderPtr txpb,
                                            PacketBuilderPtr rxpb)
-    : ROSCommsDevice(sim, txpb, rxpb), _ownPtr(this), _erDist(0.0, 1.0) {}
+    : ROSCommsDevice(sim, txpb, rxpb), _ownPtr(this), _erDist(0.0, 1.0) {
+  _transmitting = false;
+}
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
 
 void CustomROSCommsDevice::SetVariableBitRate(double mean, double sd) {
   _bitRateMean = mean;
   _bitRateSd = sd;
-  auto _ttMean = 1 / (_bitRateMean / 8) * 1000;
-  auto _ttSd = _bitRateSd > 0 ? 1 / (_bitRateSd / 8) * 1000 : 0;
+  auto _ttMean = 8 * 1e9 / _bitRateMean; //nanos / byte
+  auto _ttSd = _bitRateSd > 0 ? 8 * 1e9 / _bitRateSd : 0;
   _ttDist = NormalDist(_ttMean, _ttSd);
 }
 
@@ -37,7 +41,7 @@ double CustomROSCommsDevice::GetPktErrorRateInc() {
   return _pktErrorRateIncPerMeter;
 }
 
-double CustomROSCommsDevice::GetNextTt() {
+uint64_t CustomROSCommsDevice::GetNextTt() {
   auto tt = _ttDist(_ttGenerator);
   if (tt < 0) {
     Log->warn("trRate < 0: {} . Changing to its abs({}) value", tt, tt);
@@ -61,7 +65,11 @@ uint32_t CustomROSCommsDevice::GetMinDistance() { return _minDistance; }
 
 void CustomROSCommsDevice::DoSetMac(uint32_t mac) { _mac = mac; }
 void CustomROSCommsDevice::DoSend(PacketPtr dlf) {
+  Transmitting(true);
   static_pointer_cast<CustomCommsChannel>(_channel)->SendPacket(_ownPtr, dlf);
+  ns3::Simulator::ScheduleWithContext(
+      GetMac(), ns3::NanoSeconds(dlf->GetPacketSize() * GetNanosPerByte()),
+      &CustomROSCommsDevice::Transmitting, this, false);
 }
 void CustomROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel) {
   if (channel->GetType() == CHANNEL_TYPE::CUSTOM_CHANNEL) {

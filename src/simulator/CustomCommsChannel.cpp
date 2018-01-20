@@ -8,9 +8,9 @@ namespace dccomms_ros {
 
 CustomCommsChannel::CustomCommsChannel(uint32_t id) { _rosChannelId = id; }
 
-void CustomCommsChannel::SetMinPrTime(double prTime) { _minPrTime = prTime; }
+void CustomCommsChannel::SetMinPrTime(double prTime) { _minPrTime = prTime * 1000000; } //from millis to nanos
 
-void CustomCommsChannel::SetPrTimeInc(double inc) { _prTimeIncPerMeter = inc; }
+void CustomCommsChannel::SetPrTimeInc(double inc) { _prTimeIncPerMeter = inc * 1000000; } //from millis to nanos
 
 void CustomCommsChannel::AddDevice(CustomROSCommsDevicePtr dev) {
   _devices.push_back(dev);
@@ -28,18 +28,23 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
   for (CustomROSCommsDevicePtr dst : _devices) {
     if (dst->GetMac() != dev->GetMac()) {
       auto rxpos = dst->GetPosition();
-      auto distance = txpos.distance(rxpos);
-      auto delay = _minPrTime + _prTimeIncPerMeter * distance;
-      auto totalTime = static_cast<uint32_t>(ceil(delay + trTime));
-      auto errRate = minErrRate + errRateInc * distance;
-      auto error = dev->ErrOnNextPkt(errRate);
-      if (error) {
-        auto pBuffer = pkt->GetPayloadBuffer();
-        *pBuffer = ~*pBuffer;
+      auto distance = txpos.distance(rxpos); // distance = meters
+      auto dm = distance * 10;               // dm = decimeters
+      auto maxdm = dev->GetMaxDistance();
+      auto mindm = dev->GetMinDistance();
+      if (dm <= maxdm && dm >= mindm) { //dst is in range
+        auto delay = _minPrTime + _prTimeIncPerMeter * distance;
+        auto totalTime = static_cast<uint64_t>(round(delay + trTime));
+        auto errRate = minErrRate + errRateInc * distance;
+        auto error = dev->ErrOnNextPkt(errRate);
+        if (error) {
+          auto pBuffer = pkt->GetPayloadBuffer();
+          *pBuffer = ~*pBuffer;
+        }
+        ns3::Simulator::ScheduleWithContext(
+            dev->GetMac(), NanoSeconds(totalTime),
+            &ROSCommsDevice::ReceiveFrame, dst.get(), pkt);
       }
-      ns3::Simulator::ScheduleWithContext(
-          dev->GetMac(), MilliSeconds(totalTime), &ROSCommsDevice::ReceiveFrame,
-          dst.get(), pkt);
     }
   }
 }

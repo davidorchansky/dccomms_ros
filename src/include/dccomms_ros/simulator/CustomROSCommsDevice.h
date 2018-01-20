@@ -14,22 +14,26 @@ typedef std::shared_ptr<CustomROSCommsDevice> CustomROSCommsDevicePtr;
 
 class CustomROSCommsDevice : public ROSCommsDevice {
 public:
-  CustomROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr txpb, PacketBuilderPtr rxpb);
+  CustomROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr txpb,
+                       PacketBuilderPtr rxpb);
 
-  void SetVariableBitRate(double trTimeMean, double trTimeSd = 0); //as bps
+  void SetVariableBitRate(double trTimeMean, double trTimeSd = 0); // as bps
   void SetMinPktErrorRate(double minPktErrorRate);
   void SetPktErrorRateInc(double pktErrorRateInc);
   void SetMaxDistance(uint32_t d);
   void SetMinDistance(uint32_t d);
 
-  void GetBitRate(double &trTimeMean, double &trTimeSd); //as bps
+  void GetBitRate(double &trTimeMean, double &trTimeSd); // as bps
   double GetMinPktErrorRate();
   double GetPktErrorRateInc();
   uint32_t GetMaxDistance();
   uint32_t GetMinDistance();
 
   bool ErrOnNextPkt(double errRate);
-  double GetNextTt(); // get next ms/byte
+  uint64_t GetNextTt(); // get next ms/byte
+
+  inline bool IsTransmitting() { return _transmitting; }
+  inline void Transmitting(bool v) { _transmitting = v; }
 
   virtual DEV_TYPE GetDevType();
 
@@ -50,7 +54,7 @@ private:
   double _bitRateMean, _bitRateSd;
   double _minPktErrorRate, _pktErrorRateIncPerMeter;
 
-  uint32_t _maxDistance, _minDistance;
+  uint32_t _maxDistance, _minDistance; //in dm
   CommsChannelPtr _channel;
   tf::Vector3 _position;
   CustomROSCommsDevicePtr _ownPtr;
@@ -58,6 +62,8 @@ private:
   NormalDist _ttDist;
   UniformRealDist _erDist;
   RandEngGen _ttGenerator, _erGenerator;
+
+  bool _transmitting;
 };
 }
 #endif // COMMSNODE_H

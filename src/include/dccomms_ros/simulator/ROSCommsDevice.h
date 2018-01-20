@@ -20,7 +20,8 @@ typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 
 class ROSCommsDevice : public virtual Logger {
 public:
-  ROSCommsDevice(ROSCommsSimulatorPtr,  PacketBuilderPtr txpb, PacketBuilderPtr rxpb);
+  ROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr txpb,
+                 PacketBuilderPtr rxpb);
 
   CommsDeviceServicePtr GetService();
   void ReceiveFrame(PacketPtr);
@@ -28,6 +29,7 @@ public:
   void SetDccommsId(const std::string name);
 
   void SetBitRate(uint32_t bps);
+  double GetNanosPerByte() { return _nanosPerByte; }
 
   void SetPosition(const tf::Vector3 &position);
   void SetMaxTxFifoSize(uint32_t size);
@@ -81,7 +83,7 @@ private:
   std::string _name, _tfFrameId;
   uint32_t _mac;
   uint32_t _bitRate;
-  uint32_t _millisPerByte;
+  uint64_t _nanosPerByte;
   tf::Vector3 _position;
 
   void _TxWork();

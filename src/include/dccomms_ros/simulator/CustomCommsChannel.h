@@ -22,7 +22,7 @@ public:
 
 private:
   uint32_t _rosChannelId;
-  double _prTimeIncPerMeter, _minPrTime;
+  uint64_t _prTimeIncPerMeter, _minPrTime; //nanoseconds
   std::list<CustomROSCommsDevicePtr> _devices;
 
 };

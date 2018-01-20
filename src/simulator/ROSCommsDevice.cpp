@@ -56,7 +56,7 @@ void ROSCommsDevice::ReceiveFrame(PacketPtr dlf) {
 
 void ROSCommsDevice::SetBitRate(uint32_t v) {
   _bitRate = v; // bps
-  _millisPerByte = static_cast<uint32_t>(std::round(1000. / _bitRate * 8));
+  _nanosPerByte = static_cast<uint64_t>(std::round(8 * 1e9 / _bitRate));
 }
 
 void ROSCommsDevice::SetDccommsId(const std::string name) {
@@ -103,8 +103,8 @@ void ROSCommsDevice::_TxWork() {
       _sim->TransmitPDUCb(this, txdlf);
       DoSend(txdlf);
       uint32_t packetSize = static_cast<uint32_t>(txdlf->GetPacketSize());
-      uint32_t transmissionTime = packetSize * _millisPerByte;
-      std::this_thread::sleep_for(std::chrono::milliseconds(transmissionTime));
+      uint64_t transmissionTime = packetSize * _nanosPerByte;
+      std::this_thread::sleep_for(std::chrono::nanoseconds(transmissionTime));
     } else {
       Log->critical("packet received with errors from the upper layer!");
     }
