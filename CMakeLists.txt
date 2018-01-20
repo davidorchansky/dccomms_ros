@@ -122,6 +122,44 @@ FOREACH(subdir ${${PROJECT_NAME}_DEPS})
         add_subdirectory(${${PROJECT_NAME}_DEPS_DIR}/${subdir})
 ENDFOREACH()
 
+SET(NS3_BUILD ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/build/)
+
+SET(NS3_LIBS
+    libns3-dev-antenna-debug.so                libns3-dev-flow-monitor-test-debug.so      libns3-dev-propagation-debug.so
+    libns3-dev-antenna-test-debug.so           libns3-dev-internet-apps-debug.so          libns3-dev-propagation-test-debug.so
+    libns3-dev-aodv-debug.so                   libns3-dev-internet-apps-test-debug.so     libns3-dev-sixlowpan-debug.so
+    libns3-dev-aodv-test-debug.so              libns3-dev-internet-debug.so               libns3-dev-sixlowpan-test-debug.so
+    libns3-dev-applications-debug.so           libns3-dev-internet-test-debug.so          libns3-dev-spectrum-debug.so
+    libns3-dev-applications-test-debug.so      libns3-dev-lr-wpan-debug.so                libns3-dev-spectrum-test-debug.so
+    libns3-dev-aqua-sim-ng-debug.so            libns3-dev-lr-wpan-test-debug.so           libns3-dev-stats-debug.so
+    libns3-dev-aqua-sim-ng-test-debug.so       libns3-dev-lte-debug.so                    libns3-dev-stats-test-debug.so
+    libns3-dev-bridge-debug.so                 libns3-dev-lte-test-debug.so               libns3-dev-tap-bridge-debug.so
+    libns3-dev-buildings-debug.so              libns3-dev-mesh-debug.so                   libns3-dev-test-debug.so
+    libns3-dev-buildings-test-debug.so         libns3-dev-mesh-test-debug.so              libns3-dev-test-test-debug.so
+    libns3-dev-config-store-debug.so           libns3-dev-mobility-debug.so               libns3-dev-topology-read-debug.so
+    libns3-dev-core-debug.so                   libns3-dev-mobility-test-debug.so          libns3-dev-topology-read-test-debug.so
+    libns3-dev-core-test-debug.so              libns3-dev-mpi-debug.so                    libns3-dev-traffic-control-debug.so
+    libns3-dev-csma-debug.so                   libns3-dev-netanim-debug.so                libns3-dev-traffic-control-test-debug.so
+    libns3-dev-csma-layout-debug.so            libns3-dev-netanim-test-debug.so           libns3-dev-uan-debug.so
+    libns3-dev-dsdv-debug.so                   libns3-dev-network-debug.so                libns3-dev-uan-test-debug.so
+    libns3-dev-dsdv-test-debug.so              libns3-dev-network-test-debug.so           libns3-dev-virtual-net-device-debug.so
+    libns3-dev-dsr-debug.so                    libns3-dev-nix-vector-routing-debug.so     libns3-dev-wave-debug.so
+    libns3-dev-dsr-test-debug.so               libns3-dev-olsr-debug.so                   libns3-dev-wave-test-debug.so
+    libns3-dev-energy-debug.so                 libns3-dev-olsr-test-debug.so              libns3-dev-wifi-debug.so
+    libns3-dev-energy-test-debug.so            libns3-dev-point-to-point-debug.so         libns3-dev-wifi-test-debug.so
+    libns3-dev-fd-net-device-debug.so          libns3-dev-point-to-point-layout-debug.so  libns3-dev-wimax-debug.so
+    libns3-dev-flow-monitor-debug.so           libns3-dev-point-to-point-test-debug.so    libns3-dev-wimax-test-debug.so
+)
+
+#Catkin do not export well relative paths to libraries: https://github.com/ros/catkin/issues/535
+#link_directories(${NS3_BUILD})
+#So it's better to specify the full path to each .so if the the *.so are not in the common directories (see ldconfig)
+message("NS3 modules: ${NS3_LIBS}")
+SET(ns3liblist "")
+FOREACH(lib ${NS3_LIBS})
+SET(path ${NS3_BUILD}/${lib})
+LIST(APPEND ns3liblist ${path})
+ENDFOREACH()
 
 SET(${PROJECT_NAME}_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include
@@ -162,45 +200,6 @@ SET(S100BRIDGE s100_bridge)
 add_executable(${S100BRIDGE} src/bridges/s100/s100_main.cpp)
 target_include_directories(${S100BRIDGE} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${S100BRIDGE} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
-
-SET(NS3_BUILD ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/build/)
-
-SET(NS3_LIBS
-    libns3-dev-antenna-debug.so                libns3-dev-flow-monitor-test-debug.so      libns3-dev-propagation-debug.so
-    libns3-dev-antenna-test-debug.so           libns3-dev-internet-apps-debug.so          libns3-dev-propagation-test-debug.so
-    libns3-dev-aodv-debug.so                   libns3-dev-internet-apps-test-debug.so     libns3-dev-sixlowpan-debug.so
-    libns3-dev-aodv-test-debug.so              libns3-dev-internet-debug.so               libns3-dev-sixlowpan-test-debug.so
-    libns3-dev-applications-debug.so           libns3-dev-internet-test-debug.so          libns3-dev-spectrum-debug.so
-    libns3-dev-applications-test-debug.so      libns3-dev-lr-wpan-debug.so                libns3-dev-spectrum-test-debug.so
-    libns3-dev-aqua-sim-ng-debug.so            libns3-dev-lr-wpan-test-debug.so           libns3-dev-stats-debug.so
-    libns3-dev-aqua-sim-ng-test-debug.so       libns3-dev-lte-debug.so                    libns3-dev-stats-test-debug.so
-    libns3-dev-bridge-debug.so                 libns3-dev-lte-test-debug.so               libns3-dev-tap-bridge-debug.so
-    libns3-dev-buildings-debug.so              libns3-dev-mesh-debug.so                   libns3-dev-test-debug.so
-    libns3-dev-buildings-test-debug.so         libns3-dev-mesh-test-debug.so              libns3-dev-test-test-debug.so
-    libns3-dev-config-store-debug.so           libns3-dev-mobility-debug.so               libns3-dev-topology-read-debug.so
-    libns3-dev-core-debug.so                   libns3-dev-mobility-test-debug.so          libns3-dev-topology-read-test-debug.so
-    libns3-dev-core-test-debug.so              libns3-dev-mpi-debug.so                    libns3-dev-traffic-control-debug.so
-    libns3-dev-csma-debug.so                   libns3-dev-netanim-debug.so                libns3-dev-traffic-control-test-debug.so
-    libns3-dev-csma-layout-debug.so            libns3-dev-netanim-test-debug.so           libns3-dev-uan-debug.so
-    libns3-dev-dsdv-debug.so                   libns3-dev-network-debug.so                libns3-dev-uan-test-debug.so
-    libns3-dev-dsdv-test-debug.so              libns3-dev-network-test-debug.so           libns3-dev-virtual-net-device-debug.so
-    libns3-dev-dsr-debug.so                    libns3-dev-nix-vector-routing-debug.so     libns3-dev-wave-debug.so
-    libns3-dev-dsr-test-debug.so               libns3-dev-olsr-debug.so                   libns3-dev-wave-test-debug.so
-    libns3-dev-energy-debug.so                 libns3-dev-olsr-test-debug.so              libns3-dev-wifi-debug.so
-    libns3-dev-energy-test-debug.so            libns3-dev-point-to-point-debug.so         libns3-dev-wifi-test-debug.so
-    libns3-dev-fd-net-device-debug.so          libns3-dev-point-to-point-layout-debug.so  libns3-dev-wimax-debug.so
-    libns3-dev-flow-monitor-debug.so           libns3-dev-point-to-point-test-debug.so    libns3-dev-wimax-test-debug.so
-)
-
-#Catkin do not export well relative paths to libraries: https://github.com/ros/catkin/issues/535
-#link_directories(${NS3_BUILD})
-#So it's better to specify the full path to each .so if the the *.so are not in the common directories (see ldconfig)
-message("NS3 modules: ${NS3_LIBS}")
-SET(ns3liblist "")
-FOREACH(lib ${NS3_LIBS})
-SET(path ${NS3_BUILD}/${lib})
-LIST(APPEND ns3liblist ${path})
-ENDFOREACH()
 
 SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/ROSCommsDevice.cpp
