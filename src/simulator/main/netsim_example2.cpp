@@ -42,23 +42,22 @@ int main(int argc, char **argv) {
               pkt->GetDestAddr());
   });
   sim->SetReceivePDUCb([Log](ROSCommsDevice *dev, PacketPtr pkt) {
-    Log->Info("Dev '{}': received PDU from address {}", dev->GetDccommsId(),
-              pkt->GetSrcAddr());
-
-  });
-  sim->SetErrorPDUCb([Log](ROSCommsDevice *dev, PacketPtr pkt) {
-    Log->Warn("Dev '{}': received PDU with errors from address {}",
-              dev->GetDccommsId(), pkt->GetSrcAddr());
+    if (pkt->PacketIsOk())
+      Log->Info("Dev '{}': received PDU from address {}", dev->GetDccommsId(),
+                pkt->GetSrcAddr());
+    else
+      Log->Warn("Dev '{}': received PDU with errors", dev->GetDccommsId());
 
   });
   int printPositionPeriod = 50;
   sim->SetPositionUpdatedCb(
       [Log](ROSCommsDevicePtr dev, tf::Vector3 pos) {
-        Log->Debug("Dev '{}': P: [{},{},{}]", dev->GetDccommsId(),
-                   pos.x(), pos.y(), pos.z());
+        Log->Debug("Dev '{}': P: [{},{},{}]", dev->GetDccommsId(), pos.x(),
+                   pos.y(), pos.z());
 
       },
-      printPositionPeriod); // Print the position of each device at a minimum period of printPositionPeriod ms
+      printPositionPeriod); // Print the position of each device at a minimum
+                            // period of printPositionPeriod ms
 
   sim->StartROSInterface();
   Log->Info("ROS Interface started.");

@@ -66,11 +66,6 @@ void ROSCommsSimulator::SetReceivePDUCb(
   ReceivePDUCb = cb;
 }
 
-void ROSCommsSimulator::SetErrorPDUCb(
-    std::function<void(ROSCommsDevice *, dccomms::PacketPtr)> cb) {
-  ErrorPDUCb = cb;
-}
-
 void ROSCommsSimulator::SetPositionUpdatedCb(
     std::function<void(ROSCommsDevicePtr dev, tf::Vector3)> cb,
     double cbMinPeriod, uint32_t positionUpdateRate) {
@@ -82,7 +77,6 @@ void ROSCommsSimulator::SetPositionUpdatedCb(
 void ROSCommsSimulator::_Init() {
   SetTransmitPDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
   SetReceivePDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
-  SetErrorPDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
   SetPositionUpdatedCb([](ROSCommsDevicePtr dev, tf::Vector3 pos) {}, 1000);
   GlobalValue::Bind("SimulatorImplementationType",
                     StringValue("ns3::RealtimeSimulatorImpl"));
@@ -273,7 +267,10 @@ bool ROSCommsSimulator::_AddCustomChannel(AddCustomChannel::Request &req,
                                           AddCustomChannel::Response &res) {
   uint32_t id = req.id;
   if (!_channelMap[id]) {
-    CommsChannelPtr channel = dccomms::CreateObject<CustomCommsChannel>(id);
+    CustomCommsChannelPtr channel =
+        dccomms::CreateObject<CustomCommsChannel>(id);
+    channel->SetMinPrTime(req.minPrTime);
+    channel->SetPrTimeInc(req.prTimeIncPerMeter);
     _channelMap[id] = channel;
     res.res = true;
     Log->info("custom channel {} added", id);
@@ -485,7 +482,7 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
                                    transform);
           tf::Vector3 position = transform.getOrigin();
           dev->SetPosition(position);
-          if(callPositionUpdatedCb)
+          if (callPositionUpdatedCb)
             PositionUpdatedCb(dev, position);
         } catch (std::exception &e) {
           if (callPositionUpdatedCb)

@@ -45,10 +45,7 @@ bool ROSCommsDevice::Started() { return _commonStarted && DoStarted(); }
 void ROSCommsDevice::_StartNodeWorker() { _txserv.Start(); }
 
 void ROSCommsDevice::ReceiveFrame(PacketPtr dlf) {
-  if(dlf->PacketIsOk())
-    _sim->ReceivePDUCb(this, dlf);
-  else
-    _sim->ErrorPDUCb(this, dlf);
+  _sim->ReceivePDUCb(this, dlf);
   _receiveFrameMutex.lock();
   _device << dlf;
   _receiveFrameMutex.unlock();
@@ -71,7 +68,9 @@ void ROSCommsDevice::SetMaxTxFifoSize(uint32_t size) {
   _device->SetMaxQueueSize(size);
 }
 
-uint32_t ROSCommsDevice::GetMaxTxFifoSize() { return _device->GetMaxQueueSize(); }
+uint32_t ROSCommsDevice::GetMaxTxFifoSize() {
+  return _device->GetMaxQueueSize();
+}
 
 void ROSCommsDevice::SetMac(uint32_t mac) {
   _mac = mac;
@@ -94,9 +93,10 @@ void ROSCommsDevice::_TxWork() {
   do {
     _device >> _txdlf;
     txFifoSize = _device->GetRxFifoSize();
-//    Log->info("(dccommsId: {}) received packet from the upper layer. tx fifo "
-//              "size: {} bytes",
-//              GetDccommsId(), txFifoSize);
+    //    Log->info("(dccommsId: {}) received packet from the upper layer. tx
+    //    fifo "
+    //              "size: {} bytes",
+    //              GetDccommsId(), txFifoSize);
     PacketPtr txdlf = _txpb->CreateFromBuffer(_txdlf->GetBuffer());
     if (txdlf->PacketIsOk()) {
       // PACKET OK
@@ -164,14 +164,15 @@ std::string ROSCommsDevice::ToString() {
   else
     channelLinked = "not linked";
 
-  int n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
-                                      "\tMAC ....................... %d\n"
-                                      "\tDevice type ............... %s\n"
-                                      "\tFrame ID: ................. '%s'\n"
-                                      "\tChannel: .................. '%s'\n"
-                                      "\tTx Fifo Size: ............. %d bytes",
-                   _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
-                   _tfFrameId.c_str(), channelLinked.c_str(), GetMaxTxFifoSize());
+  int n =
+      snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
+                                  "\tMAC ....................... %d\n"
+                                  "\tDevice type ............... %s\n"
+                                  "\tFrame ID: ................. '%s'\n"
+                                  "\tChannel: .................. '%s'\n"
+                                  "\tTx Fifo Size: ............. %d bytes",
+               _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
+               _tfFrameId.c_str(), channelLinked.c_str(), GetMaxTxFifoSize());
   return std::string(buff);
 }
 }
