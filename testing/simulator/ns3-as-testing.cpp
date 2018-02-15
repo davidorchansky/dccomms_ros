@@ -139,9 +139,10 @@ void Test::RoutingPacketTx(std::string context, Ptr<const Packet> pkt) {
   double secs;
   GetSimTime(timeFormat, datetime, secs);
 
-  routingLog.Info(
-      "({} secs; {}) {}: (Addr: {}) Transmitting packet to {}. Next hop: {} ; {} bytes",
-      secs, datetime, context, saddr, daddr, nhaddr, pkt->GetSize());
+  routingLog.Info("({} secs; {}) {}: (Addr: {}) Transmitting packet to {}. "
+                  "Next hop: {} ; {} bytes",
+                  secs, datetime, context, saddr, daddr, nhaddr,
+                  pkt->GetSize());
 }
 
 void Test::RunTest() {
@@ -273,25 +274,25 @@ void Test::RunTest() {
   //  // AnimationInterface anim ("bmac-anim.xml"); /* Animiation is very buggy
   //  with
   //  // Aqua-Sim NG */
-  //  std::ofstream ascii(asciiTraceFile.c_str());
-  //  if (!ascii.is_open()) {
-  //    NS_FATAL_ERROR("Could not open trace file.");
-  //  }
-  //  asHelper.EnableAsciiAll(ascii);
+  std::ofstream ascii(asciiTraceFile.c_str());
+  if (!ascii.is_open()) {
+    NS_FATAL_ERROR("Could not open trace file.");
+  }
+  asHelper.EnableAsciiAll(ascii);
 
   std::cout << "-----------Running Simulation-----------\n";
 
   auto node0 = nodesCon.Get(0);
-//  bool cont = true;
-//  std::thread mobilityWorker([node0, &cont]() {
-//    auto mobility = node0->GetObject<MobilityModel>();
-//    while (cont) {
-//      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-////      auto x = mobility->GetPosition().x;
-////      auto y = mobility->GetPosition().y;
-////      mobility->SetPosition(Vector3D(x + 0.2, y + 0.2, 0));
-//    }
-//  });
+  //  bool cont = true;
+  //  std::thread mobilityWorker([node0, &cont]() {
+  //    auto mobility = node0->GetObject<MobilityModel>();
+  //    while (cont) {
+  //      std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  ////      auto x = mobility->GetPosition().x;
+  ////      auto y = mobility->GetPosition().y;
+  ////      mobility->SetPosition(Vector3D(x + 0.2, y + 0.2, 0));
+  //    }
+  //  });
 
   Config::Connect("/NodeList/*/DeviceList/*/Routing/PacketReceived",
                   MakeCallback(&Test::RoutingPacketRx, this));
@@ -304,8 +305,8 @@ void Test::RunTest() {
   Simulator::Schedule(Seconds(0),
                       MakeEvent(&Test::SetSimulationStartDateTime, this));
   Simulator::Run();
-  //cont = false;
-  //mobilityWorker.join();
+  // cont = false;
+  // mobilityWorker.join();
   Simulator::Destroy();
 }
 

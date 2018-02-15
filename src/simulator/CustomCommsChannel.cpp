@@ -8,9 +8,13 @@ namespace dccomms_ros {
 
 CustomCommsChannel::CustomCommsChannel(uint32_t id) { _rosChannelId = id; }
 
-void CustomCommsChannel::SetMinPrTime(double prTime) { _minPrTime = prTime * 1000000; } //from millis to nanos
+void CustomCommsChannel::SetMinPrTime(double prTime) {
+  _minPrTime = prTime * 1000000;
+} // from millis to nanos
 
-void CustomCommsChannel::SetPrTimeInc(double inc) { _prTimeIncPerMeter = inc * 1000000; } //from millis to nanos
+void CustomCommsChannel::SetPrTimeInc(double inc) {
+  _prTimeIncPerMeter = inc * 1000000;
+} // from millis to nanos
 
 void CustomCommsChannel::AddDevice(CustomROSCommsDevicePtr dev) {
   _devices.push_back(dev);
@@ -19,9 +23,6 @@ void CustomCommsChannel::AddDevice(CustomROSCommsDevicePtr dev) {
 void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
                                     dccomms::PacketPtr pkt) {
   auto txpos = dev->GetPosition();
-  auto pktSize = pkt->GetPacketSize();
-  auto byteTrt = dev->GetNextTt();
-  auto trTime = pktSize * byteTrt;
   auto minErrRate = dev->GetMinPktErrorRate();
   auto errRateInc = dev->GetPktErrorRateInc();
 
@@ -32,18 +33,18 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
       auto dm = distance * 10;               // dm = decimeters
       auto maxdm = dev->GetMaxDistance();
       auto mindm = dev->GetMinDistance();
-      if (dm <= maxdm && dm >= mindm) { //dst is in range
+      if (dm <= maxdm && dm >= mindm) { // dst is in range
         auto delay = _minPrTime + _prTimeIncPerMeter * distance;
-        auto totalTime = static_cast<uint64_t>(round(delay + trTime));
+        auto totalTime = static_cast<uint64_t>(round(delay));
         auto errRate = minErrRate + errRateInc * distance;
-        auto error = dev->ErrOnNextPkt(errRate);
-        if (error) {
-          auto pBuffer = pkt->GetPayloadBuffer();
-          *pBuffer = ~*pBuffer;
-        }
+        auto propagationError = dev->ErrOnNextPkt(errRate);
+//        if (error) {
+//          auto pBuffer = pkt->GetPayloadBuffer();
+//          *pBuffer = ~*pBuffer;
+//        }
         ns3::Simulator::ScheduleWithContext(
             dev->GetMac(), NanoSeconds(totalTime),
-            &ROSCommsDevice::ReceiveFrame, dst.get(), pkt);
+            &CustomROSCommsDevice::AddNewPacket, dst.get(), pkt, propagationError);
       }
     }
   }

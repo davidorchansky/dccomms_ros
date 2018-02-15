@@ -195,7 +195,7 @@ bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
                                           LinkDeviceToChannel::Response &res) {
   ROSCommsDevicePtr dev = _GetDevice(req.dccommsId);
   CommsChannelPtr channel = _GetChannel(req.channelId);
-  if (!dev || dev->GetLinkedChannel()) {
+  if (!dev) {
     res.res = false;
     return res.res;
   }
@@ -217,11 +217,11 @@ bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
   }
   case CUSTOM_DEV: {
     break;
+  }
   default: { res.res = false; }
   }
-  }
   if (res.res) {
-    dev->LinkToChannel(channel);
+    dev->LinkToChannel(channel, (CHANNEL_LINK_TYPE) req.linkType);
     Log->info("dev {} linked to channel {}:\n{}", dev->GetDccommsId(),
               channel->GetId(), dev->ToString());
   } else {

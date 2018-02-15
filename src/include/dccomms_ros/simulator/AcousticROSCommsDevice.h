@@ -15,16 +15,17 @@ namespace dccomms_ros {
 enum AQS_ROUTING_TYPE { AQS_ROUTING_DUMMY, AQS_ROUTING_VBF };
 class AcousticROSCommsDevice : public ROSCommsDevice {
 public:
-  AcousticROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr txpb, PacketBuilderPtr rxpb);
+  AcousticROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr txpb,
+                         PacketBuilderPtr rxpb);
 
   DEV_TYPE GetDevType();
 
 protected:
   void DoSetMac(uint32_t mac);
   void DoSend(PacketPtr dlf);
-  void DoLinkToChannel(CommsChannelPtr channel);
+  void DoLinkToChannel(CommsChannelPtr channel, CHANNEL_LINK_TYPE linkTyp);
   void DoStart();
-  void DoSetPosition(const tf::Vector3 & position);
+  void DoSetPosition(const tf::Vector3 &position);
   bool DoStarted();
 
 private:
@@ -46,7 +47,8 @@ private:
   void _Recv(std::string context, ns3::Ptr<const ns3::Packet>);
   void _SendTrace(std::string context, ns3::Ptr<const ns3::Packet>);
   void _RxError(std::string context, ns3::Ptr<const ns3::Packet>);
-  void _PositionUpdated(std::string context, ns3::Ptr<const MobilityModel> model);
+  void _PositionUpdated(std::string context,
+                        ns3::Ptr<const MobilityModel> model);
 };
 }
 #endif // COMMSNODE_H

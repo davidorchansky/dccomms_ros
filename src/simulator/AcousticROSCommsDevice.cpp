@@ -121,7 +121,7 @@ void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
   }
 }
 
-void AcousticROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel) {
+void AcousticROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel, CHANNEL_LINK_TYPE linkType) {
   if (channel->GetType() == CHANNEL_TYPE::ACOUSTIC_UNDERWATER_CHANNEL) {
 
     AcousticCommsChannelPtr acChannel =
@@ -170,9 +170,9 @@ void AcousticROSCommsDevice::DoStart() {
   ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
                            "/DeviceList/0/Routing/PacketTransmitting",
                        MakeCallback(&AcousticROSCommsDevice::_SendTrace, this));
-  ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
-                           "/DeviceList/0/Phy/RxError",
-                       MakeCallback(&AcousticROSCommsDevice::_RxError, this));
+//  ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
+//                           "/DeviceList/0/Phy/RxError",
+//                       MakeCallback(&AcousticROSCommsDevice::_RxError, this));
   Config::Connect(
       "/NodeList/" + std::to_string(_nodeListIndex) +
           "/$ns3::MobilityModel/CourseChange",

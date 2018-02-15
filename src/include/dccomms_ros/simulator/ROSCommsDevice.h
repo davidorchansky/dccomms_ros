@@ -9,9 +9,9 @@
 
 using namespace dccomms;
 using namespace cpplogging;
-
 namespace dccomms_ros {
 
+enum PacketErrorType { PE_PROP, PE_COL };
 class ROSCommsDevice;
 typedef std::shared_ptr<ROSCommsDevice> ROSCommsDevicePtr;
 
@@ -52,8 +52,10 @@ public:
 
   void Start();
 
-  void LinkToChannel(CommsChannelPtr channel);
-  CommsChannelPtr GetLinkedChannel();
+  void LinkToChannel(CommsChannelPtr channel,
+                     CHANNEL_LINK_TYPE linkType = CHANNEL_TXRX);
+  CommsChannelPtr GetLinkedTxChannel();
+  CommsChannelPtr GetLinkedRxChannel();
 
   tf::Vector3 GetPosition();
 
@@ -63,7 +65,8 @@ public:
 protected:
   virtual void DoSetMac(uint32_t mac) = 0;
   virtual void DoSend(PacketPtr dlf) = 0;
-  virtual void DoLinkToChannel(CommsChannelPtr channel) = 0;
+  virtual void DoLinkToChannel(CommsChannelPtr channel,
+                               CHANNEL_LINK_TYPE linkType = CHANNEL_TXRX) = 0;
   virtual void DoStart() = 0;
   virtual void DoSetPosition(const tf::Vector3 &position) = 0;
   virtual bool DoStarted() = 0;
@@ -77,7 +80,7 @@ private:
 
   std::mutex _receiveFrameMutex;
   CommsDeviceServicePtr _device;
-  CommsChannelPtr _channel;
+  CommsChannelPtr _txChannel, _rxChannel;
   ServiceThread<ROSCommsDevice> _txserv;
   PacketPtr _txdlf;
   std::string _name, _tfFrameId;

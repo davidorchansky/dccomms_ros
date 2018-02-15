@@ -77,12 +77,30 @@ void ROSCommsDevice::SetMac(uint32_t mac) {
   DoSetMac(_mac);
 }
 
-void ROSCommsDevice::LinkToChannel(CommsChannelPtr channel) {
-  _channel = channel;
-  DoLinkToChannel(channel);
+void ROSCommsDevice::LinkToChannel(CommsChannelPtr channel,
+                                   CHANNEL_LINK_TYPE linkType) {
+  if (channel->GetType() == CHANNEL_TYPE::ACOUSTIC_UNDERWATER_CHANNEL) {
+    linkType = CHANNEL_LINK_TYPE::CHANNEL_TXRX;
+  }
+  switch (linkType) {
+  case CHANNEL_LINK_TYPE::CHANNEL_TXRX: {
+    _rxChannel = channel;
+    _txChannel = channel;
+    break;
+  }
+  case CHANNEL_LINK_TYPE::CHANNEL_TX: {
+    _txChannel = channel;
+    break;
+  }
+  case CHANNEL_LINK_TYPE::CHANNEL_RX: {
+    _rxChannel = channel;
+    break;
+  }
+  }
+  DoLinkToChannel(channel, linkType);
 }
 
-CommsChannelPtr ROSCommsDevice::GetLinkedChannel() { return _channel; }
+CommsChannelPtr ROSCommsDevice::GetLinkedTxChannel() { return _txChannel; }
 
 uint32_t ROSCommsDevice::GetMac() { return _mac; }
 
@@ -157,22 +175,44 @@ std::string ROSCommsDevice::GetTfFrameId() { return _tfFrameId; }
 std::string ROSCommsDevice::ToString() {
   int maxBuffSize = 1024;
   char buff[maxBuffSize];
-  string channelLinked;
-  if (_channel)
-    channelLinked = "Type: " + ChannelType2String(_channel->GetType()) +
-                    " ; Id: " + to_string(_channel->GetId());
+  string txChannelLinked;
+  if (_txChannel)
+    txChannelLinked = "Type: " + ChannelType2String(_txChannel->GetType()) +
+                      " ; Id: " + to_string(_txChannel->GetId());
   else
-    channelLinked = "not linked";
+    txChannelLinked = "not linked";
 
-  int n =
-      snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
-                                  "\tMAC ....................... %d\n"
-                                  "\tDevice type ............... %s\n"
-                                  "\tFrame ID: ................. '%s'\n"
-                                  "\tChannel: .................. '%s'\n"
-                                  "\tTx Fifo Size: ............. %d bytes",
-               _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
-               _tfFrameId.c_str(), channelLinked.c_str(), GetMaxTxFifoSize());
+  string rxChannelLinked;
+  if (_rxChannel)
+    rxChannelLinked = "Type: " + ChannelType2String(_rxChannel->GetType()) +
+                      " ; Id: " + to_string(_rxChannel->GetId());
+  else
+    rxChannelLinked = "not linked";
+
+  int n;
+  if (GetDevType() == DEV_TYPE::ACOUSTIC_UNDERWATER_DEV)
+    n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
+                                    "\tMAC ....................... %d\n"
+                                    "\tDevice type ............... %s\n"
+                                    "\tFrame ID: ................. '%s'\n"
+                                    "\tChannel: .................. '%s'\n"
+                                    "\tTx Fifo Size: ............. %d bytes",
+                 _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
+                 _tfFrameId.c_str(), txChannelLinked.c_str(),
+                 GetMaxTxFifoSize());
+  else // CUSTOM_DEV
+  {
+    n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
+                                    "\tMAC ....................... %d\n"
+                                    "\tDevice type ............... %s\n"
+                                    "\tFrame ID: ................. '%s'\n"
+                                    "\tTX channel: .................. '%s'\n"
+                                    "\tRX channel: .................. '%s'\n"
+                                    "\tTx Fifo Size: ............. %d bytes",
+                 _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
+                 _tfFrameId.c_str(), txChannelLinked.c_str(),
+                 rxChannelLinked.c_str(), GetMaxTxFifoSize());
+  }
   return std::string(buff);
 }
 }
