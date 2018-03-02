@@ -25,7 +25,7 @@ AcousticROSCommsDevice::AcousticROSCommsDevice(ROSCommsSimulatorPtr s,
 }
 
 void AcousticROSCommsDevice::_SendTrace(string context,
-                                        ns3::Ptr<const ns3::Packet> pkt, ns3::Ptr<AquaSimNetDevice> dev) {
+                                        ns3::Ptr<const ns3::Packet> pkt) {
   std::string datetime;
   double secs;
   _sim->GetSimTime(datetime, secs);
@@ -43,7 +43,7 @@ void AcousticROSCommsDevice::_SendTrace(string context,
 }
 
 void AcousticROSCommsDevice::_Recv(std::string context,
-                                   ns3::Ptr<const ns3::Packet> pkt, ns3::Ptr<AquaSimNetDevice> dev) {
+                                   ns3::Ptr<const ns3::Packet> pkt) {
   std::string datetime;
   double secs;
   _sim->GetSimTime(datetime, secs);
