@@ -9,9 +9,9 @@ using namespace cpplogging;
 
 namespace dccomms_ros {
 
-enum DEV_STATUS { RECV, SEND, IDLE };
+//enum DEV_STATUS { RECV, SEND, IDLE };
 class CustomROSCommsDevice;
-typedef std::shared_ptr<CustomROSCommsDevice> CustomROSCommsDevicePtr;
+typedef ns3::Ptr<CustomROSCommsDevice> CustomROSCommsDevicePtr;
 
 class IncommingPacket;
 typedef dccomms::Ptr<IncommingPacket> IncommingPacketPtr;
@@ -46,12 +46,13 @@ public:
   uint32_t GetMinDistance();
 
   void PropagateNextPacket();
+  void PropagatePacket(PacketPtr pkt);
   void TransmitPacket(PacketPtr pkt);
   bool ErrOnNextPkt(double errRate);
   uint64_t GetNextTt(); // get next ms/byte
 
-  inline DEV_STATUS GetStatus() { return _status; }
-  inline void SetStatus(DEV_STATUS status);
+//  inline DEV_STATUS GetStatus() { return _status; }
+//  inline void SetStatus(DEV_STATUS status);
 
   virtual DEV_TYPE GetDevType();
 
@@ -67,7 +68,11 @@ public:
   void HandleNextIncommingPacket();
 
   void MarkIncommingPacketsAsCollisioned();
+  bool Transmitting();
+  void Transmitting(bool);
 
+  bool Receiving();
+  void Receiving(bool );
 protected:
   virtual void DoSetMac(uint32_t mac);
   virtual void DoSend(PacketPtr dlf);
@@ -93,7 +98,8 @@ private:
   std::list<IncommingPacketPtr> _incommingPackets;
 
   CommsChannelPtr _txChannel, _rxChannel;
-  DEV_STATUS _status;
+  //DEV_STATUS _status;
+  bool _transmitting, _receiving;
 };
 }
 #endif // COMMSNODE_H

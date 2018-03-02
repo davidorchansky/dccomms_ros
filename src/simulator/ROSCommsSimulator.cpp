@@ -22,6 +22,22 @@ using namespace dccomms;
 using namespace dccomms_ros_msgs;
 
 namespace dccomms_ros {
+
+NS_OBJECT_ENSURE_REGISTERED(ROSCommsSimulator);
+
+TypeId ROSCommsSimulator::GetTypeId(void) {
+  static TypeId tid =
+      TypeId("dccomms_ros::ROSCommsSimulator")
+          .SetParent<Object>()
+          .AddAttribute("DeviceList",
+                        "The list of devices associated to the simulator.",
+                        ObjectVectorValue(),
+                        MakeObjectVectorAccessor(&ROSCommsSimulator::_devices),
+                        MakeObjectVectorChecker<ROSCommsDevice>());
+
+  return tid;
+}
+
 ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle &rosNode)
     : _rosNode(rosNode), _linkUpdaterWorker(this),
       _this(ROSCommsSimulatorPtr(this)) {
@@ -30,6 +46,11 @@ ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle &rosNode)
   FlushLogOn(cpplogging::LogLevel::info);
   _linkUpdaterWorker.SetWork(&ROSCommsSimulator::_LinkUpdaterWork);
   _Init();
+}
+
+ROSCommsSimulator::~ROSCommsSimulator()
+{
+
 }
 
 PacketBuilderPtr
@@ -86,6 +107,13 @@ void ROSCommsSimulator::_AddDeviceToSet(std::string iddev,
                                         ROSCommsDevicePtr dev) {
   _idDevMapMutex.lock();
   _dccommsDevMap[iddev] = dev;
+  _devices.push_back(dev);
+
+  static ns3::Ptr<ROSCommsSimulator> ptr = 0;
+  if (ptr == 0) {
+    ptr = ns3::Ptr<ROSCommsSimulator>(this);
+    Config::RegisterRootNamespaceObject(ptr);
+  }
   _idDevMapMutex.unlock();
 }
 
@@ -156,7 +184,7 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     if (!rxpb)
       rxpb = GetDefaultPacketBuilder();
     ROSCommsDevicePtr dev =
-        dccomms::CreateObject<AcousticROSCommsDevice>(_this, txpb, rxpb);
+        ns3::CreateObject<AcousticROSCommsDevice>(_this, txpb, rxpb);
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
@@ -165,11 +193,11 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;
-    _dccommsDevMap[dev->GetDccommsId()] = dev;
+    _AddDeviceToSet(dev->GetDccommsId(), dev);
 
     Log->info("\nAdding device:\n{}", dev->ToString());
     Simulator::Schedule(Seconds(0 + 0.01 * mac),
-                        MakeEvent(&ROSCommsDevice::Start, dev.get()));
+                        MakeEvent(&ROSCommsDevice::Start, dev));
     res.res = true;
 
   } else {
@@ -221,7 +249,7 @@ bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
   default: { res.res = false; }
   }
   if (res.res) {
-    dev->LinkToChannel(channel, (CHANNEL_LINK_TYPE) req.linkType);
+    dev->LinkToChannel(channel, (CHANNEL_LINK_TYPE)req.linkType);
     Log->info("dev {} linked to channel {}:\n{}", dev->GetDccommsId(),
               channel->GetId(), dev->ToString());
   } else {
@@ -331,7 +359,7 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     if (!rxpb)
       rxpb = GetDefaultPacketBuilder();
     CustomROSCommsDevicePtr dev =
-        dccomms::CreateObject<CustomROSCommsDevice>(_this, txpb, rxpb);
+        ns3::CreateObject<CustomROSCommsDevice>(_this, txpb, rxpb);
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
@@ -345,11 +373,11 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;
-    _dccommsDevMap[dev->GetDccommsId()] = dev;
+    _AddDeviceToSet(dev->GetDccommsId(), dev);
 
     Log->info("\nAdding device:\n{}", dev->ToString());
     Simulator::Schedule(Seconds(0 + 0.01 * mac),
-                        MakeEvent(&ROSCommsDevice::Start, dev.get()));
+                        MakeEvent(&ROSCommsDevice::Start, dev));
     res.res = true;
 
   } else {

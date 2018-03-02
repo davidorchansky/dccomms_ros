@@ -24,6 +24,10 @@
 #include <ros/ros.h>
 // end ROS
 
+//ns3
+#include <ns3/core-module.h>
+//end ns3
+
 using namespace dccomms;
 using namespace cpplogging;
 
@@ -47,11 +51,12 @@ typedef std::unordered_map<uint32_t, Id2ChannelMapPtr> Type2ChannelMapMap;
 
 class ROSCommsSimulator;
 
-typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
+typedef dccomms::Ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 
-class ROSCommsSimulator : public virtual Logger {
+class ROSCommsSimulator : public virtual Logger, public ns3::Object{
 public:
   ROSCommsSimulator(ros::NodeHandle &rosnode);
+  ~ROSCommsSimulator();
   void StartROSInterface();
 
   void
@@ -78,6 +83,8 @@ public:
   bool AddCustomChannel(dccomms_ros_msgs::AddCustomChannel::Request &req);
   bool AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req);
   bool StartSimulation();
+
+  static TypeId GetTypeId(void);
 
   friend class ROSCommsDevice;
 private:
@@ -147,6 +154,7 @@ private:
   uint32_t _updatePositionRate;
 
   PacketBuilderMap _packetBuilderMap;
+  std::vector<ns3::Ptr<ROSCommsDevice>> _devices;
 };
 }
 #endif // WHROVSIMULATOR_H

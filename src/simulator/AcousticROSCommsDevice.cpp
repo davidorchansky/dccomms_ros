@@ -25,7 +25,7 @@ AcousticROSCommsDevice::AcousticROSCommsDevice(ROSCommsSimulatorPtr s,
 }
 
 void AcousticROSCommsDevice::_SendTrace(string context,
-                                        ns3::Ptr<const ns3::Packet> pkt) {
+                                        ns3::Ptr<const ns3::Packet> pkt, ns3::Ptr<AquaSimNetDevice> dev) {
   std::string datetime;
   double secs;
   _sim->GetSimTime(datetime, secs);
@@ -43,7 +43,7 @@ void AcousticROSCommsDevice::_SendTrace(string context,
 }
 
 void AcousticROSCommsDevice::_Recv(std::string context,
-                                   ns3::Ptr<const ns3::Packet> pkt) {
+                                   ns3::Ptr<const ns3::Packet> pkt, ns3::Ptr<AquaSimNetDevice> dev) {
   std::string datetime;
   double secs;
   _sim->GetSimTime(datetime, secs);
@@ -173,10 +173,10 @@ void AcousticROSCommsDevice::DoStart() {
 //  ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
 //                           "/DeviceList/0/Phy/RxError",
 //                       MakeCallback(&AcousticROSCommsDevice::_RxError, this));
-  Config::Connect(
-      "/NodeList/" + std::to_string(_nodeListIndex) +
-          "/$ns3::MobilityModel/CourseChange",
-      MakeCallback(&AcousticROSCommsDevice::_PositionUpdated, this));
+//  Config::Connect(
+//      "/NodeList/" + std::to_string(_nodeListIndex) +
+//          "/$ns3::MobilityModel/CourseChange",
+//      MakeCallback(&AcousticROSCommsDevice::_PositionUpdated, this));
   _started = true;
 }
 

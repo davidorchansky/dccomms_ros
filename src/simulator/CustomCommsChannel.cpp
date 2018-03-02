@@ -44,7 +44,7 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
 //        }
         ns3::Simulator::ScheduleWithContext(
             dev->GetMac(), NanoSeconds(totalTime),
-            &CustomROSCommsDevice::AddNewPacket, dst.get(), pkt, propagationError);
+            &CustomROSCommsDevice::AddNewPacket, dst, pkt, propagationError);
       }
     }
   }

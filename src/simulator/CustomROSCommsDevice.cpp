@@ -8,8 +8,9 @@ namespace dccomms_ros {
 CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
                                            PacketBuilderPtr txpb,
                                            PacketBuilderPtr rxpb)
-    : ROSCommsDevice(sim, txpb, rxpb), _ownPtr(this), _erDist(0.0, 1.0) {
-  SetStatus(IDLE);
+    : ROSCommsDevice(sim, txpb, rxpb), _erDist(0.0, 1.0) {
+  Transmitting(false);
+  Receiving(false);
 }
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
@@ -95,6 +96,7 @@ void CustomROSCommsDevice::HandleNextIncommingPacket() {
     } else {
       ReceiveFrame(ptr->packet);
     }
+    Receiving(false);
   } else {
     Critical("internal error: incomming packets queue empty when "
              "HandleNextIncommingPacket!");
@@ -104,28 +106,45 @@ void CustomROSCommsDevice::HandleNextIncommingPacket() {
 void CustomROSCommsDevice::AddNewPacket(PacketPtr pkt, bool propagationError) {
   IncommingPacketPtr ipkt = dccomms::CreateObject<IncommingPacket>();
   ipkt->propagationError = propagationError;
-  _incommingPackets.push_back(ipkt);
 
-  if (_txChannel == _rxChannel && GetStatus() != SEND)
-    ipkt->collisionError = true;
+  //TODO: check if propagation error and increase traced value
+  if (Receiving() || _txChannel == _rxChannel && Transmitting()) {
+    //TODO: increase colission errors traced value
+    MarkIncommingPacketsAsCollisioned(); //Should be a maximum of 1 packet in the _incommingPackets queue
+  }
+  else
+    {
+      Receiving(true);
+      ipkt->packet = pkt;
+      _incommingPackets.push_back(ipkt);
 
-  MarkIncommingPacketsAsCollisioned();
-
-  auto pktSize = pkt->GetPacketSize();
-  auto byteTrt = GetNanosPerByte();
-  auto trTime = pktSize * byteTrt;
-  ns3::Simulator::ScheduleWithContext(
-      GetMac(), ns3::NanoSeconds(trTime),
-      &CustomROSCommsDevice::HandleNextIncommingPacket, this);
+      auto pktSize = pkt->GetPacketSize();
+      auto byteTrt = GetNanosPerByte();
+      auto trTime = pktSize * byteTrt;
+      ns3::Simulator::ScheduleWithContext(
+          GetMac(), ns3::NanoSeconds(trTime),
+          &CustomROSCommsDevice::HandleNextIncommingPacket, this);
+    }
 }
 
-void CustomROSCommsDevice::SetStatus(DEV_STATUS status) {
-  _status = status;
-  if (!_txFifo.empty()) {
-    auto pkt = PopTxPacket();
-    TransmitPacket(pkt);
+bool CustomROSCommsDevice::Transmitting() { return _transmitting; }
+
+void CustomROSCommsDevice::Transmitting(bool transmitting) {
+  _transmitting = transmitting;
+  if (!TxFifoEmpty()) {
+    if (!_transmitting) {
+      auto pkt = PopTxPacket();
+      TransmitPacket(pkt);
+    } else {
+      Critical("internal error: TX fifo not empty when calling SetStatus with "
+               "not SEND");
+    }
   }
 }
+
+bool CustomROSCommsDevice::Receiving() { return _receiving; }
+
+void CustomROSCommsDevice::Receiving(bool receiving) { _receiving = receiving; }
 
 void CustomROSCommsDevice::PropagateNextPacket() {
 
@@ -133,22 +152,27 @@ void CustomROSCommsDevice::PropagateNextPacket() {
     auto packet = PopTxPacket();
     static_pointer_cast<CustomCommsChannel>(_txChannel)
         ->SendPacket(_ownPtr, packet);
-    if (TxFifoEmpty())
-      SetStatus(IDLE);
+    Transmitting(false);
   } else
     Critical("internal error: TX fifo emtpy when calling TransmitNextPacket");
 }
 
+void CustomROSCommsDevice::PropagatePacket(PacketPtr pkt) {
+
+  static_pointer_cast<CustomCommsChannel>(_txChannel)->SendPacket(_ownPtr, pkt);
+  Transmitting(false);
+}
+
 void CustomROSCommsDevice::TransmitPacket(PacketPtr pkt) {
-  if (_rxChannel != _txChannel || GetStatus() != RECV) {
+  if (_rxChannel != _txChannel || _rxChannel == _txChannel && !Receiving()) {
     auto pktSize = pkt->GetPacketSize();
     auto byteTrt =
         GetNextTt(); // It's like GetNanosPerByte but with a variation
     auto trTime = pktSize * byteTrt;
-    SetStatus(SEND);
-    ns3::Simulator::ScheduleWithContext(
-        GetMac(), ns3::NanoSeconds(trTime),
-        &CustomROSCommsDevice::PropagateNextPacket, this);
+    Transmitting(true);
+    ns3::Simulator::ScheduleWithContext(GetMac(), ns3::NanoSeconds(trTime),
+                                        &CustomROSCommsDevice::PropagatePacket,
+                                        this, pkt);
   } else {
     EnqueueTxPacket(pkt);
   }
@@ -162,6 +186,8 @@ void CustomROSCommsDevice::DoSend(PacketPtr dlf) {
 }
 void CustomROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
                                            CHANNEL_LINK_TYPE linkType) {
+  if(!_ownPtr)
+    _ownPtr = this;//std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
   if (channel->GetType() == CHANNEL_TYPE::CUSTOM_CHANNEL) {
     //_channel = static_pointer_cast<CustomCommsChannel>(channel);
 
@@ -181,7 +207,10 @@ void CustomROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
         "internal error: attempted to link device to a wrong channel type");
   }
 }
-void CustomROSCommsDevice::DoStart() {}
+void CustomROSCommsDevice::DoStart() {
+  if(!_ownPtr)
+    _ownPtr = this;//std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
+}
 bool CustomROSCommsDevice::DoStarted() { return true; }
 void CustomROSCommsDevice::DoSetPosition(const tf::Vector3 &position) {
   _position = position;

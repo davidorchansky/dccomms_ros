@@ -5,23 +5,30 @@
 #include <dccomms/CommsDeviceService.h>
 #include <dccomms/Utils.h>
 #include <dccomms_ros/simulator/CommsChannel.h>
+#include <ns3/config-store-module.h>
+#include <ns3/core-module.h>
 #include <tf/transform_listener.h>
 
 using namespace dccomms;
 using namespace cpplogging;
+using namespace ns3;
 namespace dccomms_ros {
 
 enum PacketErrorType { PE_PROP, PE_COL };
 class ROSCommsDevice;
-typedef std::shared_ptr<ROSCommsDevice> ROSCommsDevicePtr;
+typedef ns3::Ptr<ROSCommsDevice> ROSCommsDevicePtr;
 
 class ROSCommsSimulator;
-typedef std::shared_ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
+typedef dccomms::Ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
 
-class ROSCommsDevice : public virtual Logger {
+//why inheritance for std::enable_shared_from_this??:
+//  https://stackoverflow.com/questions/11711034/stdshared-ptr-of-this
+//  https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
+class ROSCommsDevice : public virtual Logger, public ns3::Object, public std::enable_shared_from_this<ROSCommsDevice> {
 public:
   ROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr txpb,
                  PacketBuilderPtr rxpb);
+  ~ROSCommsDevice();
 
   CommsDeviceServicePtr GetService();
   void ReceiveFrame(PacketPtr);
@@ -62,6 +69,15 @@ public:
   virtual DEV_TYPE GetDevType() = 0;
   bool Started();
 
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static TypeId GetTypeId(void);
+
+  typedef void (*PacketReceivedCallback)(std::string path, ROSCommsDevicePtr, PacketPtr);
+  typedef void (*PacketTransmittingCallback)(std::string path, ROSCommsDevicePtr, PacketPtr);
+
 protected:
   virtual void DoSetMac(uint32_t mac) = 0;
   virtual void DoSend(PacketPtr dlf) = 0;
@@ -73,6 +89,9 @@ protected:
 
   ROSCommsSimulatorPtr _sim;
   PacketBuilderPtr _txpb, _rxpb;
+
+  TracedCallback<ROSCommsDevicePtr, PacketPtr> _rxCbTrace;
+  TracedCallback<ROSCommsDevicePtr, PacketPtr> _txCbTrace;
 
 private:
   void _StartDeviceService();
@@ -88,6 +107,8 @@ private:
   uint32_t _bitRate;
   uint64_t _nanosPerByte;
   tf::Vector3 _position;
+
+  ROSCommsDevicePtr _ownPtr;
 
   void _TxWork();
 

@@ -5,6 +5,25 @@
 
 namespace dccomms_ros {
 
+NS_OBJECT_ENSURE_REGISTERED(ROSCommsDevice);
+
+TypeId ROSCommsDevice::GetTypeId(void) {
+  static TypeId tid =
+      TypeId("dccomms_ros::ROSCommsDevice")
+          .SetParent<Object>()
+          .AddTraceSource("PacketReceived",
+                          "Trace source indicating a packet has been "
+                          "delivered to the upper layer.",
+                          MakeTraceSourceAccessor(&ROSCommsDevice::_rxCbTrace),
+                          "dccomms_ros::ROSCommsDevice::PacketReceivedCallback")
+          .AddTraceSource(
+              "PacketTransmitting", "Trace source indicating a packet has been "
+                                    "delivered to the lower layer.",
+              MakeTraceSourceAccessor(&ROSCommsDevice::_txCbTrace),
+              "dccomms_ros::ROSCommsDevice::PacketTransmittingCallback");
+  return tid;
+}
+
 ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
                                PacketBuilderPtr rxpb)
     : _sim(s), _txserv(this) {
@@ -12,11 +31,13 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
   _txpb = txpb;
   _device = CommsDeviceService::BuildCommsDeviceService(
       _txpb, CommsDeviceService::IPHY_TYPE_PHY);
-  _device->SetLogLevel(LogLevel::info);
+  _device->SetLogLevel(cpplogging::LogLevel::info);
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
   _commonStarted = false;
   _position = tf::Vector3(0, 0, 0);
 }
+
+ROSCommsDevice::~ROSCommsDevice() {}
 
 void ROSCommsDevice::_StartDeviceService() {
   auto startWorker = std::thread([this]() {
@@ -36,6 +57,7 @@ void ROSCommsDevice::_StartDeviceService() {
 }
 
 void ROSCommsDevice::Start() {
+  _ownPtr = this;//shared_from_this();
   _StartDeviceService();
   DoStart();
 }
@@ -119,6 +141,7 @@ void ROSCommsDevice::_TxWork() {
     if (txdlf->PacketIsOk()) {
       // PACKET OK
       _sim->TransmitPDUCb(this, txdlf);
+      _txCbTrace(_ownPtr, txdlf);
       DoSend(txdlf);
       uint32_t packetSize = static_cast<uint32_t>(txdlf->GetPacketSize());
       uint64_t transmissionTime = packetSize * _nanosPerByte;
