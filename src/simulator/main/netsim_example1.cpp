@@ -29,7 +29,6 @@ ROSCommsSimulator *sim;
 int main(int argc, char **argv) {
   //// GET PARAMS
   ros::init(argc, argv, "dccomms_netsim");
-  ros::NodeHandle nh("~");
 
   auto rovTxPacketBuilder =
       dccomms::CreateObject<dccomms::DataLinkFramePacketBuilder>(
@@ -38,7 +37,7 @@ int main(int argc, char **argv) {
       dccomms::CreateObject<dccomms::DataLinkFramePacketBuilder>(
           dccomms::DataLinkFrame::crc16);
 
-  auto sim = dccomms::CreateObject<ROSCommsSimulator>(nh);
+  auto sim = dccomms::CreateObject<ROSCommsSimulator>();
   sim->SetLogName("netsim");
   sim->LogToFile("netsim_log");
 

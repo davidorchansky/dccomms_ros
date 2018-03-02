@@ -24,13 +24,12 @@ using namespace std;
 
 int main(int argc, char **argv) {
   ros::init(argc, argv, "dccomms_netsim");
-  ros::NodeHandle nh("~");
   auto packetBuilder =
       dccomms::CreateObject<dccomms::DataLinkFramePacketBuilder>(
           dccomms::DataLinkFrame::crc16);
   auto Log = cpplogging::CreateLogger("netsim_example2");
 
-  auto sim = dccomms::CreateObject<ROSCommsSimulator>(nh);
+  auto sim = dccomms::CreateObject<ROSCommsSimulator>();
   sim->SetLogName("netsim");
   sim->LogToFile("netsim_log");
 

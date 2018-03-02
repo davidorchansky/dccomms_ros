@@ -69,6 +69,7 @@ void ROSCommsDevice::_StartNodeWorker() { _txserv.Start(); }
 void ROSCommsDevice::ReceiveFrame(PacketPtr dlf) {
   _sim->ReceivePDUCb(this, dlf);
   _receiveFrameMutex.lock();
+  _rxCbTrace(_ownPtr, dlf);
   _device << dlf;
   _receiveFrameMutex.unlock();
 }

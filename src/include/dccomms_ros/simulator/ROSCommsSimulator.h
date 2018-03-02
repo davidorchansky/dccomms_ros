@@ -51,11 +51,12 @@ typedef std::unordered_map<uint32_t, Id2ChannelMapPtr> Type2ChannelMapMap;
 
 class ROSCommsSimulator;
 
-typedef dccomms::Ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
+//typedef dccomms::Ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
+typedef ROSCommsSimulator* ROSCommsSimulatorPtr;
 
 class ROSCommsSimulator : public virtual Logger, public ns3::Object{
 public:
-  ROSCommsSimulator(ros::NodeHandle &rosnode);
+  ROSCommsSimulator();
   ~ROSCommsSimulator();
   void StartROSInterface();
 
@@ -132,7 +133,7 @@ private:
   ros::ServiceServer _addDevService, _checkDevService, _addChannelService,
       _removeDevService, _linkDeviceToChannelService, _startSimulationService,
       _addCustomDeviceService, _addCustomChannelService, _checkChannelService;
-  ros::NodeHandle &_rosNode;
+  ros::NodeHandle _rosNode;
 
   std::mutex _devLinksMutex, _idDevMapMutex, _channelsMutex;
 

@@ -19,7 +19,8 @@ class ROSCommsDevice;
 typedef ns3::Ptr<ROSCommsDevice> ROSCommsDevicePtr;
 
 class ROSCommsSimulator;
-typedef dccomms::Ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
+//typedef dccomms::Ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
+typedef ROSCommsSimulator* ROSCommsSimulatorPtr;
 
 //why inheritance for std::enable_shared_from_this??:
 //  https://stackoverflow.com/questions/11711034/stdshared-ptr-of-this

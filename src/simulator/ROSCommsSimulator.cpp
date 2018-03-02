@@ -29,7 +29,7 @@ TypeId ROSCommsSimulator::GetTypeId(void) {
   static TypeId tid =
       TypeId("dccomms_ros::ROSCommsSimulator")
           .SetParent<Object>()
-          .AddAttribute("DeviceList",
+          .AddAttribute("ROSDeviceList",
                         "The list of devices associated to the simulator.",
                         ObjectVectorValue(),
                         MakeObjectVectorAccessor(&ROSCommsSimulator::_devices),
@@ -38,9 +38,9 @@ TypeId ROSCommsSimulator::GetTypeId(void) {
   return tid;
 }
 
-ROSCommsSimulator::ROSCommsSimulator(ros::NodeHandle &rosNode)
-    : _rosNode(rosNode), _linkUpdaterWorker(this),
-      _this(ROSCommsSimulatorPtr(this)) {
+ROSCommsSimulator::ROSCommsSimulator()
+    : _linkUpdaterWorker(this),
+      _this(this) {
   SetLogName("CommsSimulator");
   LogToConsole(true);
   FlushLogOn(cpplogging::LogLevel::info);
@@ -391,6 +391,7 @@ void ROSCommsSimulator::StartROSInterface() {
   /*
    * http://www.boost.org/doc/libs/1_63_0/libs/bind/doc/html/bind.html#bind.purpose.using_bind_with_functions_and_fu
    */
+  _rosNode = ros::NodeHandle("~");
   _addDevService = _rosNode.advertiseService(
       "add_acoustic_net_device", &ROSCommsSimulator::_AddAcousticDevice, this);
   _addChannelService = _rosNode.advertiseService(

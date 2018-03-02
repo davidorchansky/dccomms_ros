@@ -23,16 +23,10 @@ using namespace std;
 
 static std::shared_ptr<spd::logger> Log =
     spd::stdout_color_mt("CommsSimulatorTest");
-ROSCommsSimulator *sim;
-
-void txcb(std::string path, ROSCommsDevicePtr dev, PacketPtr pkt){
-  Log->info("{}: Packet transmitted")  ;
-}
 
 int main(int argc, char **argv) {
   //// GET PARAMS
   ros::init(argc, argv, "dccomms_netsim");
-  ros::NodeHandle nh("~");
 
   auto rovTxPacketBuilder =
       dccomms::CreateObject<dccomms::DataLinkFramePacketBuilder>(
@@ -41,7 +35,7 @@ int main(int argc, char **argv) {
       dccomms::CreateObject<dccomms::DataLinkFramePacketBuilder>(
           dccomms::DataLinkFrame::crc16);
 
-  auto sim = ns3::CreateObject<ROSCommsSimulator>(nh);
+  auto sim = ns3::CreateObject<ROSCommsSimulator>();
   sim->SetLogName("netsim");
   sim->LogToFile("netsim_log");
 
@@ -88,13 +82,22 @@ int main(int argc, char **argv) {
   sim->LinkDevToChannel(ldc1);
   sim->LinkDevToChannel(ldc2);
 
+  ROSCommsDevice::PacketTransmittingCallback txcb =
+      [](std::string path, ROSCommsDevicePtr, PacketPtr) {
+        Log->info("{}: Transmitting packet", path);
+      };
 
-//  ROSCommsDevice::PacketReceivedCallback txcb = [](std::string path, ROSCommsDevicePtr, PacketPtr){
-//    Log->info("{}: Packet transmitted")  ;
-//  };
+  ROSCommsDevice::PacketReceivedCallback rxcb =
+      [](std::string path, ROSCommsDevicePtr, PacketPtr) {
+        Log->info("{}: Packet received", path);
+      };
 
-  ns3::Config::Connect("/DeviceList/*/PacketTransmitting",ns3::MakeCallback(&txcb));
+  ns3::Config::Connect("/ROSDeviceList/*/PacketTransmitting",
+                       ns3::MakeCallback(txcb));
 
+
+  ns3::Config::Connect("/ROSDeviceList/*/PacketReceived",
+                       ns3::MakeCallback(rxcb));
 
   sim->StartROSInterface();
   Log->info("ROS Interface started");
