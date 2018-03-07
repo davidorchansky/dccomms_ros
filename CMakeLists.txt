@@ -16,7 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
 		message_generation
                 std_srvs
                 tf
-		dccomms_ros_msgs
+                dccomms_ros_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -208,6 +208,7 @@ SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/CustomROSCommsDevice.cpp
         src/simulator/AcousticCommsChannel.cpp
         src/simulator/CustomCommsChannel.cpp
+        src/simulator/PacketBuilderLoader.cpp
 )
 
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
@@ -223,6 +224,9 @@ target_link_libraries(netsim_example2 ${PROJECT_NAME})
 
 add_executable (netsim_example3 src/simulator/main/netsim_example3.cpp)
 target_link_libraries(netsim_example3 ${PROJECT_NAME})
+
+add_executable (netsim_example4 src/simulator/main/netsim_example4.cpp)
+target_link_libraries(netsim_example4 ${PROJECT_NAME})
 
 #target_compile_options(pruebas PUBLIC "")
 #https://cmake.org/cmake/help/v3.4/command/find_library.html

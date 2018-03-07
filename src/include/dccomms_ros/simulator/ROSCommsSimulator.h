@@ -72,6 +72,9 @@ public:
                                     PACKET_TYPE type);
   void SetPacketBuilder(const std::string &dccommsId, PACKET_TYPE type,
                         PacketBuilderPtr pb);
+  void SetPacketBuilder(const std::string &dccommsId, PACKET_TYPE type,
+                        const std::string & libName, const std::string & className);
+  void SetDefaultPacketBuilder(const std::string & lib, const std::string & className);
   void SetDefaultPacketBuilder(PacketBuilderPtr pb) {
     _defaultPacketBuilder = pb;
   }
@@ -85,7 +88,7 @@ public:
   bool AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req);
   bool StartSimulation();
 
-  static TypeId GetTypeId(void);
+  static ns3::TypeId GetTypeId(void);
 
   friend class ROSCommsDevice;
 private:

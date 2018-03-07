@@ -11,7 +11,6 @@
 
 using namespace dccomms;
 using namespace cpplogging;
-using namespace ns3;
 namespace dccomms_ros {
 
 enum PacketErrorType { PE_PROP, PE_COL };
@@ -74,7 +73,7 @@ public:
    * \brief Get the type ID.
    * \return the object TypeId
    */
-  static TypeId GetTypeId(void);
+  static ns3::TypeId GetTypeId(void);
 
   typedef void (*PacketReceivedCallback)(std::string path, ROSCommsDevicePtr, PacketPtr);
   typedef void (*PacketTransmittingCallback)(std::string path, ROSCommsDevicePtr, PacketPtr);
@@ -91,8 +90,8 @@ protected:
   ROSCommsSimulatorPtr _sim;
   PacketBuilderPtr _txpb, _rxpb;
 
-  TracedCallback<ROSCommsDevicePtr, PacketPtr> _rxCbTrace;
-  TracedCallback<ROSCommsDevicePtr, PacketPtr> _txCbTrace;
+  ns3::TracedCallback<ROSCommsDevicePtr, PacketPtr> _rxCbTrace;
+  ns3::TracedCallback<ROSCommsDevicePtr, PacketPtr> _txCbTrace;
 
 private:
   void _StartDeviceService();

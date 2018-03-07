@@ -12,7 +12,6 @@
 #include <random>
 
 using namespace std;
-using namespace ns3;
 namespace dccomms_ros {
 
 typedef ns3::Ptr<ns3::AquaSimChannel> AquaSimChannelPtr;
@@ -30,7 +29,7 @@ private:
   int _ns3ChannelId;
   AquaSimChannelPtr _aquaSimChannel;
   static AquaSimChannelSet _aquaSimChannels;
-  InternetStackHelper _internet;
+  ns3::InternetStackHelper _internet;
   ns3::AquaSimChannelHelper _channelHelper;
 };
 

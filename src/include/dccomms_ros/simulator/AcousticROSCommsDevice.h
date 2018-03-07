@@ -48,7 +48,7 @@ private:
   void _SendTrace(std::string context, ns3::Ptr<const ns3::Packet>);
   void _RxError(std::string context, ns3::Ptr<const ns3::Packet>);
   void _PositionUpdated(std::string context,
-                        ns3::Ptr<const MobilityModel> model);
+                        ns3::Ptr<const ns3::MobilityModel> model);
 };
 }
 #endif // COMMSNODE_H

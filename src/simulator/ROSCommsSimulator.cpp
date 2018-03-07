@@ -5,17 +5,16 @@
 #include <dccomms_ros/simulator/AcousticROSCommsDevice.h>
 #include <dccomms_ros/simulator/CustomCommsChannel.h>
 #include <dccomms_ros/simulator/CustomROSCommsDevice.h>
+#include <dccomms_ros/simulator/PacketBuilderLoader.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
-#include <dccomms_ros_msgs/AddDevice.h>
 #include <dccomms_ros_msgs/CheckDevice.h>
 #include <dccomms_ros_msgs/types.h>
 #include <iostream>
 #include <list>
-#include <regex>
-#include <tf/transform_listener.h>
-
 #include <ns3/core-module.h>
 #include <ns3/simulator.h>
+#include <regex>
+#include <tf/transform_listener.h>
 
 using namespace ns3;
 using namespace dccomms;
@@ -38,9 +37,7 @@ TypeId ROSCommsSimulator::GetTypeId(void) {
   return tid;
 }
 
-ROSCommsSimulator::ROSCommsSimulator()
-    : _linkUpdaterWorker(this),
-      _this(this) {
+ROSCommsSimulator::ROSCommsSimulator() : _linkUpdaterWorker(this), _this(this) {
   SetLogName("CommsSimulator");
   LogToConsole(true);
   FlushLogOn(cpplogging::LogLevel::info);
@@ -48,10 +45,7 @@ ROSCommsSimulator::ROSCommsSimulator()
   _Init();
 }
 
-ROSCommsSimulator::~ROSCommsSimulator()
-{
-
-}
+ROSCommsSimulator::~ROSCommsSimulator() {}
 
 PacketBuilderPtr
 ROSCommsSimulator::GetPacketBuilder(const std::string &dccommsId,
@@ -75,6 +69,21 @@ void ROSCommsSimulator::SetPacketBuilder(const string &dccommsId,
   else
     dpb.txpb = pb;
   _packetBuilderMap[dccommsId] = dpb;
+}
+
+void ROSCommsSimulator::SetPacketBuilder(const std::string &dccommsId,
+                                         PACKET_TYPE type,
+                                         const std::string &libName,
+                                         const std::string &className) {
+  dccomms::PacketBuilderPtr pb =
+      PacketBuilderLoader::LoadPacketBuilder(libName, className);
+  SetPacketBuilder(dccommsId, type, pb);
+}
+void ROSCommsSimulator::SetDefaultPacketBuilder(const std::string &libName,
+                                                const std::string &className) {
+  dccomms::PacketBuilderPtr pb =
+      PacketBuilderLoader::LoadPacketBuilder(libName, className);
+  SetDefaultPacketBuilder(pb);
 }
 
 void ROSCommsSimulator::SetTransmitPDUCb(
