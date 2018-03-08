@@ -93,6 +93,7 @@ public:
   friend class ROSCommsDevice;
 private:
   const char _timeFormat[100] = "%Y-%m-%d %H:%M:%S";
+  int _publish_rate;
   void _Run();
   void _Init();
 

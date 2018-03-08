@@ -108,6 +108,7 @@ void ROSCommsSimulator::_Init() {
   SetTransmitPDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
   SetReceivePDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
   SetPositionUpdatedCb([](ROSCommsDevicePtr dev, tf::Vector3 pos) {}, 1000);
+  _publish_rate = 10;
   GlobalValue::Bind("SimulatorImplementationType",
                     StringValue("ns3::RealtimeSimulatorImpl"));
 }
@@ -420,6 +421,15 @@ void ROSCommsSimulator::StartROSInterface() {
   _addCustomDeviceService = _rosNode.advertiseService(
       "add_custom_net_device", &ROSCommsSimulator::_AddCustomDevice, this);
   _linkUpdaterWorker.Start();
+
+  std::thread rosLoop([this]() {
+    ros::Rate rate(_publish_rate);
+    while (ros::ok()) {
+
+      rate.sleep();
+    }
+  });
+  rosLoop.detach();
 }
 
 bool ROSCommsSimulator::_StartSimulation(
