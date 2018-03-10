@@ -123,7 +123,6 @@ FOREACH(subdir ${${PROJECT_NAME}_DEPS})
 ENDFOREACH()
 
 SET(NS3_BUILD ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/build/)
-
 SET(NS3_LIBS
     libns3-dev-antenna-debug.so                libns3-dev-flow-monitor-test-debug.so      libns3-dev-propagation-debug.so
     libns3-dev-antenna-test-debug.so           libns3-dev-internet-apps-debug.so          libns3-dev-propagation-test-debug.so
@@ -215,6 +214,16 @@ add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME}  ${ns3liblist} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 
+
+#./waf configure --build-profile=debug --enable-examples --enable-tests --enable-sudo
+#./waf build
+SET(WAF_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/waf)
+add_custom_command(
+  TARGET ${PROJECT_NAME}
+  COMMAND ${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests #--enable-sudo
+  COMMAND ${WAF_EXECUTABLE} build
+  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
+)
 
 add_executable (netsim_example1 src/simulator/main/netsim_example1.cpp)
 target_link_libraries(netsim_example1 ${PROJECT_NAME})
