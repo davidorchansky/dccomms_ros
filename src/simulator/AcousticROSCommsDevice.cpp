@@ -20,8 +20,8 @@ AcousticROSCommsDevice::AcousticROSCommsDevice(ROSCommsSimulatorPtr s,
 
   _asHelper = ns3::AquaSimHelper::Default();
   _asHelper.SetMac("ns3::AquaSimBroadcastMac");
-  _asHelper.SetRouting("ns3::AquaSimRoutingDummy");
-  _routingType = AQS_ROUTING_DUMMY;
+  //_asHelper.SetRouting("ns3::AquaSimRoutingDummy");
+  _routingType = AQS_NOROUTING;
   _device = ns3::CreateObject<ns3::AquaSimNetDevice>();
 }
 
@@ -37,7 +37,7 @@ void AcousticROSCommsDevice::_SendTrace(string context,
   auto daddr = ash.GetDAddr().GetAsInt();
   auto nhaddr = ash.GetNextHop().GetAsInt();
 
-  Info("({} secs; {}) {}: (Addr: {}) Transmitting packet to {}. Next hop: {} ; "
+  Debug("({} secs; {}) {}: (Addr: {}) Transmitting packet to {}. Next hop: {} ; "
        "{} bytes",
        secs, datetime, context, saddr, daddr, nhaddr, pkt->GetSize());
   FlushLog();
@@ -51,6 +51,8 @@ void AcousticROSCommsDevice::_Recv(std::string context,
 
   auto packet = pkt->Copy();
   switch (_routingType) {
+  case AQS_NOROUTING: {
+  }
   case AQS_ROUTING_DUMMY: {
     ns3::AquaSimHeader ash;
     auto psize = packet->GetSize();
@@ -65,7 +67,7 @@ void AcousticROSCommsDevice::_Recv(std::string context,
     auto size = packet->GetSize();
     packet->CopyData((uint8_t *)ser, size);
     auto dccommsPacket = _rxpb->CreateFromBuffer(ser);
-    Info("({} secs; {}) {}: (Own Addr: {} Dest. Addr: {}) Received packet from "
+    Debug("({} secs; {}) {}: (Own Addr: {} Dest. Addr: {}) Received packet from "
          "{} ({} forwards) ({} bytes)",
          secs, datetime, context, GetMac(), daddr, saddr, numForwards, psize);
     ReceiveFrame(dccommsPacket);
@@ -105,6 +107,15 @@ void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
 
   uint16_t daddr = pkt->GetDestAddr();
   switch (_routingType) {
+  case AQS_NOROUTING: {
+    ns3::AquaSimHeader ash;
+    ash.SetDAddr(AquaSimAddress::ConvertFrom(AquaSimAddress(daddr)));
+    ns3pkt->AddHeader(ash);
+    ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
+                                        &ns3::AquaSimNetDevice::Send, _device,
+                                        ns3pkt, AquaSimAddress(daddr), 0);
+    break;
+  }
   case AQS_ROUTING_DUMMY: {
     ns3::AquaSimHeader ash;
     ash.SetNumForwards(0);
@@ -158,20 +169,34 @@ void AcousticROSCommsDevice::_PositionUpdated(
 
 void AcousticROSCommsDevice::DoStart() {
   _asHelper.SetChannel(_channel);
-  _asHelper.Create(_node, _device);
+  if (_routingType == AQS_NOROUTING)
+    _asHelper.CreateWithoutRouting(_node, _device);
+  else
+    _asHelper.Create(_node, _device);
   _device->SetAddress(_aquaSimAddr);
   _macLayer = _device->GetMac();
-  _routingLayer = _device->GetRouting();
   _mobility = _node->GetObject<ns3::MobilityModel>();
 
   _device->GetPhy()->SetTransRange(20);
   _mobility->SetPosition(Vector3D(10 * _nodeListIndex, 0, 0));
-  ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
-                           "/DeviceList/0/Routing/PacketReceived",
-                       MakeCallback(&AcousticROSCommsDevice::_Recv, this));
-  ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
-                           "/DeviceList/0/Routing/PacketTransmitting",
-                       MakeCallback(&AcousticROSCommsDevice::_SendTrace, this));
+  if (_routingType != AQS_NOROUTING) {
+    _routingLayer = _device->GetRouting();
+    ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
+                             "/DeviceList/0/Routing/PacketReceived",
+                         MakeCallback(&AcousticROSCommsDevice::_Recv, this));
+    ns3::Config::Connect(
+        "/NodeList/" + std::to_string(_nodeListIndex) +
+            "/DeviceList/0/Routing/PacketTransmitting",
+        MakeCallback(&AcousticROSCommsDevice::_SendTrace, this));
+  } else {
+    ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
+                             "/DeviceList/0/Mac/RoutingRx",
+                         MakeCallback(&AcousticROSCommsDevice::_Recv, this));
+    ns3::Config::Connect(
+        "/NodeList/" + std::to_string(_nodeListIndex) +
+            "/DeviceList/0/Mac/RoutingTx",
+        MakeCallback(&AcousticROSCommsDevice::_SendTrace, this));
+  }
   //  ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
   //                           "/DeviceList/0/Phy/RxError",
   //                       MakeCallback(&AcousticROSCommsDevice::_RxError,

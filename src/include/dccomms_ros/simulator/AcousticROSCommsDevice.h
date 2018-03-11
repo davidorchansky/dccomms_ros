@@ -12,7 +12,7 @@ using namespace cpplogging;
 
 namespace dccomms_ros {
 
-enum AQS_ROUTING_TYPE { AQS_ROUTING_DUMMY, AQS_ROUTING_VBF };
+enum AQS_ROUTING_TYPE { AQS_NOROUTING, AQS_ROUTING_DUMMY, AQS_ROUTING_VBF };
 class AcousticROSCommsDevice : public ROSCommsDevice {
 public:
   AcousticROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr txpb,

@@ -11,11 +11,11 @@ ns3::TypeId ROSCommsDevice::GetTypeId(void) {
   static ns3::TypeId tid =
       ns3::TypeId("dccomms_ros::ROSCommsDevice")
           .SetParent<Object>()
-          .AddTraceSource("PacketReceived",
-                          "Trace source indicating a packet has been "
-                          "delivered to the upper layer.",
-                          ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_rxCbTrace),
-                          "dccomms_ros::ROSCommsDevice::PacketReceivedCallback")
+          .AddTraceSource(
+              "PacketReceived", "Trace source indicating a packet has been "
+                                "delivered to the upper layer.",
+              ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_rxCbTrace),
+              "dccomms_ros::ROSCommsDevice::PacketReceivedCallback")
           .AddTraceSource(
               "PacketTransmitting", "Trace source indicating a packet has been "
                                     "delivered to the lower layer.",
@@ -32,6 +32,7 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
   _device = CommsDeviceService::BuildCommsDeviceService(
       _txpb, CommsDeviceService::IPHY_TYPE_PHY);
   _device->SetLogLevel(cpplogging::LogLevel::info);
+  SetLogLevel(cpplogging::info);
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
   _commonStarted = false;
   _position = tf::Vector3(0, 0, 0);
@@ -57,7 +58,7 @@ void ROSCommsDevice::_StartDeviceService() {
 }
 
 void ROSCommsDevice::Start() {
-  _ownPtr = this;//shared_from_this();
+  _ownPtr = this; // shared_from_this();
   _StartDeviceService();
   DoStart();
 }
