@@ -80,6 +80,7 @@ protected:
   virtual void DoStart();
   virtual void DoSetPosition(const tf::Vector3 &position);
   virtual bool DoStarted();
+  std::string DoToString();
 
 private:
   uint32_t _mac;

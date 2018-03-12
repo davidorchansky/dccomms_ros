@@ -19,10 +19,18 @@ AcousticROSCommsDevice::AcousticROSCommsDevice(ROSCommsSimulatorPtr s,
   _mobh.Install(_node);
 
   _asHelper = ns3::AquaSimHelper::Default();
-  _asHelper.SetMac("ns3::AquaSimBroadcastMac");
-  //_asHelper.SetRouting("ns3::AquaSimRoutingDummy");
   _routingType = AQS_NOROUTING;
   _device = ns3::CreateObject<ns3::AquaSimNetDevice>();
+  _pT = 0.2818;
+  _freq = 25;
+  _L = 0;
+  _K = 2.0;
+  _turnOnEnergy = 0;
+  _turnOffEnergy = 0;
+  _preamble = 0;
+  _pTConsume = 0.660;
+  _pRConsume = 0.395;
+  _pIdle = 0.0;
 }
 
 void AcousticROSCommsDevice::_SendTrace(string context,
@@ -37,9 +45,10 @@ void AcousticROSCommsDevice::_SendTrace(string context,
   auto daddr = ash.GetDAddr().GetAsInt();
   auto nhaddr = ash.GetNextHop().GetAsInt();
 
-  Debug("({} secs; {}) {}: (Addr: {}) Transmitting packet to {}. Next hop: {} ; "
-       "{} bytes",
-       secs, datetime, context, saddr, daddr, nhaddr, pkt->GetSize());
+  Debug(
+      "({} secs; {}) {}: (Addr: {}) Transmitting packet to {}. Next hop: {} ; "
+      "{} bytes",
+      secs, datetime, context, saddr, daddr, nhaddr, pkt->GetSize());
   FlushLog();
 }
 
@@ -67,9 +76,10 @@ void AcousticROSCommsDevice::_Recv(std::string context,
     auto size = packet->GetSize();
     packet->CopyData((uint8_t *)ser, size);
     auto dccommsPacket = _rxpb->CreateFromBuffer(ser);
-    Debug("({} secs; {}) {}: (Own Addr: {} Dest. Addr: {}) Received packet from "
-         "{} ({} forwards) ({} bytes)",
-         secs, datetime, context, GetMac(), daddr, saddr, numForwards, psize);
+    Debug(
+        "({} secs; {}) {}: (Own Addr: {} Dest. Addr: {}) Received packet from "
+        "{} ({} forwards) ({} bytes)",
+        secs, datetime, context, GetMac(), daddr, saddr, numForwards, psize);
     ReceiveFrame(dccommsPacket);
     FlushLog();
     break;
@@ -167,7 +177,28 @@ void AcousticROSCommsDevice::_PositionUpdated(
        position.x, position.y, position.z);
 }
 
+void AcousticROSCommsDevice::SetMACProtocol(const std::string &name) {
+  _macP = GetMACPType(name);
+}
+void AcousticROSCommsDevice::SetRange(double value) { _range = value; }
+void AcousticROSCommsDevice::SetPT(double value) { _pT = value; }
+void AcousticROSCommsDevice::SetFreq(double value) { _freq = value; }
+void AcousticROSCommsDevice::SetL(double value) { _L = value; }
+void AcousticROSCommsDevice::SetK(double value) { _K = value; }
+void AcousticROSCommsDevice::SetTurnOnEnergy(double value) {
+  _turnOnEnergy = value;
+}
+void AcousticROSCommsDevice::SetTurnOffEnergy(double value) {
+  _turnOffEnergy = value;
+}
+void AcousticROSCommsDevice::SetPreamble(double value) { _preamble = value; }
+void AcousticROSCommsDevice::SetPTConsume(double value) { _pTConsume = value; }
+void AcousticROSCommsDevice::SetPRConsume(double value) { _pRConsume = value; }
+void AcousticROSCommsDevice::SetPIdle(double value) { _pIdle = value; }
+
 void AcousticROSCommsDevice::DoStart() {
+
+  _asHelper.SetMac(_macP);
   _asHelper.SetChannel(_channel);
   if (_routingType == AQS_NOROUTING)
     _asHelper.CreateWithoutRouting(_node, _device);
@@ -177,7 +208,19 @@ void AcousticROSCommsDevice::DoStart() {
   _macLayer = _device->GetMac();
   _mobility = _node->GetObject<ns3::MobilityModel>();
 
-  _device->GetPhy()->SetTransRange(20);
+  auto phy = _device->GetPhy();
+  phy->SetTransRange(_range);
+  phy->SetAttribute("PT", ns3::DoubleValue(_pT));
+  phy->SetAttribute("Frequency", ns3::DoubleValue(_freq));
+  phy->SetAttribute("L", ns3::DoubleValue(_L));
+  phy->SetAttribute("K", ns3::DoubleValue(_K));
+  phy->SetAttribute("TurnOnEnergy", ns3::DoubleValue(_turnOnEnergy));
+  phy->SetAttribute("TurnOffEnergy", ns3::DoubleValue(_turnOffEnergy));
+  phy->SetAttribute("Preamble", ns3::DoubleValue(_preamble));
+  phy->SetAttribute("PRConsume", ns3::DoubleValue(_pRConsume));
+  phy->SetAttribute("PTConsume", ns3::DoubleValue(_pTConsume));
+  phy->SetAttribute("PIdle", ns3::DoubleValue(_pIdle));
+
   _mobility->SetPosition(Vector3D(10 * _nodeListIndex, 0, 0));
   if (_routingType != AQS_NOROUTING) {
     _routingLayer = _device->GetRouting();
@@ -209,4 +252,75 @@ void AcousticROSCommsDevice::DoStart() {
 }
 
 bool AcousticROSCommsDevice::DoStarted() { return _started; }
+
+std::string AcousticROSCommsDevice::DoToString() {
+  int maxBuffSize = 1024;
+  char buff[maxBuffSize];
+  string txChannelLinked;
+  if (_txChannel)
+    txChannelLinked = "Type: " + ChannelType2String(_txChannel->GetType()) +
+                      " ; Id: " + to_string(_txChannel->GetId());
+  else
+    txChannelLinked = "not linked";
+
+  dccomms::Ptr<AcousticCommsChannel> acousticChannel =
+      std::static_pointer_cast<AcousticCommsChannel>(_txChannel);
+  int n;
+  if (_txChannel) {
+    n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
+                                    "\tMAC ....................... %d\n"
+                                    "\tDevice type ............... %s\n"
+                                    "\tFrame ID: ................. '%s'\n"
+                                    "\tChannel: .................. '%s'\n"
+                                    "\t  Bandwidth: .............. '%f'Hz\n"
+                                    "\t  Temperature: ............ '%f'ºC\n"
+                                    "\t  Salinity: ............... '%f' ppt\n"
+                                    "\t  Noise Level: ............ '%f' dB\n"
+                                    "\tTx Fifo Size: ............. %d bytes\n"
+                                    "\tMAC protocol: ............. %s\n"
+                                    "\tMax. Range: ............... %f m\n"
+                                    "\tPT: ....................... %f W\n"
+                                    "\tFreq: ..................... %f KHz\n"
+                                    "\tL: ........................ %f\n"
+                                    "\tK: ........................ %f\n"
+                                    "\tTurnOnEnergy: ............. %f J\n"
+                                    "\tTurnOffEnergy: ............ %f J\n"
+                                    "\tPreamble: ................. %f\n"
+                                    "\tPTConsume: ................ %f W\n"
+                                    "\tPRConsume: ................ %f W\n"
+                                    "\tPIdle: .................... %f W\n",
+                 _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
+                 _tfFrameId.c_str(), txChannelLinked.c_str(),
+                 acousticChannel->GetBandwidth(),
+                 acousticChannel->GetTemperature(),
+                 acousticChannel->GetSalinity(),
+                 acousticChannel->GetNoiseLevel(), GetMaxTxFifoSize(),
+                 _macP.c_str(), _range, _pT, _freq, _L, _K, _turnOnEnergy,
+                 _turnOffEnergy, _preamble, _pTConsume, _pRConsume, _pIdle);
+  } else {
+    n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
+                                    "\tMAC ....................... %d\n"
+                                    "\tDevice type ............... %s\n"
+                                    "\tFrame ID: ................. '%s'\n"
+                                    "\tChannel: .................. '%s'\n"
+                                    "\tMAC protocol: ............. %s\n"
+                                    "\tMax. Range: ............... %f m\n"
+                                    "\tPT: ....................... %f W\n"
+                                    "\tFreq: ..................... %f KHz\n"
+                                    "\tL: ........................ %f\n"
+                                    "\tK: ........................ %f\n"
+                                    "\tTurnOnEnergy: ............. %f J\n"
+                                    "\tTurnOffEnergy: ............ %f J\n"
+                                    "\tPreamble: ................. %f\n"
+                                    "\tPTConsume: ................ %f W\n"
+                                    "\tPRConsume: ................ %f W\n"
+                                    "\tPIdle: .................... %f W\n",
+                 _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
+                 _tfFrameId.c_str(), txChannelLinked.c_str(), _macP.c_str(),
+                 _range, _pT, _freq, _L, _K, _turnOnEnergy, _turnOffEnergy,
+                 _preamble, _pTConsume, _pRConsume, _pIdle);
+  }
+
+  return std::string(buff);
+}
 }

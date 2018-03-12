@@ -22,7 +22,16 @@ public:
   AcousticCommsChannel(uint32_t id);
   uint32_t GetId() { return _rosChannelId; }
   CHANNEL_TYPE GetType() { return ACOUSTIC_UNDERWATER_CHANNEL; }
-  AquaSimChannelPtr GetAquaSimChannel() { return _aquaSimChannel; };
+  AquaSimChannelPtr GetAquaSimChannel() { return _aquaSimChannel; }
+  void SetBandwidth(double value);
+  void SetTemperature(double value);
+  void SetSalinity(double value);
+  void SetNoiseLevel(double value);
+
+  double GetBandwidth();
+  double GetTemperature();
+  double GetSalinity();
+  double GetNoiseLevel();
 
 private:
   int _rosChannelId;

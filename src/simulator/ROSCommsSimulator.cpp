@@ -193,13 +193,26 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     auto rxpb = GetPacketBuilder(dccommsId, RX_PACKET);
     if (!rxpb)
       rxpb = GetDefaultPacketBuilder();
-    ROSCommsDevicePtr dev =
+    ns3::Ptr<AcousticROSCommsDevice> dev =
         ns3::CreateObject<AcousticROSCommsDevice>(_this, txpb, rxpb);
+
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
     dev->SetBitRate(bitrate);
     dev->SetMaxTxFifoSize(req.maxTxFifoSize);
+    dev->SetMACProtocol(req.macProtocol);
+    dev->SetRange(req.range);
+    dev->SetPT(req.PT);
+    dev->SetFreq(req.frequency);
+    dev->SetL(req.L);
+    dev->SetK(req.K);
+    dev->SetTurnOnEnergy(req.turnOnEnergy);
+    dev->SetTurnOffEnergy(req.turnOffEnergy);
+    dev->SetPreamble(req.preamble);
+    dev->SetPTConsume(req.PTConsume);
+    dev->SetPRConsume(req.PRConsume);
+    dev->SetPIdle(req.PIdle);
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;
@@ -271,32 +284,21 @@ bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
 
 bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
                                             AddAcousticChannel::Response &res) {
-  CommsChannelPtr channel;
-  CHANNEL_TYPE type = (CHANNEL_TYPE)req.type;
+
   uint32_t id = req.id;
   res.res = false;
-  switch (type) {
-  case ACOUSTIC_UNDERWATER_CHANNEL: {
-    if (!_channelMap[id]) {
-      auto acousticChannel =
-          dccomms::CreateObject<dccomms_ros::AcousticCommsChannel>(id);
-      channel = acousticChannel;
-      _channelMap[id] = channel;
-      res.res = true;
-      Log->info("acoustic channel {} added", id);
-    }
-    break;
-  }
-  case CUSTOM_CHANNEL:
-    break;
-  default:
-    Log->error("unknown channel type");
-    res.res = false;
-    return false;
-    break;
-  }
-  if (!res.res) {
-    Log->error("error adding acoustic channel {}", id);
+  if (!_channelMap[id]) {
+    auto acousticChannel =
+        dccomms::CreateObject<dccomms_ros::AcousticCommsChannel>(id);
+
+    acousticChannel->SetBandwidth(req.bandwidth);
+    acousticChannel->SetNoiseLevel(req.noiseLvl);
+    acousticChannel->SetSalinity(req.salinity);
+    acousticChannel->SetTemperature(req.temperature);
+
+    _channelMap[id] = acousticChannel;
+    res.res = true;
+    Log->info("acoustic channel {} added", id);
   }
   return res.res;
 }

@@ -197,47 +197,5 @@ tf::Vector3 ROSCommsDevice::GetPosition() { return _position; }
 
 std::string ROSCommsDevice::GetTfFrameId() { return _tfFrameId; }
 
-std::string ROSCommsDevice::ToString() {
-  int maxBuffSize = 1024;
-  char buff[maxBuffSize];
-  string txChannelLinked;
-  if (_txChannel)
-    txChannelLinked = "Type: " + ChannelType2String(_txChannel->GetType()) +
-                      " ; Id: " + to_string(_txChannel->GetId());
-  else
-    txChannelLinked = "not linked";
-
-  string rxChannelLinked;
-  if (_rxChannel)
-    rxChannelLinked = "Type: " + ChannelType2String(_rxChannel->GetType()) +
-                      " ; Id: " + to_string(_rxChannel->GetId());
-  else
-    rxChannelLinked = "not linked";
-
-  int n;
-  if (GetDevType() == DEV_TYPE::ACOUSTIC_UNDERWATER_DEV)
-    n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
-                                    "\tMAC ....................... %d\n"
-                                    "\tDevice type ............... %s\n"
-                                    "\tFrame ID: ................. '%s'\n"
-                                    "\tChannel: .................. '%s'\n"
-                                    "\tTx Fifo Size: ............. %d bytes",
-                 _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
-                 _tfFrameId.c_str(), txChannelLinked.c_str(),
-                 GetMaxTxFifoSize());
-  else // CUSTOM_DEV
-  {
-    n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
-                                    "\tMAC ....................... %d\n"
-                                    "\tDevice type ............... %s\n"
-                                    "\tFrame ID: ................. '%s'\n"
-                                    "\tTX channel: .................. '%s'\n"
-                                    "\tRX channel: .................. '%s'\n"
-                                    "\tTx Fifo Size: ............. %d bytes",
-                 _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
-                 _tfFrameId.c_str(), txChannelLinked.c_str(),
-                 rxChannelLinked.c_str(), GetMaxTxFifoSize());
-  }
-  return std::string(buff);
-}
+std::string ROSCommsDevice::ToString() { return DoToString(); }
 }

@@ -107,24 +107,23 @@ void CustomROSCommsDevice::AddNewPacket(PacketPtr pkt, bool propagationError) {
   IncommingPacketPtr ipkt = dccomms::CreateObject<IncommingPacket>();
   ipkt->propagationError = propagationError;
 
-  //TODO: check if propagation error and increase traced value
+  // TODO: check if propagation error and increase traced value
   if (Receiving() || _txChannel == _rxChannel && Transmitting()) {
-    //TODO: increase colission errors traced value
-    MarkIncommingPacketsAsCollisioned(); //Should be a maximum of 1 packet in the _incommingPackets queue
-  }
-  else
-    {
-      Receiving(true);
-      ipkt->packet = pkt;
-      _incommingPackets.push_back(ipkt);
+    // TODO: increase colission errors traced value
+    MarkIncommingPacketsAsCollisioned(); // Should be a maximum of 1 packet in
+                                         // the _incommingPackets queue
+  } else {
+    Receiving(true);
+    ipkt->packet = pkt;
+    _incommingPackets.push_back(ipkt);
 
-      auto pktSize = pkt->GetPacketSize();
-      auto byteTrt = GetNanosPerByte();
-      auto trTime = pktSize * byteTrt;
-      ns3::Simulator::ScheduleWithContext(
-          GetMac(), ns3::NanoSeconds(trTime),
-          &CustomROSCommsDevice::HandleNextIncommingPacket, this);
-    }
+    auto pktSize = pkt->GetPacketSize();
+    auto byteTrt = GetNanosPerByte();
+    auto trTime = pktSize * byteTrt;
+    ns3::Simulator::ScheduleWithContext(
+        GetMac(), ns3::NanoSeconds(trTime),
+        &CustomROSCommsDevice::HandleNextIncommingPacket, this);
+  }
 }
 
 bool CustomROSCommsDevice::Transmitting() { return _transmitting; }
@@ -186,8 +185,9 @@ void CustomROSCommsDevice::DoSend(PacketPtr dlf) {
 }
 void CustomROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
                                            CHANNEL_LINK_TYPE linkType) {
-  if(!_ownPtr)
-    _ownPtr = this;//std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
+  if (!_ownPtr)
+    _ownPtr =
+        this; // std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
   if (channel->GetType() == CHANNEL_TYPE::CUSTOM_CHANNEL) {
     //_channel = static_pointer_cast<CustomCommsChannel>(channel);
 
@@ -208,11 +208,44 @@ void CustomROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
   }
 }
 void CustomROSCommsDevice::DoStart() {
-  if(!_ownPtr)
-    _ownPtr = this;//std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
+  if (!_ownPtr)
+    _ownPtr =
+        this; // std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
 }
 bool CustomROSCommsDevice::DoStarted() { return true; }
 void CustomROSCommsDevice::DoSetPosition(const tf::Vector3 &position) {
   _position = position;
+}
+
+std::string CustomROSCommsDevice::DoToString() {
+  int maxBuffSize = 1024;
+  char buff[maxBuffSize];
+  string txChannelLinked;
+  if (_txChannel)
+    txChannelLinked = "Type: " + ChannelType2String(_txChannel->GetType()) +
+                      " ; Id: " + to_string(_txChannel->GetId());
+  else
+    txChannelLinked = "not linked";
+
+  string rxChannelLinked;
+  if (_rxChannel)
+    rxChannelLinked = "Type: " + ChannelType2String(_rxChannel->GetType()) +
+                      " ; Id: " + to_string(_rxChannel->GetId());
+  else
+    rxChannelLinked = "not linked";
+
+  int n;
+  n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
+                                  "\tMAC ....................... %d\n"
+                                  "\tDevice type ............... %s\n"
+                                  "\tFrame ID: ................. '%s'\n"
+                                  "\tTX channel: .................. '%s'\n"
+                                  "\tRX channel: .................. '%s'\n"
+                                  "\tTx Fifo Size: ............. %d bytes",
+               _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
+               _tfFrameId.c_str(), txChannelLinked.c_str(),
+               rxChannelLinked.c_str(), GetMaxTxFifoSize());
+
+  return std::string(buff);
 }
 }

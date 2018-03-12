@@ -79,6 +79,7 @@ public:
   typedef void (*PacketTransmittingCallback)(std::string path, ROSCommsDevicePtr, PacketPtr);
 
 protected:
+  virtual std::string DoToString() = 0;
   virtual void DoSetMac(uint32_t mac) = 0;
   virtual void DoSend(PacketPtr dlf) = 0;
   virtual void DoLinkToChannel(CommsChannelPtr channel,
@@ -96,7 +97,9 @@ protected:
 private:
   void _StartDeviceService();
   void _StartNodeWorker();
+  void _TxWork();
 
+protected:
   std::mutex _receiveFrameMutex;
   CommsDeviceServicePtr _device;
   CommsChannelPtr _txChannel, _rxChannel;
@@ -109,8 +112,6 @@ private:
   tf::Vector3 _position;
 
   ROSCommsDevicePtr _ownPtr;
-
-  void _TxWork();
 
   bool _commonStarted;
 };

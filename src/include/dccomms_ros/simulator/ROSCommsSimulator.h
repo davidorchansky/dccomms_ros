@@ -5,7 +5,6 @@
 #include <dccomms/dccomms.h>
 #include <dccomms_ros/simulator/CommsChannel.h>
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
-#include <dccomms_ros/simulator/VirtualDeviceLink.h>
 #include <functional>
 #include <memory>
 #include <random>
@@ -24,14 +23,39 @@
 #include <ros/ros.h>
 // end ROS
 
-//ns3
+// ns3
 #include <ns3/core-module.h>
-//end ns3
+// end ns3
 
 using namespace dccomms;
 using namespace cpplogging;
 
 namespace dccomms_ros {
+
+static std::string GetMACPType(const string &name) {
+  std::string typestr;
+  if (name == "FAMA")
+    typestr = "ns3::AquaSimFama";
+  else if (name == "Slotted-FAMA" || "SFAMA")
+    typestr = "ns3::AquaSimSFama";
+  else if (name == "UWAN-MAC")
+    typestr = "ns3::AquaSimUwan";
+  else if (name == "COPE-MAC")
+    typestr = "ns3::AquaSimCopeMac";
+  else if (name == "ALOHA")
+    typestr = "ns3::AquaSimAloha";
+  else if (name == "COPE-MAC")
+    typestr = "ns3::AquaSimCopeMac";
+  else if (name == "R-MAC" || name == "RMAC")
+    typestr = "ns3::AquaSimRMac";
+  else if (name == "GOAL")
+    typestr = "ns3::AquaSimGoal";
+  else if (name == "broadcast MAC" || name == "BMAC" || name == "B-MAC")
+    typestr = "ns3::AquaSimBroadcastMac";
+  else if (name == "T-MAC" || name == "TMAC")
+    typestr = "ns3::AquaSimTMac";
+  return typestr;
+}
 
 enum PACKET_TYPE { TX_PACKET, RX_PACKET };
 
@@ -51,20 +75,23 @@ typedef std::unordered_map<uint32_t, Id2ChannelMapPtr> Type2ChannelMapMap;
 
 class ROSCommsSimulator;
 
-//typedef dccomms::Ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
-typedef ROSCommsSimulator* ROSCommsSimulatorPtr;
+// typedef dccomms::Ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
+typedef ROSCommsSimulator *ROSCommsSimulatorPtr;
 
-class ROSCommsSimulator : public virtual Logger, public ns3::Object{
+class ROSCommsSimulator : public virtual Logger, public ns3::Object {
 public:
   ROSCommsSimulator();
   ~ROSCommsSimulator();
   void StartROSInterface();
 
-  void
-  SetTransmitPDUCb(std::function<void(ROSCommsDevice* txdev, dccomms::PacketPtr)> cb);
-  void
-  SetReceivePDUCb(std::function<void(ROSCommsDevice* rxdev, dccomms::PacketPtr)> cb);
-  void SetPositionUpdatedCb(std::function<void(ROSCommsDevicePtr dev, tf::Vector3)> cb, double cbMinPeriod, uint32_t positionUpdateRate = 10); //callback period = ms ; update rate = Hz
+  void SetTransmitPDUCb(
+      std::function<void(ROSCommsDevice *txdev, dccomms::PacketPtr)> cb);
+  void SetReceivePDUCb(
+      std::function<void(ROSCommsDevice *rxdev, dccomms::PacketPtr)> cb);
+  void SetPositionUpdatedCb(
+      std::function<void(ROSCommsDevicePtr dev, tf::Vector3)> cb,
+      double cbMinPeriod, uint32_t positionUpdateRate =
+                              10); // callback period = ms ; update rate = Hz
 
   void GetSimTime(std::string &datetime, double &secsFromStart);
 
@@ -73,8 +100,10 @@ public:
   void SetPacketBuilder(const std::string &dccommsId, PACKET_TYPE type,
                         PacketBuilderPtr pb);
   void SetPacketBuilder(const std::string &dccommsId, PACKET_TYPE type,
-                        const std::string & libName, const std::string & className);
-  void SetDefaultPacketBuilder(const std::string & lib, const std::string & className);
+                        const std::string &libName,
+                        const std::string &className);
+  void SetDefaultPacketBuilder(const std::string &lib,
+                               const std::string &className);
   void SetDefaultPacketBuilder(PacketBuilderPtr pb) {
     _defaultPacketBuilder = pb;
   }
@@ -91,6 +120,7 @@ public:
   static ns3::TypeId GetTypeId(void);
 
   friend class ROSCommsDevice;
+
 private:
   const char _timeFormat[100] = "%Y-%m-%d %H:%M:%S";
   int _publish_rate;
@@ -100,7 +130,8 @@ private:
   std::chrono::high_resolution_clock::time_point _startPoint;
   void _SetSimulationStartDateTime();
 
-  std::function<void(ROSCommsDevice* dev, dccomms::PacketPtr)> TransmitPDUCb, ReceivePDUCb;
+  std::function<void(ROSCommsDevice *dev, dccomms::PacketPtr)> TransmitPDUCb,
+      ReceivePDUCb;
   std::function<void(ROSCommsDevicePtr dev, tf::Vector3)> PositionUpdatedCb;
 
   bool _AddAcousticDevice(dccomms_ros_msgs::AddAcousticDevice::Request &req,
@@ -147,7 +178,6 @@ private:
   void _IsAliveWork();
 
   ////////////////////
-  VirtualDevicesLinks _devLinks;
   Type2DevMapMap _type2DevMap;
   DccommsDevMap _dccommsDevMap;
   // Type2ChannelMapMap _type2ChannelMapMap;
