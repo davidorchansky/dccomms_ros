@@ -36,7 +36,7 @@ static std::string GetMACPType(const string &name) {
   std::string typestr;
   if (name == "FAMA")
     typestr = "ns3::AquaSimFama";
-  else if (name == "Slotted-FAMA" || "SFAMA")
+  else if (name == "Slotted-FAMA" || name == "SFAMA")
     typestr = "ns3::AquaSimSFama";
   else if (name == "UWAN-MAC")
     typestr = "ns3::AquaSimUwan";

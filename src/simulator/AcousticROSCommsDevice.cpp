@@ -61,6 +61,24 @@ void AcousticROSCommsDevice::_Recv(std::string context,
   auto packet = pkt->Copy();
   switch (_routingType) {
   case AQS_NOROUTING: {
+    ns3::AquaSimHeader ash;
+    auto psize = packet->GetSize();
+    packet->RemoveHeader(ash);
+    auto saddr = ash.GetSAddr().GetAsInt();
+    auto daddr = ash.GetDAddr().GetAsInt();
+    Debug("Packet received ({} bytes ; {} bytes ; {} bytes) , S:{} ; D:{}", psize,
+         packet->GetSize(), ash.GetSize(), saddr, daddr);
+    char ser[5000];
+    auto size = packet->GetSize();
+    packet->CopyData((uint8_t *)ser, size);
+    auto dccommsPacket = _rxpb->CreateFromBuffer(ser);
+    Debug(
+        "({} secs; {}) {}: (Own Addr: {} Dest. Addr: {}) Received packet from "
+        "{} ({} bytes)",
+        secs, datetime, context, GetMac(), daddr, saddr, psize);
+    ReceiveFrame(dccommsPacket);
+    FlushLog();
+    break;
   }
   case AQS_ROUTING_DUMMY: {
     ns3::AquaSimHeader ash;
@@ -119,7 +137,10 @@ void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
   switch (_routingType) {
   case AQS_NOROUTING: {
     ns3::AquaSimHeader ash;
+    ash.SetSize(pkt->GetPacketSize());
+    ash.SetSAddr(AquaSimAddress::ConvertFrom(AquaSimAddress(_mac)));
     ash.SetDAddr(AquaSimAddress::ConvertFrom(AquaSimAddress(daddr)));
+    ash.SetNextHop(AquaSimAddress::GetBroadcast());
     ns3pkt->AddHeader(ash);
     ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
                                         &ns3::AquaSimNetDevice::Send, _device,
@@ -128,6 +149,7 @@ void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
   }
   case AQS_ROUTING_DUMMY: {
     ns3::AquaSimHeader ash;
+    ash.SetSize(pkt->GetPacketSize());
     ash.SetNumForwards(0);
     ns3pkt->AddHeader(ash);
     ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
@@ -272,23 +294,23 @@ std::string AcousticROSCommsDevice::DoToString() {
                                     "\tDevice type ............... %s\n"
                                     "\tFrame ID: ................. '%s'\n"
                                     "\tChannel: .................. '%s'\n"
-                                    "\t  Bandwidth: .............. '%f'Hz\n"
-                                    "\t  Temperature: ............ '%f'ºC\n"
-                                    "\t  Salinity: ............... '%f' ppt\n"
-                                    "\t  Noise Level: ............ '%f' dB\n"
+                                    "\t  Bandwidth: .............. %.03f Hz\n"
+                                    "\t  Temperature: ............ %.01f ºC\n"
+                                    "\t  Salinity: ............... %.02f ppt\n"
+                                    "\t  Noise Level: ............ %.01f dB\n"
                                     "\tTx Fifo Size: ............. %d bytes\n"
                                     "\tMAC protocol: ............. %s\n"
-                                    "\tMax. Range: ............... %f m\n"
-                                    "\tPT: ....................... %f W\n"
-                                    "\tFreq: ..................... %f KHz\n"
-                                    "\tL: ........................ %f\n"
-                                    "\tK: ........................ %f\n"
-                                    "\tTurnOnEnergy: ............. %f J\n"
-                                    "\tTurnOffEnergy: ............ %f J\n"
-                                    "\tPreamble: ................. %f\n"
-                                    "\tPTConsume: ................ %f W\n"
-                                    "\tPRConsume: ................ %f W\n"
-                                    "\tPIdle: .................... %f W\n",
+                                    "\tMax. Range: ............... %.02f m\n"
+                                    "\tPT: ....................... %.03f W\n"
+                                    "\tFreq: ..................... %.03f KHz\n"
+                                    "\tL: ........................ %.03f\n"
+                                    "\tK: ........................ %.03f\n"
+                                    "\tTurnOnEnergy: ............. %.03f J\n"
+                                    "\tTurnOffEnergy: ............ %.03f J\n"
+                                    "\tPreamble: ................. %.03f\n"
+                                    "\tPTConsume: ................ %.03f W\n"
+                                    "\tPRConsume: ................ %.03f W\n"
+                                    "\tPIdle: .................... %.03f W\n",
                  _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
                  _tfFrameId.c_str(), txChannelLinked.c_str(),
                  acousticChannel->GetBandwidth(),
@@ -304,17 +326,17 @@ std::string AcousticROSCommsDevice::DoToString() {
                                     "\tFrame ID: ................. '%s'\n"
                                     "\tChannel: .................. '%s'\n"
                                     "\tMAC protocol: ............. %s\n"
-                                    "\tMax. Range: ............... %f m\n"
-                                    "\tPT: ....................... %f W\n"
-                                    "\tFreq: ..................... %f KHz\n"
-                                    "\tL: ........................ %f\n"
-                                    "\tK: ........................ %f\n"
-                                    "\tTurnOnEnergy: ............. %f J\n"
-                                    "\tTurnOffEnergy: ............ %f J\n"
-                                    "\tPreamble: ................. %f\n"
-                                    "\tPTConsume: ................ %f W\n"
-                                    "\tPRConsume: ................ %f W\n"
-                                    "\tPIdle: .................... %f W\n",
+                                    "\tMax. Range: ............... %.02f m\n"
+                                    "\tPT: ....................... %.03f W\n"
+                                    "\tFreq: ..................... %.03f KHz\n"
+                                    "\tL: ........................ %.03f\n"
+                                    "\tK: ........................ %.03f\n"
+                                    "\tTurnOnEnergy: ............. %.03f J\n"
+                                    "\tTurnOffEnergy: ............ %.03f J\n"
+                                    "\tPreamble: ................. %.03f\n"
+                                    "\tPTConsume: ................ %.03f W\n"
+                                    "\tPRConsume: ................ %.03f W\n"
+                                    "\tPIdle: .................... %.03f W\n",
                  _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
                  _tfFrameId.c_str(), txChannelLinked.c_str(), _macP.c_str(),
                  _range, _pT, _freq, _L, _K, _turnOnEnergy, _turnOffEnergy,

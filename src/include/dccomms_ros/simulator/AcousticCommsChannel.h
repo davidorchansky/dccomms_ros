@@ -40,6 +40,7 @@ private:
   static AquaSimChannelSet _aquaSimChannels;
   ns3::InternetStackHelper _internet;
   ns3::AquaSimChannelHelper _channelHelper;
+  ns3::Ptr<ns3::AquaSimPropagation> _prop;
 };
 
 typedef dccomms::Ptr<AcousticCommsChannel> AcousticCommsChannelPtr;
