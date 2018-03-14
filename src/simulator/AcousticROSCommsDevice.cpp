@@ -136,25 +136,19 @@ void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
   uint16_t daddr = pkt->GetDestAddr();
   switch (_routingType) {
   case AQS_NOROUTING: {
-    ns3::AquaSimHeader ash;
-    ash.SetSize(pkt->GetPacketSize());
-    ash.SetSAddr(AquaSimAddress::ConvertFrom(AquaSimAddress(_mac)));
-    ash.SetDAddr(AquaSimAddress::ConvertFrom(AquaSimAddress(daddr)));
-    ash.SetNextHop(AquaSimAddress::GetBroadcast());
-    ns3pkt->AddHeader(ash);
     ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
                                         &ns3::AquaSimNetDevice::Send, _device,
                                         ns3pkt, AquaSimAddress(daddr), 0);
     break;
   }
   case AQS_ROUTING_DUMMY: {
-    ns3::AquaSimHeader ash;
-    ash.SetSize(pkt->GetPacketSize());
-    ash.SetNumForwards(0);
-    ns3pkt->AddHeader(ash);
-    ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
-                                        &ns3::AquaSimNetDevice::Send, _device,
-                                        ns3pkt, AquaSimAddress(daddr), 0);
+//    ns3::AquaSimHeader ash;
+//    ash.SetSize(pkt->GetPacketSize());
+//    ash.SetNumForwards(0);
+//    ns3pkt->AddHeader(ash);
+//    ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
+//                                        &ns3::AquaSimNetDevice::Send, _device,
+//                                        ns3pkt, AquaSimAddress(daddr), 0);
     break;
   }
   case AQS_ROUTING_VBF: {
