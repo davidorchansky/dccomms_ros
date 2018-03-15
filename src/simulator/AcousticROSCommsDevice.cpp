@@ -66,8 +66,8 @@ void AcousticROSCommsDevice::_Recv(std::string context,
     packet->RemoveHeader(ash);
     auto saddr = ash.GetSAddr().GetAsInt();
     auto daddr = ash.GetDAddr().GetAsInt();
-    Debug("Packet received ({} bytes ; {} bytes ; {} bytes) , S:{} ; D:{}", psize,
-         packet->GetSize(), ash.GetSize(), saddr, daddr);
+    Debug("Packet received ({} bytes ; {} bytes ; {} bytes) , S:{} ; D:{}",
+          psize, packet->GetSize(), ash.GetSize(), saddr, daddr);
     char ser[5000];
     auto size = packet->GetSize();
     packet->CopyData((uint8_t *)ser, size);
@@ -142,13 +142,14 @@ void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
     break;
   }
   case AQS_ROUTING_DUMMY: {
-//    ns3::AquaSimHeader ash;
-//    ash.SetSize(pkt->GetPacketSize());
-//    ash.SetNumForwards(0);
-//    ns3pkt->AddHeader(ash);
-//    ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
-//                                        &ns3::AquaSimNetDevice::Send, _device,
-//                                        ns3pkt, AquaSimAddress(daddr), 0);
+    //    ns3::AquaSimHeader ash;
+    //    ash.SetSize(pkt->GetPacketSize());
+    //    ash.SetNumForwards(0);
+    //    ns3pkt->AddHeader(ash);
+    //    ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),
+    //                                        &ns3::AquaSimNetDevice::Send,
+    //                                        _device,
+    //                                        ns3pkt, AquaSimAddress(daddr), 0);
     break;
   }
   case AQS_ROUTING_VBF: {
@@ -212,6 +213,14 @@ void AcousticROSCommsDevice::SetPTConsume(double value) { _pTConsume = value; }
 void AcousticROSCommsDevice::SetPRConsume(double value) { _pRConsume = value; }
 void AcousticROSCommsDevice::SetPIdle(double value) { _pIdle = value; }
 
+void AcousticROSCommsDevice::SetSymbolsPerSecond(uint32_t value) {
+  _symbPerSec = value;
+}
+void AcousticROSCommsDevice::SetCodingEff(double value) { _codingEff = value; }
+void AcousticROSCommsDevice::SetBitErrorRate(uint32_t value) {
+  _bitErrorRate = value;
+}
+
 void AcousticROSCommsDevice::DoStart() {
 
   _asHelper.SetMac(_macP);
@@ -236,6 +245,10 @@ void AcousticROSCommsDevice::DoStart() {
   phy->SetAttribute("PRConsume", ns3::DoubleValue(_pRConsume));
   phy->SetAttribute("PTConsume", ns3::DoubleValue(_pTConsume));
   phy->SetAttribute("PIdle", ns3::DoubleValue(_pIdle));
+  ns3::Ptr<AquaSimModulation> modulation = phy->Modulation(NULL);
+  modulation->SetAttribute("CodingEff", ns3::DoubleValue(_codingEff));
+  modulation->SetAttribute("SPS", ns3::UintegerValue(_symbPerSec));
+  modulation->SetAttribute("BER", ns3::DoubleValue(_bitErrorRate));
 
   _mobility->SetPosition(Vector3D(10 * _nodeListIndex, 0, 0));
   if (_routingType != AQS_NOROUTING) {
@@ -283,36 +296,39 @@ std::string AcousticROSCommsDevice::DoToString() {
       std::static_pointer_cast<AcousticCommsChannel>(_txChannel);
   int n;
   if (_txChannel) {
-    n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
-                                    "\tMAC ....................... %d\n"
-                                    "\tDevice type ............... %s\n"
-                                    "\tFrame ID: ................. '%s'\n"
-                                    "\tChannel: .................. '%s'\n"
-                                    "\t  Bandwidth: .............. %.03f Hz\n"
-                                    "\t  Temperature: ............ %.01f ºC\n"
-                                    "\t  Salinity: ............... %.02f ppt\n"
-                                    "\t  Noise Level: ............ %.01f dB\n"
-                                    "\tTx Fifo Size: ............. %d bytes\n"
-                                    "\tMAC protocol: ............. %s\n"
-                                    "\tMax. Range: ............... %.02f m\n"
-                                    "\tPT: ....................... %.03f W\n"
-                                    "\tFreq: ..................... %.03f KHz\n"
-                                    "\tL: ........................ %.03f\n"
-                                    "\tK: ........................ %.03f\n"
-                                    "\tTurnOnEnergy: ............. %.03f J\n"
-                                    "\tTurnOffEnergy: ............ %.03f J\n"
-                                    "\tPreamble: ................. %.03f\n"
-                                    "\tPTConsume: ................ %.03f W\n"
-                                    "\tPRConsume: ................ %.03f W\n"
-                                    "\tPIdle: .................... %.03f W\n",
-                 _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
-                 _tfFrameId.c_str(), txChannelLinked.c_str(),
-                 acousticChannel->GetBandwidth(),
-                 acousticChannel->GetTemperature(),
-                 acousticChannel->GetSalinity(),
-                 acousticChannel->GetNoiseLevel(), GetMaxTxFifoSize(),
-                 _macP.c_str(), _range, _pT, _freq, _L, _K, _turnOnEnergy,
-                 _turnOffEnergy, _preamble, _pTConsume, _pRConsume, _pIdle);
+    n = snprintf(
+        buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
+                           "\tMAC ....................... %d\n"
+                           "\tDevice type ............... %s\n"
+                           "\tFrame ID: ................. '%s'\n"
+                           "\tChannel: .................. '%s'\n"
+                           "\t  Bandwidth: .............. %.03f Hz\n"
+                           "\t  Temperature: ............ %.01f ºC\n"
+                           "\t  Salinity: ............... %.02f ppt\n"
+                           "\t  Noise Level: ............ %.01f dB\n"
+                           "\tTx Fifo Size: ............. %d bytes\n"
+                           "\tMAC protocol: ............. %s\n"
+                           "\tMax. Range: ............... %.02f m\n"
+                           "\tPT: ....................... %.03f W\n"
+                           "\tFreq: ..................... %.03f KHz\n"
+                           "\tL: ........................ %.03f\n"
+                           "\tK: ........................ %.03f\n"
+                           "\tTurnOnEnergy: ............. %.03f J\n"
+                           "\tTurnOffEnergy: ............ %.03f J\n"
+                           "\tPreamble: ................. %.03f\n"
+                           "\tPTConsume: ................ %.03f W\n"
+                           "\tPRConsume: ................ %.03f W\n"
+                           "\tPIdle: .................... %.03f W\n"
+                           "\tSymbols per second: ....... %d symb/s\n"
+                           "\tBit error rate: ........... %.2f\n"
+                           "\tCoding efficiency: ........ %.1f\n",
+        _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
+        _tfFrameId.c_str(), txChannelLinked.c_str(),
+        acousticChannel->GetBandwidth(), acousticChannel->GetTemperature(),
+        acousticChannel->GetSalinity(), acousticChannel->GetNoiseLevel(),
+        GetMaxTxFifoSize(), _macP.c_str(), _range, _pT, _freq, _L, _K,
+        _turnOnEnergy, _turnOffEnergy, _preamble, _pTConsume, _pRConsume,
+        _pIdle, _symbPerSec, _bitErrorRate, _codingEff);
   } else {
     n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
                                     "\tMAC ....................... %d\n"
@@ -330,11 +346,15 @@ std::string AcousticROSCommsDevice::DoToString() {
                                     "\tPreamble: ................. %.03f\n"
                                     "\tPTConsume: ................ %.03f W\n"
                                     "\tPRConsume: ................ %.03f W\n"
-                                    "\tPIdle: .................... %.03f W\n",
+                                    "\tPIdle: .................... %.03f W\n"
+                                    "\tSymbols per second: ....... %d symb/s\n"
+                                    "\tBit error rate: ........... %.2f\n"
+                                    "\tCoding efficiency: ........ %.1f\n",
                  _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
                  _tfFrameId.c_str(), txChannelLinked.c_str(), _macP.c_str(),
                  _range, _pT, _freq, _L, _K, _turnOnEnergy, _turnOffEnergy,
-                 _preamble, _pTConsume, _pRConsume, _pIdle);
+                 _preamble, _pTConsume, _pRConsume, _pIdle, _symbPerSec,
+                 _bitErrorRate, _codingEff);
   }
 
   return std::string(buff);

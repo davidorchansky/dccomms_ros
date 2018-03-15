@@ -31,6 +31,9 @@ public:
   void SetPTConsume(double value);
   void SetPRConsume(double value);
   void SetPIdle(double value);
+  void SetSymbolsPerSecond(uint32_t value);
+  void SetCodingEff(double value);
+  void SetBitErrorRate(uint32_t value);
 
 protected:
   void DoSetMac(uint32_t mac);
@@ -62,6 +65,9 @@ private:
   std::string _macP;
   double _range, _freq, _L, _K, _turnOnEnergy, _turnOffEnergy,
   _preamble, _pTConsume, _pRConsume, _pIdle, _pT;
+
+  double _codingEff, _bitErrorRate;
+  uint32_t _symbPerSec;
 
   void _Recv(std::string context, ns3::Ptr<const ns3::Packet>);
   void _SendTrace(std::string context, ns3::Ptr<const ns3::Packet>);

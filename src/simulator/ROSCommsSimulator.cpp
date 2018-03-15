@@ -179,7 +179,6 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
   DEV_TYPE deviceType = static_cast<DEV_TYPE>(req.type);
   auto mac = req.mac;
   auto frameId = req.frameId;
-  auto bitrate = req.bitrate;
   // auto energyModel = req.energyModel;
 
   Log->info("Add device request received");
@@ -199,7 +198,10 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
-    dev->SetBitRate(bitrate);
+    dev->SetCodingEff(req.codingEff);
+    dev->SetSymbolsPerSecond(req.symbolsPerSecond);
+    dev->SetBitErrorRate(req.bitErrorRate);
+    dev->SetBitRate(req.symbolsPerSecond / req.codingEff);
     dev->SetMaxTxFifoSize(req.maxTxFifoSize);
     dev->SetMACProtocol(req.macProtocol);
     dev->SetRange(req.range);
