@@ -199,6 +199,7 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
     dev->SetCodingEff(req.codingEff);
+    dev->SetInitialEnergy(req.batteryEnergy);
     dev->SetSymbolsPerSecond(req.symbolsPerSecond);
     dev->SetBitErrorRate(req.bitErrorRate);
     dev->SetBitRate(req.symbolsPerSecond / req.codingEff);
@@ -212,9 +213,9 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     dev->SetTurnOnEnergy(req.turnOnEnergy);
     dev->SetTurnOffEnergy(req.turnOffEnergy);
     dev->SetPreamble(req.preamble);
-    dev->SetPTConsume(req.PTConsume);
-    dev->SetPRConsume(req.PRConsume);
-    dev->SetPIdle(req.PIdle);
+    dev->SetTxPower(req.PTConsume);
+    dev->SetRxPower(req.PRConsume);
+    dev->SetIdlePower(req.PIdle);
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;

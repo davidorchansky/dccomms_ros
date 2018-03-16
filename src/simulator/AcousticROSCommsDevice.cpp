@@ -209,9 +209,9 @@ void AcousticROSCommsDevice::SetTurnOffEnergy(double value) {
   _turnOffEnergy = value;
 }
 void AcousticROSCommsDevice::SetPreamble(double value) { _preamble = value; }
-void AcousticROSCommsDevice::SetPTConsume(double value) { _pTConsume = value; }
-void AcousticROSCommsDevice::SetPRConsume(double value) { _pRConsume = value; }
-void AcousticROSCommsDevice::SetPIdle(double value) { _pIdle = value; }
+void AcousticROSCommsDevice::SetTxPower(double value) { _pTConsume = value; }
+void AcousticROSCommsDevice::SetRxPower(double value) { _pRConsume = value; }
+void AcousticROSCommsDevice::SetIdlePower(double value) { _pIdle = value; }
 
 void AcousticROSCommsDevice::SetSymbolsPerSecond(uint32_t value) {
   _symbPerSec = value;
@@ -221,10 +221,16 @@ void AcousticROSCommsDevice::SetBitErrorRate(uint32_t value) {
   _bitErrorRate = value;
 }
 
+void AcousticROSCommsDevice::SetInitialEnergy(double value) {
+  _initialEnergy = value;
+}
+
 void AcousticROSCommsDevice::DoStart() {
 
-  _asHelper.SetMac(_macP);
+  if (_macP != "")
+    _asHelper.SetMac(_macP);
   _asHelper.SetChannel(_channel);
+
   if (_routingType == AQS_NOROUTING)
     _asHelper.CreateWithoutRouting(_node, _device);
   else
@@ -242,9 +248,11 @@ void AcousticROSCommsDevice::DoStart() {
   phy->SetAttribute("TurnOnEnergy", ns3::DoubleValue(_turnOnEnergy));
   phy->SetAttribute("TurnOffEnergy", ns3::DoubleValue(_turnOffEnergy));
   phy->SetAttribute("Preamble", ns3::DoubleValue(_preamble));
-  phy->SetAttribute("PRConsume", ns3::DoubleValue(_pRConsume));
-  phy->SetAttribute("PTConsume", ns3::DoubleValue(_pTConsume));
-  phy->SetAttribute("PIdle", ns3::DoubleValue(_pIdle));
+  auto em = phy->EM();
+  em->SetAttribute("InitialEnergy", ns3::DoubleValue(_initialEnergy));
+  em->SetAttribute("RxPower", ns3::DoubleValue(_pRConsume));
+  em->SetAttribute("TxPower", ns3::DoubleValue(_pTConsume));
+  em->SetAttribute("IdlePower", ns3::DoubleValue(_pIdle));
   ns3::Ptr<AquaSimModulation> modulation = phy->Modulation(NULL);
   modulation->SetAttribute("CodingEff", ns3::DoubleValue(_codingEff));
   modulation->SetAttribute("SPS", ns3::UintegerValue(_symbPerSec));
@@ -261,102 +269,85 @@ void AcousticROSCommsDevice::DoStart() {
             "/DeviceList/0/Routing/PacketTransmitting",
         MakeCallback(&AcousticROSCommsDevice::_SendTrace, this));
   } else {
-    ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
-                             "/DeviceList/0/Mac/RoutingRx",
-                         MakeCallback(&AcousticROSCommsDevice::_Recv, this));
-    ns3::Config::Connect(
-        "/NodeList/" + std::to_string(_nodeListIndex) +
-            "/DeviceList/0/Mac/RoutingTx",
-        MakeCallback(&AcousticROSCommsDevice::_SendTrace, this));
+    if (_macP != "") {
+      ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
+                               "/DeviceList/0/Mac/RoutingRx",
+                           MakeCallback(&AcousticROSCommsDevice::_Recv, this));
+      ns3::Config::Connect(
+          "/NodeList/" + std::to_string(_nodeListIndex) +
+              "/DeviceList/0/Mac/RoutingTx",
+          MakeCallback(&AcousticROSCommsDevice::_SendTrace, this));
+    } else {
+      _device->MacEnabled(false);
+      ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
+                               "/DeviceList/0/Phy/MacRx",
+                           MakeCallback(&AcousticROSCommsDevice::_Recv, this));
+      ns3::Config::Connect(
+          "/NodeList/" + std::to_string(_nodeListIndex) +
+              "/DeviceList/0/Phy/MacTx",
+          MakeCallback(&AcousticROSCommsDevice::_SendTrace, this));
+    }
   }
-  //  ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
-  //                           "/DeviceList/0/Phy/RxError",
-  //                       MakeCallback(&AcousticROSCommsDevice::_RxError,
-  //                       this));
-  //  Config::Connect(
-  //      "/NodeList/" + std::to_string(_nodeListIndex) +
-  //          "/$ns3::MobilityModel/CourseChange",
-  //      MakeCallback(&AcousticROSCommsDevice::_PositionUpdated, this));
   _started = true;
 }
 
 bool AcousticROSCommsDevice::DoStarted() { return _started; }
 
 std::string AcousticROSCommsDevice::DoToString() {
-  int maxBuffSize = 1024;
-  char buff[maxBuffSize];
-  string txChannelLinked;
-  if (_txChannel)
-    txChannelLinked = "Type: " + ChannelType2String(_txChannel->GetType()) +
-                      " ; Id: " + to_string(_txChannel->GetId());
-  else
-    txChannelLinked = "not linked";
 
   dccomms::Ptr<AcousticCommsChannel> acousticChannel =
       std::static_pointer_cast<AcousticCommsChannel>(_txChannel);
+
+  int maxBuffSize = 2024;
+  char buff[maxBuffSize];
+  char *txChannelLinked = buff;
   int n;
   if (_txChannel) {
-    n = snprintf(
-        buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
-                           "\tMAC ....................... %d\n"
-                           "\tDevice type ............... %s\n"
-                           "\tFrame ID: ................. '%s'\n"
-                           "\tChannel: .................. '%s'\n"
-                           "\t  Bandwidth: .............. %.03f Hz\n"
-                           "\t  Temperature: ............ %.01f ºC\n"
-                           "\t  Salinity: ............... %.02f ppt\n"
-                           "\t  Noise Level: ............ %.01f dB\n"
-                           "\tTx Fifo Size: ............. %d bytes\n"
-                           "\tMAC protocol: ............. %s\n"
-                           "\tMax. Range: ............... %.02f m\n"
-                           "\tPT: ....................... %.03f W\n"
-                           "\tFreq: ..................... %.03f KHz\n"
-                           "\tL: ........................ %.03f\n"
-                           "\tK: ........................ %.03f\n"
-                           "\tTurnOnEnergy: ............. %.03f J\n"
-                           "\tTurnOffEnergy: ............ %.03f J\n"
-                           "\tPreamble: ................. %.03f\n"
-                           "\tPTConsume: ................ %.03f W\n"
-                           "\tPRConsume: ................ %.03f W\n"
-                           "\tPIdle: .................... %.03f W\n"
-                           "\tSymbols per second: ....... %d symb/s\n"
-                           "\tBit error rate: ........... %.2f\n"
-                           "\tCoding efficiency: ........ %.1f\n",
-        _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
-        _tfFrameId.c_str(), txChannelLinked.c_str(),
-        acousticChannel->GetBandwidth(), acousticChannel->GetTemperature(),
-        acousticChannel->GetSalinity(), acousticChannel->GetNoiseLevel(),
-        GetMaxTxFifoSize(), _macP.c_str(), _range, _pT, _freq, _L, _K,
-        _turnOnEnergy, _turnOffEnergy, _preamble, _pTConsume, _pRConsume,
-        _pIdle, _symbPerSec, _bitErrorRate, _codingEff);
+    n = snprintf(txChannelLinked, maxBuffSize,
+                 "Id: %d:\n"
+                 "\t  Bandwidth: .............. %.01f Hz\n"
+                 "\t  Temperature: ............ %.01f ºC\n"
+                 "\t  Salinity: ............... %.02f ppt\n"
+                 "\t  Noise Level: ............ %.01f dB",
+                 acousticChannel->GetId(), acousticChannel->GetBandwidth(),
+                 acousticChannel->GetTemperature(),
+                 acousticChannel->GetSalinity(),
+                 acousticChannel->GetNoiseLevel());
+
   } else {
-    n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
-                                    "\tMAC ....................... %d\n"
-                                    "\tDevice type ............... %s\n"
-                                    "\tFrame ID: ................. '%s'\n"
-                                    "\tChannel: .................. '%s'\n"
-                                    "\tMAC protocol: ............. %s\n"
-                                    "\tMax. Range: ............... %.02f m\n"
-                                    "\tPT: ....................... %.03f W\n"
-                                    "\tFreq: ..................... %.03f KHz\n"
-                                    "\tL: ........................ %.03f\n"
-                                    "\tK: ........................ %.03f\n"
-                                    "\tTurnOnEnergy: ............. %.03f J\n"
-                                    "\tTurnOffEnergy: ............ %.03f J\n"
-                                    "\tPreamble: ................. %.03f\n"
-                                    "\tPTConsume: ................ %.03f W\n"
-                                    "\tPRConsume: ................ %.03f W\n"
-                                    "\tPIdle: .................... %.03f W\n"
-                                    "\tSymbols per second: ....... %d symb/s\n"
-                                    "\tBit error rate: ........... %.2f\n"
-                                    "\tCoding efficiency: ........ %.1f\n",
-                 _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
-                 _tfFrameId.c_str(), txChannelLinked.c_str(), _macP.c_str(),
-                 _range, _pT, _freq, _L, _K, _turnOnEnergy, _turnOffEnergy,
-                 _preamble, _pTConsume, _pRConsume, _pIdle, _symbPerSec,
-                 _bitErrorRate, _codingEff);
+    n = snprintf(txChannelLinked, maxBuffSize, "not linked");
   }
 
-  return std::string(buff);
+  char *ptr = txChannelLinked + n + 1;
+  n = snprintf(ptr, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
+                                 "\tMAC ....................... %d\n"
+                                 "\tDevice type ............... %s\n"
+                                 "\tFrame ID: ................. '%s'\n"
+                                 "\tChannel: .................. %s\n"
+                                 "\tTx Fifo Size: ............. %d bytes\n"
+                                 "\tMAC protocol: ............. %s\n"
+                                 "\tMax. Range: ............... %.02f m\n"
+                                 "\tPT: ....................... %.02f W\n"
+                                 "\tFreq: ..................... %.02f KHz\n"
+                                 "\tL: ........................ %.02f\n"
+                                 "\tK: ........................ %.03f\n"
+                                 "\tInitial energy: ........... %.02f J\n"
+                                 "\tTurnOnEnergy: ............. %.02f J\n"
+                                 "\tTurnOffEnergy: ............ %.02f J\n"
+                                 "\tPreamble: ................. %.02f\n"
+                                 "\tPTConsume: ................ %.02f W\n"
+                                 "\tPRConsume: ................ %.02f W\n"
+                                 "\tPIdle: .................... %.02f W\n"
+                                 "\tSymbols per second: ....... %d symb/s\n"
+                                 "\tBit error rate: ........... %.2f\n"
+                                 "\tCoding efficiency: ........ %.1f\n",
+               _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
+               _tfFrameId.c_str(), txChannelLinked, GetMaxTxFifoSize(),
+               _macP.c_str(), _range, _pT, _freq, _L, _K, _initialEnergy,
+               _turnOnEnergy, _turnOffEnergy, _preamble, _pTConsume, _pRConsume,
+               _pIdle, _symbPerSec, _bitErrorRate, _codingEff);
+
+  std::string repr = (const char *)ptr;
+  return repr;
 }
 }

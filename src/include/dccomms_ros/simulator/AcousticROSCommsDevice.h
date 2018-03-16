@@ -28,12 +28,13 @@ public:
   void SetTurnOnEnergy(double value);
   void SetTurnOffEnergy(double value);
   void SetPreamble(double value);
-  void SetPTConsume(double value);
-  void SetPRConsume(double value);
-  void SetPIdle(double value);
+  void SetTxPower(double value);
+  void SetRxPower(double value);
+  void SetIdlePower(double value);
   void SetSymbolsPerSecond(uint32_t value);
   void SetCodingEff(double value);
   void SetBitErrorRate(uint32_t value);
+  void SetInitialEnergy(double value);
 
 protected:
   void DoSetMac(uint32_t mac);
@@ -64,7 +65,7 @@ private:
 
   std::string _macP;
   double _range, _freq, _L, _K, _turnOnEnergy, _turnOffEnergy,
-  _preamble, _pTConsume, _pRConsume, _pIdle, _pT;
+  _preamble, _pTConsume, _pRConsume, _pIdle, _pT, _initialEnergy;
 
   double _codingEff, _bitErrorRate;
   uint32_t _symbPerSec;

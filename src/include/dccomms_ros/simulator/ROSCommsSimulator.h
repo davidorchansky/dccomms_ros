@@ -54,6 +54,8 @@ static std::string GetMACPType(const string &name) {
     typestr = "ns3::AquaSimBroadcastMac";
   else if (name == "T-MAC" || name == "TMAC")
     typestr = "ns3::AquaSimTMac";
+  else
+    typestr = "";
   return typestr;
 }
 
