@@ -2,8 +2,8 @@
 #define DCCOMMS_ROS_CUSTOMROSCOMMSDEVICE_H_
 
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
+#include <ns3/error-model.h>
 #include <random>
-
 using namespace dccomms;
 using namespace cpplogging;
 
@@ -49,9 +49,10 @@ public:
   void PropagatePacket(ns3PacketPtr pkt);
   void TransmitPacket(ns3PacketPtr pkt);
   inline void SetTransmitting(bool v) { Transmitting(v); }
-  bool ErrOnNextPkt(double errRate);
+  bool ErrOnPkt(double range, ns3PacketPtr pkt);
   uint64_t GetNextTt(); // get next ms/byte
-
+  void SetRateErrorModel(const std::string &expr, const std::string &unit);
+  void GetRateErrorModel(std::string &expr, std::string &unit);
   //  inline DEV_STATUS GetStatus() { return _status; }
   //  inline void SetStatus(DEV_STATUS status);
 
@@ -106,6 +107,10 @@ private:
   CommsChannelPtr _txChannel, _rxChannel;
   // DEV_STATUS _status;
   bool _transmitting, _receiving;
+  ns3::Ptr<ns3::RateErrorModel> _rem;
+
+  double _GetErrorRate(double meters);
+  std::string _eexpr;
 };
 }
 #endif // COMMSNODE_H

@@ -27,8 +27,8 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
                                     ns3PacketPtr pkt) {
   Debug("CustomCommsChannel: SendPacket");
   auto txpos = dev->GetPosition();
-  auto minErrRate = dev->GetMinPktErrorRate();
-  auto errRateInc = dev->GetPktErrorRateInc();
+  //auto minErrRate = dev->GetMinPktErrorRate();
+  //auto errRateInc = dev->GetPktErrorRateInc();
 
   for (CustomROSCommsDevicePtr dst : _devices) {
     if (dst != dev) {
@@ -40,8 +40,8 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
       if (dm <= maxdm && dm >= mindm) { // dst is in range
         auto delay = _minPrTime + _prTimeIncPerMeter * distance;
         auto totalTime = static_cast<uint64_t>(round(delay));
-        auto errRate = minErrRate + errRateInc * distance;
-        auto propagationError = dev->ErrOnNextPkt(errRate);
+        //auto errRate = minErrRate + errRateInc * distance;
+        auto propagationError = dev->ErrOnPkt(distance, pkt);
         //        if (error) {
         //          auto pBuffer = pkt->GetPayloadBuffer();
         //          *pBuffer = ~*pBuffer;

@@ -66,9 +66,52 @@ uint64_t CustomROSCommsDevice::GetNextTt() {
   return tt;
 }
 
-bool CustomROSCommsDevice::ErrOnNextPkt(double errRate) {
-  auto rand = _erDist(_erGenerator);
-  return rand < errRate;
+double CustomROSCommsDevice::_GetErrorRate(double meters) {
+  return meters * 0.001; // TODO: use user math expression
+}
+void CustomROSCommsDevice::GetRateErrorModel(std::string &expr,
+                                             std::string &unit) {
+  RateErrorModel::ErrorUnit eunit = _rem->GetUnit();
+  switch (eunit) {
+  case RateErrorModel::ERROR_UNIT_BIT:
+    unit = "ERROR_UNIT_BIT";
+    break;
+  case RateErrorModel::ERROR_UNIT_BYTE:
+    unit = "ERROR_UNIT_BYTE";
+    break;
+  default:
+    unit = "ERROR_UNIT_PACKET";
+  }
+  expr = _eexpr;
+}
+
+void CustomROSCommsDevice::SetRateErrorModel(const std::string &expr,
+                                             const std::string &unit) {
+  ns3::Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+  // Set this variable to a specific stream
+  uv->SetStream(50);
+
+  _rem = CreateObject<RateErrorModel>();
+  _rem->SetRandomVariable(uv);
+  if (unit == "bit")
+    _rem->SetUnit(RateErrorModel::ERROR_UNIT_BIT);
+  else if (unit == "byte")
+    _rem->SetUnit(RateErrorModel::ERROR_UNIT_BYTE);
+  else
+    _rem->SetUnit(RateErrorModel::ERROR_UNIT_PACKET);
+
+  _rem->Enable();
+  if (expr == "")
+    _eexpr = "0.01*m";
+  else
+    _eexpr = expr;
+  // TODO: compute user math expression
+}
+
+bool CustomROSCommsDevice::ErrOnPkt(double range, ns3PacketPtr pkt) {
+  double rate = _GetErrorRate(range);
+  _rem->SetRate(rate);
+  return _rem->IsCorrupt(pkt);
 }
 
 void CustomROSCommsDevice::SetMaxDistance(uint32_t d) { _maxDistance = d; }
@@ -261,7 +304,7 @@ void CustomROSCommsDevice::DoSetPosition(const tf::Vector3 &position) {
 }
 
 std::string CustomROSCommsDevice::DoToString() {
-  int maxBuffSize = 1024;
+  int maxBuffSize = 2048;
   char buff[maxBuffSize];
   string txChannelLinked;
   if (_txChannel)
@@ -277,17 +320,28 @@ std::string CustomROSCommsDevice::DoToString() {
   else
     rxChannelLinked = "not linked";
 
+  double bitrateD, bitrateSd;
+  GetBitRate(bitrateD, bitrateSd);
+  uint32_t bitrate = (uint32_t)bitrateD;
+  std::string expr, eunit;
+  GetRateErrorModel(expr, eunit);
+
   int n;
   n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
                                   "\tMAC ....................... %d\n"
                                   "\tDevice type ............... %s\n"
                                   "\tFrame ID: ................. '%s'\n"
-                                  "\tTX channel: .................. '%s'\n"
-                                  "\tRX channel: .................. '%s'\n"
-                                  "\tTx Fifo Size: ............. %d bytes",
+                                  "\tTX channel: ............... '%s'\n"
+                                  "\tRX channel: ............... '%s'\n"
+                                  "\tBitrate: .................. %d bps\n"
+                                  "\tBitrate SD: ............... %.3f\n"
+                                  "\tTx Fifo Size: ............. %d bytes\n"
+                                  "\tError Expression: ......... %s\n"
+                                  "\tError Unit: ............... %s",
                _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
                _tfFrameId.c_str(), txChannelLinked.c_str(),
-               rxChannelLinked.c_str(), GetMaxTxFifoSize());
+               rxChannelLinked.c_str(), bitrate, bitrateSd, GetMaxTxFifoSize(),
+               expr.c_str(), eunit.c_str());
 
   return std::string(buff);
 }

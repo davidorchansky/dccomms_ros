@@ -291,7 +291,7 @@ std::string AcousticROSCommsDevice::DoToString() {
   dccomms::Ptr<AcousticCommsChannel> acousticChannel =
       std::static_pointer_cast<AcousticCommsChannel>(_txChannel);
 
-  int maxBuffSize = 2024;
+  int maxBuffSize = 2048;
   char buff[maxBuffSize];
   char *txChannelLinked = buff;
   int n;
