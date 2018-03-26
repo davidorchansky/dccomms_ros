@@ -6,7 +6,10 @@ using namespace ns3;
 
 namespace dccomms_ros {
 
-CustomCommsChannel::CustomCommsChannel(uint32_t id) { _rosChannelId = id; }
+CustomCommsChannel::CustomCommsChannel(uint32_t id) {
+  _rosChannelId = id;
+  SetLogLevel(debug);
+}
 
 void CustomCommsChannel::SetMinPrTime(double prTime) {
   _minPrTime = prTime * 1000000;
@@ -21,13 +24,14 @@ void CustomCommsChannel::AddDevice(CustomROSCommsDevicePtr dev) {
 }
 
 void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
-                                    dccomms::PacketPtr pkt) {
+                                    ns3PacketPtr pkt) {
+  Debug("CustomCommsChannel: SendPacket");
   auto txpos = dev->GetPosition();
   auto minErrRate = dev->GetMinPktErrorRate();
   auto errRateInc = dev->GetPktErrorRateInc();
 
   for (CustomROSCommsDevicePtr dst : _devices) {
-    if (dst->GetMac() != dev->GetMac()) {
+    if (dst != dev) {
       auto rxpos = dst->GetPosition();
       auto distance = txpos.distance(rxpos); // distance = meters
       auto dm = distance * 10;               // dm = decimeters
@@ -38,10 +42,11 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
         auto totalTime = static_cast<uint64_t>(round(delay));
         auto errRate = minErrRate + errRateInc * distance;
         auto propagationError = dev->ErrOnNextPkt(errRate);
-//        if (error) {
-//          auto pBuffer = pkt->GetPayloadBuffer();
-//          *pBuffer = ~*pBuffer;
-//        }
+        //        if (error) {
+        //          auto pBuffer = pkt->GetPayloadBuffer();
+        //          *pBuffer = ~*pBuffer;
+        //        }
+        Debug("CustomCommsChannel: distance({} m) ; totalTime({} secs)", distance, totalTime/1e9);
         ns3::Simulator::ScheduleWithContext(
             dev->GetMac(), NanoSeconds(totalTime),
             &CustomROSCommsDevice::AddNewPacket, dst, pkt, propagationError);

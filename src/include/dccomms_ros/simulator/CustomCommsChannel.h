@@ -16,7 +16,7 @@ public:
   void SetMinPrTime(double prTime);
   void SetPrTimeInc(double inc);
   void AddDevice(CustomROSCommsDevicePtr dev);
-  void SendPacket(CustomROSCommsDevicePtr dev, dccomms::PacketPtr pkt);
+  void SendPacket(CustomROSCommsDevicePtr dev, ns3PacketPtr pkt);
   uint32_t GetId() { return _rosChannelId; }
   CHANNEL_TYPE GetType() { return CUSTOM_CHANNEL; }
 

@@ -3,13 +3,16 @@
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
 #include <dccomms_ros_msgs/types.h>
 
+using namespace ns3;
+
+NS_LOG_COMPONENT_DEFINE("ROSCommsDevice"); //NS3 DOES NOT WORK (TODO: FIX IT)
 namespace dccomms_ros {
 
 NS_OBJECT_ENSURE_REGISTERED(ROSCommsDevice);
 
 ns3::TypeId ROSCommsDevice::GetTypeId(void) {
   static ns3::TypeId tid =
-      ns3::TypeId("dccomms_ros::ROSCommsDevice")
+      ns3::TypeId("ns3::ROSCommsDevice")
           .SetParent<Object>()
           .AddTraceSource(
               "PacketReceived", "Trace source indicating a packet has been "
@@ -36,6 +39,8 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
   _commonStarted = false;
   _position = tf::Vector3(0, 0, 0);
+  LogComponentEnable("ROSCommsDevice", LOG_LEVEL_ALL); //NS3 DOES NOT WORK (TODO: FIX IT)
+  SetLogLevel(debug);
 }
 
 ROSCommsDevice::~ROSCommsDevice() {}
@@ -67,11 +72,17 @@ bool ROSCommsDevice::Started() { return _commonStarted && DoStarted(); }
 
 void ROSCommsDevice::_StartNodeWorker() { _txserv.Start(); }
 
-void ROSCommsDevice::ReceiveFrame(PacketPtr dlf) {
-  _sim->ReceivePDUCb(this, dlf);
+void ROSCommsDevice::ReceiveFrame(ns3PacketPtr packet) {
+  Debug("ROSCommsDevice: Frame received");
+  char ser[5000];
+  _rxCbTrace(_ownPtr, packet);
+  NetsimHeader header;
+  packet->RemoveHeader(header);
+  auto size = packet->GetSize();
+  packet->CopyData((uint8_t *)ser, size);
+  auto dccommsPacket = _rxpb->CreateFromBuffer(ser);
   _receiveFrameMutex.lock();
-  _rxCbTrace(_ownPtr, dlf);
-  _device << dlf;
+  _device << dccommsPacket;
   _receiveFrameMutex.unlock();
 }
 
@@ -129,6 +140,7 @@ CommsChannelPtr ROSCommsDevice::GetLinkedTxChannel() { return _txChannel; }
 uint32_t ROSCommsDevice::GetMac() { return _mac; }
 
 void ROSCommsDevice::_TxWork() {
+  NS_LOG_FUNCTION(this);
   _device->WaitForFramesFromRxFifo();
   _device->SetPhyLayerState(CommsDeviceService::BUSY);
   unsigned int txFifoSize;
@@ -142,9 +154,14 @@ void ROSCommsDevice::_TxWork() {
     PacketPtr txdlf = _txpb->CreateFromBuffer(_txdlf->GetBuffer());
     if (txdlf->PacketIsOk()) {
       // PACKET OK
-      _sim->TransmitPDUCb(this, txdlf);
-      _txCbTrace(_ownPtr, txdlf);
-      DoSend(txdlf);
+      auto header = NetsimHeader::Build(txdlf);
+      auto pkt =
+          ns3::Create<ns3::Packet>(txdlf->GetBuffer(), txdlf->GetPacketSize());
+      pkt->AddHeader(header);
+      _txCbTrace(_ownPtr, pkt);
+      NS_LOG_DEBUG("Send packet");
+      Debug("ROSCommsDevice: Send frame");
+      DoSend(pkt);
       uint32_t packetSize = static_cast<uint32_t>(txdlf->GetPacketSize());
       uint64_t transmissionTime = packetSize * _nanosPerByte;
       std::this_thread::sleep_for(std::chrono::nanoseconds(transmissionTime));
@@ -163,7 +180,7 @@ void ROSCommsDevice::SetLogName(std::string name) {
 
 void ROSCommsDevice::SetLogLevel(cpplogging::LogLevel _level) {
   Loggable::SetLogLevel(_level);
-  _device->SetLogLevel(_level);
+ // _device->SetLogLevel(_level);
 }
 
 void ROSCommsDevice::LogToConsole(bool c) {

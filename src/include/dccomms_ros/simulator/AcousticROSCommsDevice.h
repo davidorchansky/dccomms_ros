@@ -38,7 +38,7 @@ public:
 
 protected:
   void DoSetMac(uint32_t mac);
-  void DoSend(PacketPtr dlf);
+  void DoSend(ns3PacketPtr dlf);
   void DoLinkToChannel(CommsChannelPtr channel, CHANNEL_LINK_TYPE linkTyp);
   void DoStart();
   void DoSetPosition(const tf::Vector3 &position);

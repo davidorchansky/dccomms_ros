@@ -7,7 +7,9 @@
 #include <dccomms_ros/simulator/CommsChannel.h>
 #include <ns3/config-store-module.h>
 #include <ns3/core-module.h>
+#include <ns3/packet.h>
 #include <tf/transform_listener.h>
+#include <dccomms_ros/simulator/NetsimPacket.h>
 
 using namespace dccomms;
 using namespace cpplogging;
@@ -18,20 +20,23 @@ class ROSCommsDevice;
 typedef ns3::Ptr<ROSCommsDevice> ROSCommsDevicePtr;
 
 class ROSCommsSimulator;
-//typedef dccomms::Ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
-typedef ROSCommsSimulator* ROSCommsSimulatorPtr;
+// typedef dccomms::Ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
+typedef ROSCommsSimulator *ROSCommsSimulatorPtr;
 
-//why inheritance for std::enable_shared_from_this??:
+typedef ns3::Ptr<ns3::Packet> ns3PacketPtr;
+// why inheritance for std::enable_shared_from_this??:
 //  https://stackoverflow.com/questions/11711034/stdshared-ptr-of-this
 //  https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
-class ROSCommsDevice : public virtual Logger, public ns3::Object, public std::enable_shared_from_this<ROSCommsDevice> {
+class ROSCommsDevice : public virtual Logger,
+                       public ns3::Object,
+                       public std::enable_shared_from_this<ROSCommsDevice> {
 public:
   ROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr txpb,
                  PacketBuilderPtr rxpb);
   ~ROSCommsDevice();
 
   CommsDeviceServicePtr GetService();
-  void ReceiveFrame(PacketPtr);
+  void ReceiveFrame(ns3PacketPtr);
   std::string GetDccommsId();
   void SetDccommsId(const std::string name);
 
@@ -75,13 +80,15 @@ public:
    */
   static ns3::TypeId GetTypeId(void);
 
-  typedef void (*PacketReceivedCallback)(std::string path, ROSCommsDevicePtr, PacketPtr);
-  typedef void (*PacketTransmittingCallback)(std::string path, ROSCommsDevicePtr, PacketPtr);
+  typedef void (*PacketReceivedCallback)(std::string path, ROSCommsDevicePtr,
+                                         ns3PacketPtr);
+  typedef void (*PacketTransmittingCallback)(std::string path,
+                                             ROSCommsDevicePtr, ns3PacketPtr);
 
 protected:
   virtual std::string DoToString() = 0;
   virtual void DoSetMac(uint32_t mac) = 0;
-  virtual void DoSend(PacketPtr dlf) = 0;
+  virtual void DoSend(ns3PacketPtr dlf) = 0;
   virtual void DoLinkToChannel(CommsChannelPtr channel,
                                CHANNEL_LINK_TYPE linkType = CHANNEL_TXRX) = 0;
   virtual void DoStart() = 0;
@@ -91,8 +98,8 @@ protected:
   ROSCommsSimulatorPtr _sim;
   PacketBuilderPtr _txpb, _rxpb;
 
-  ns3::TracedCallback<ROSCommsDevicePtr, PacketPtr> _rxCbTrace;
-  ns3::TracedCallback<ROSCommsDevicePtr, PacketPtr> _txCbTrace;
+  ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _rxCbTrace;
+  ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _txCbTrace;
 
 private:
   void _StartDeviceService();

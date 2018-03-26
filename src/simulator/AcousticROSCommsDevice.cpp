@@ -59,46 +59,33 @@ void AcousticROSCommsDevice::_Recv(std::string context,
   _sim->GetSimTime(datetime, secs);
 
   auto packet = pkt->Copy();
+  ns3::AquaSimHeader ash;
+
+  packet->RemoveHeader(ash);
+  auto saddr = ash.GetSAddr().GetAsInt();
+  auto daddr = ash.GetDAddr().GetAsInt();
+  auto psize = packet->GetSize();
+
   switch (_routingType) {
   case AQS_NOROUTING: {
-    ns3::AquaSimHeader ash;
-    auto psize = packet->GetSize();
-    packet->RemoveHeader(ash);
-    auto saddr = ash.GetSAddr().GetAsInt();
-    auto daddr = ash.GetDAddr().GetAsInt();
     Debug("Packet received ({} bytes ; {} bytes ; {} bytes) , S:{} ; D:{}",
           psize, packet->GetSize(), ash.GetSize(), saddr, daddr);
-    char ser[5000];
-    auto size = packet->GetSize();
-    packet->CopyData((uint8_t *)ser, size);
-    auto dccommsPacket = _rxpb->CreateFromBuffer(ser);
     Debug(
         "({} secs; {}) {}: (Own Addr: {} Dest. Addr: {}) Received packet from "
         "{} ({} bytes)",
         secs, datetime, context, GetMac(), daddr, saddr, psize);
-    ReceiveFrame(dccommsPacket);
     FlushLog();
     break;
   }
   case AQS_ROUTING_DUMMY: {
-    ns3::AquaSimHeader ash;
-    auto psize = packet->GetSize();
-    packet->RemoveHeader(ash);
-    auto saddr = ash.GetSAddr().GetAsInt();
-    auto daddr = ash.GetDAddr().GetAsInt();
     auto numForwards = ash.GetNumForwards();
     while (ash.GetNumForwards() > 0) {
       packet->RemoveHeader(ash);
     }
-    char ser[5000];
-    auto size = packet->GetSize();
-    packet->CopyData((uint8_t *)ser, size);
-    auto dccommsPacket = _rxpb->CreateFromBuffer(ser);
     Debug(
         "({} secs; {}) {}: (Own Addr: {} Dest. Addr: {}) Received packet from "
         "{} ({} forwards) ({} bytes)",
         secs, datetime, context, GetMac(), daddr, saddr, numForwards, psize);
-    ReceiveFrame(dccommsPacket);
     FlushLog();
     break;
   }
@@ -108,6 +95,14 @@ void AcousticROSCommsDevice::_Recv(std::string context,
     break;
   }
   }
+  NetsimHeader header;
+  header.SetPacketError(ash.GetErrorFlag());
+  header.SetPacketSize(psize);
+  header.SetSrc(saddr);
+  header.SetDst(daddr);
+  header.SetSeqNum(0);
+  packet->AddHeader(header);
+  ReceiveFrame(packet);
 }
 
 void AcousticROSCommsDevice::_RxError(std::string context,
@@ -124,16 +119,14 @@ void AcousticROSCommsDevice::DoSetMac(uint32_t mac) {
   _aquaSimAddr = ns3::AquaSimAddress(static_cast<uint16_t>(mac));
 }
 
-void AcousticROSCommsDevice::DoSend(dccomms::PacketPtr pkt) {
+void AcousticROSCommsDevice::DoSend(ns3PacketPtr ns3pkt) {
   while (!_started) {
     this_thread::sleep_for(chrono::milliseconds(500));
   }
-  auto packetSize = pkt->GetPacketSize();
-  auto packetBuffer = pkt->GetBuffer();
-  ns3::Ptr<ns3::Packet> ns3pkt =
-      ns3::Create<ns3::Packet>(packetBuffer, packetSize);
 
-  uint16_t daddr = pkt->GetDestAddr();
+  NetsimHeader header;
+  ns3pkt->RemoveHeader(header);
+  uint16_t daddr = header.GetDst();
   switch (_routingType) {
   case AQS_NOROUTING: {
     ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),

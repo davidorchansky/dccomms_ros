@@ -79,12 +79,12 @@ int main(int argc, char **argv) {
   sim->LinkDevToChannel(ldc2);
 
   ROSCommsDevice::PacketTransmittingCallback txcb =
-      [](std::string path, ROSCommsDevicePtr, PacketPtr) {
+      [](std::string path, ROSCommsDevicePtr, ns3PacketPtr) {
         Log->info("{}: Transmitting packet", path);
       };
 
   ROSCommsDevice::PacketReceivedCallback rxcb =
-      [](std::string path, ROSCommsDevicePtr, PacketPtr) {
+      [](std::string path, ROSCommsDevicePtr, ns3PacketPtr) {
         Log->info("{}: Packet received", path);
       };
 

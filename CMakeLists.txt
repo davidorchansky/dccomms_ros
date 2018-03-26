@@ -131,6 +131,7 @@ SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/AcousticCommsChannel.cpp
         src/simulator/CustomCommsChannel.cpp
         src/simulator/PacketBuilderLoader.cpp
+        src/simulator/NetsimPacket.cpp
 )
 #https://stackoverflow.com/questions/15972898/cmake-how-to-run-a-add-custom-command-before-everything-else
 #./waf configure --build-profile=debug --enable-examples --enable-tests --enable-sudo

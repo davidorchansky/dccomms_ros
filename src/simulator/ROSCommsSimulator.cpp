@@ -23,10 +23,11 @@ using namespace dccomms_ros_msgs;
 namespace dccomms_ros {
 
 NS_OBJECT_ENSURE_REGISTERED(ROSCommsSimulator);
+NS_LOG_COMPONENT_DEFINE("ROSCommsSimulator");
 
 TypeId ROSCommsSimulator::GetTypeId(void) {
   static TypeId tid =
-      TypeId("dccomms_ros::ROSCommsSimulator")
+      TypeId("ROSCommsSimulator")
           .SetParent<Object>()
           .AddAttribute("ROSDeviceList",
                         "The list of devices associated to the simulator.",

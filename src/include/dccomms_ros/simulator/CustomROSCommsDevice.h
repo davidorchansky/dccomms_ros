@@ -9,7 +9,7 @@ using namespace cpplogging;
 
 namespace dccomms_ros {
 
-//enum DEV_STATUS { RECV, SEND, IDLE };
+// enum DEV_STATUS { RECV, SEND, IDLE };
 class CustomROSCommsDevice;
 typedef ns3::Ptr<CustomROSCommsDevice> CustomROSCommsDevicePtr;
 
@@ -19,7 +19,7 @@ class IncommingPacket {
 public:
   bool propagationError;
   bool collisionError;
-  PacketPtr packet;
+  ns3PacketPtr packet;
   IncommingPacket() {
     propagationError = false;
     collisionError = false;
@@ -46,13 +46,14 @@ public:
   uint32_t GetMinDistance();
 
   void PropagateNextPacket();
-  void PropagatePacket(PacketPtr pkt);
-  void TransmitPacket(PacketPtr pkt);
+  void PropagatePacket(ns3PacketPtr pkt);
+  void TransmitPacket(ns3PacketPtr pkt);
+  inline void SetTransmitting(bool v) { Transmitting(v); }
   bool ErrOnNextPkt(double errRate);
   uint64_t GetNextTt(); // get next ms/byte
 
-//  inline DEV_STATUS GetStatus() { return _status; }
-//  inline void SetStatus(DEV_STATUS status);
+  //  inline DEV_STATUS GetStatus() { return _status; }
+  //  inline void SetStatus(DEV_STATUS status);
 
   virtual DEV_TYPE GetDevType();
 
@@ -60,11 +61,11 @@ public:
   typedef std::default_random_engine RandEngGen;
   typedef std::uniform_real_distribution<double> UniformRealDist;
 
-  inline void EnqueueTxPacket(PacketPtr pkt);
+  inline void EnqueueTxPacket(ns3PacketPtr pkt);
   inline bool TxFifoEmpty();
-  PacketPtr PopTxPacket();
+  ns3PacketPtr PopTxPacket();
 
-  void AddNewPacket(PacketPtr pkt, bool propagationError);
+  void AddNewPacket(ns3PacketPtr pkt, bool propagationError);
   void HandleNextIncommingPacket();
 
   void MarkIncommingPacketsAsCollisioned();
@@ -72,11 +73,15 @@ public:
   void Transmitting(bool);
 
   bool Receiving();
-  void Receiving(bool );
+  void Receiving(bool);
+
+  static ns3::TypeId GetTypeId(void);
+
 protected:
   virtual void DoSetMac(uint32_t mac);
-  virtual void DoSend(PacketPtr dlf);
-  virtual void DoLinkToChannel(CommsChannelPtr channel, CHANNEL_LINK_TYPE linkType);
+  virtual void DoSend(ns3PacketPtr dlf);
+  virtual void DoLinkToChannel(CommsChannelPtr channel,
+                               CHANNEL_LINK_TYPE linkType);
   virtual void DoStart();
   virtual void DoSetPosition(const tf::Vector3 &position);
   virtual bool DoStarted();
@@ -95,11 +100,11 @@ private:
   UniformRealDist _erDist;
   RandEngGen _ttGenerator, _erGenerator;
 
-  std::queue<PacketPtr> _txFifo;
+  std::queue<ns3PacketPtr> _txFifo;
   std::list<IncommingPacketPtr> _incommingPackets;
 
   CommsChannelPtr _txChannel, _rxChannel;
-  //DEV_STATUS _status;
+  // DEV_STATUS _status;
   bool _transmitting, _receiving;
 };
 }
