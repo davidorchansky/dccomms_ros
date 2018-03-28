@@ -198,23 +198,26 @@ private:
   std::vector<ns3::Ptr<AcousticROSCommsDevice>> _acousticDevices;
 
   template <typename T>
-  void _InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices, ns3::Ptr<T> dev) {
-
-    if (devices.size() > 0) {
-      uint32_t i = 0;
-      for (i = 0; i < devices.size(); i++) {
-        auto cdev = devices[i];
-        if (cdev->GetMac() > dev->GetMac()) {
-          devices.push_back(cdev);
-          devices[i] = dev;
-          break;
-        }
-      }
-      if (i >= devices.size())
-        devices.push_back(dev);
-    } else
-      devices.push_back(dev);
-  }
+  void _InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices, ns3::Ptr<T> dev);
 };
+
+template <typename T>
+void ROSCommsSimulator::_InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices, ns3::Ptr<T> dev) {
+
+  if (devices.size() > 0) {
+    uint32_t i = 0;
+    for (i = 0; i < devices.size(); i++) {
+      auto cdev = devices[i];
+      if (cdev->GetMac() > dev->GetMac()) {
+        devices.push_back(cdev);
+        devices[i] = dev;
+        break;
+      }
+    }
+    if (i >= devices.size())
+      devices.push_back(dev);
+  } else
+    devices.push_back(dev);
+}
 }
 #endif // WHROVSIMULATOR_H
