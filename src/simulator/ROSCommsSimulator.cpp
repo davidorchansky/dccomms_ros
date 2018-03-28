@@ -217,6 +217,8 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     dev->SetTxPower(req.PTConsume);
     dev->SetRxPower(req.PRConsume);
     dev->SetIdlePower(req.PIdle);
+    auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
+    dev->SetLogLevel(errorLevel);
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;
@@ -299,6 +301,9 @@ bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
     acousticChannel->SetNoiseLevel(req.noiseLvl);
     acousticChannel->SetSalinity(req.salinity);
     acousticChannel->SetTemperature(req.temperature);
+    //TODO: implement acoustic channel logging
+    //auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
+    //acousticChannel->SetLogLevel(errorLevel);
 
     _channelMap[id] = acousticChannel;
     res.res = true;
@@ -315,6 +320,8 @@ bool ROSCommsSimulator::_AddCustomChannel(AddCustomChannel::Request &req,
         dccomms::CreateObject<CustomCommsChannel>(id);
     channel->SetMinPrTime(req.minPrTime);
     channel->SetPrTimeInc(req.prTimeIncPerMeter);
+    auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
+    channel->SetLogLevel(errorLevel);
     _channelMap[id] = channel;
     res.res = true;
     Log->info("custom channel {} added", id);
@@ -387,6 +394,8 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     dev->SetVariableBitRate(req.bitrate, req.bitrateSd);
     dev->SetMaxTxFifoSize(req.maxTxFifoSize);
     dev->SetRateErrorModel(req.errorRateExpr, req.errorUnit);
+    auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
+    dev->SetLogLevel(errorLevel);
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;

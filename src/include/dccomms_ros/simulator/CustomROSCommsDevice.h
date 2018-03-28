@@ -2,8 +2,10 @@
 #define DCCOMMS_ROS_CUSTOMROSCOMMSDEVICE_H_
 
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
+#include <exprtk.hpp>
 #include <ns3/error-model.h>
 #include <random>
+
 using namespace dccomms;
 using namespace cpplogging;
 
@@ -26,6 +28,24 @@ public:
     packet = NULL;
   }
   bool Error() { return propagationError || collisionError; }
+};
+
+class SimpleVarExprEval {
+public:
+  typedef exprtk::symbol_table<double> symbol_table_t;
+  typedef exprtk::expression<double> expression_t;
+  typedef exprtk::parser<double> parser_t;
+
+  SimpleVarExprEval();
+  void CompileExpr(const std::string & expr, const std::string &var);
+  double ComputeVal(double var);
+
+private:
+  std::string _sexpr;
+  symbol_table_t _symbol_table;
+  expression_t _expression;
+  double _var;
+  parser_t _parser;
 };
 
 class CustomROSCommsDevice : public ROSCommsDevice {
@@ -111,6 +131,7 @@ private:
 
   double _GetErrorRate(double meters);
   std::string _eexpr;
+  SimpleVarExprEval _mExprEval;
 };
 }
 #endif // COMMSNODE_H

@@ -86,6 +86,7 @@ ENDFOREACH()
 SET(${PROJECT_NAME}_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include
     ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/build
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/exprtk
     ${${DCCOMMS_UTILS_GIT}_INCLUDE_DIRS}
     ${catkin_INCLUDE_DIRS}
     )

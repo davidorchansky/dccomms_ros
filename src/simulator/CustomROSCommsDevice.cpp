@@ -66,8 +66,23 @@ uint64_t CustomROSCommsDevice::GetNextTt() {
   return tt;
 }
 
+void SimpleVarExprEval::CompileExpr(const string &expr,
+                                    const std::string &var) {
+  _sexpr = expr;
+  _symbol_table.add_variable(var, _var);
+  _symbol_table.add_constants();
+  _expression.register_symbol_table(_symbol_table);
+  _parser.compile(_sexpr, _expression);
+}
+
+SimpleVarExprEval::SimpleVarExprEval() {}
+double SimpleVarExprEval::ComputeVal(double var) {
+  _var = var;
+  return _expression.value();
+}
+
 double CustomROSCommsDevice::_GetErrorRate(double meters) {
-  return meters * 0.001; // TODO: use user math expression
+  return _mExprEval.ComputeVal(meters);
 }
 void CustomROSCommsDevice::GetRateErrorModel(std::string &expr,
                                              std::string &unit) {
@@ -105,11 +120,14 @@ void CustomROSCommsDevice::SetRateErrorModel(const std::string &expr,
     _eexpr = "0.01*m";
   else
     _eexpr = expr;
-  // TODO: compute user math expression
+
+  Debug("SetRateErrorModel: expression = {}", _eexpr);
+  _mExprEval.CompileExpr(_eexpr, "m");
 }
 
 bool CustomROSCommsDevice::ErrOnPkt(double range, ns3PacketPtr pkt) {
   double rate = _GetErrorRate(range);
+  Debug("ErrOnPkt: range = {} meters --> rate = {}", range, rate);
   _rem->SetRate(rate);
   return _rem->IsCorrupt(pkt);
 }

@@ -27,8 +27,8 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
                                     ns3PacketPtr pkt) {
   Debug("CustomCommsChannel: SendPacket");
   auto txpos = dev->GetPosition();
-  //auto minErrRate = dev->GetMinPktErrorRate();
-  //auto errRateInc = dev->GetPktErrorRateInc();
+  // auto minErrRate = dev->GetMinPktErrorRate();
+  // auto errRateInc = dev->GetPktErrorRateInc();
 
   for (CustomROSCommsDevicePtr dst : _devices) {
     if (dst != dev) {
@@ -40,13 +40,17 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
       if (dm <= maxdm && dm >= mindm) { // dst is in range
         auto delay = _minPrTime + _prTimeIncPerMeter * distance;
         auto totalTime = static_cast<uint64_t>(round(delay));
-        //auto errRate = minErrRate + errRateInc * distance;
+        // auto errRate = minErrRate + errRateInc * distance;
+        NetsimHeader header;
+        pkt->RemoveHeader(header);
         auto propagationError = dev->ErrOnPkt(distance, pkt);
+        pkt->AddHeader(header);
         //        if (error) {
         //          auto pBuffer = pkt->GetPayloadBuffer();
         //          *pBuffer = ~*pBuffer;
         //        }
-        Debug("CustomCommsChannel: distance({} m) ; totalTime({} secs)", distance, totalTime/1e9);
+        Debug("CustomCommsChannel: distance({} m) ; totalTime({} secs)",
+              distance, totalTime / 1e9);
         ns3::Simulator::ScheduleWithContext(
             dev->GetMac(), NanoSeconds(totalTime),
             &CustomROSCommsDevice::AddNewPacket, dst, pkt, propagationError);
