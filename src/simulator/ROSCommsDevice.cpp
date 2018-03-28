@@ -5,7 +5,7 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("ROSCommsDevice"); // NS3 DOES NOT WORK (TODO: FIX IT)
+NS_LOG_COMPONENT_DEFINE("ROSCommsDevice"); // NS3 LOG DOES NOT WORK HERE (TODO: FIX IT)
 namespace dccomms_ros {
 
 NS_OBJECT_ENSURE_REGISTERED(ROSCommsDevice);
