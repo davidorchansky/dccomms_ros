@@ -30,10 +30,22 @@ TypeId ROSCommsSimulator::GetTypeId(void) {
       TypeId("ROSCommsSimulator")
           .SetParent<Object>()
           .AddAttribute("ROSDeviceList",
-                        "The list of devices associated to the simulator.",
+                        "The list of all devices associated to the simulator.",
                         ObjectVectorValue(),
                         MakeObjectVectorAccessor(&ROSCommsSimulator::_devices),
-                        MakeObjectVectorChecker<ROSCommsDevice>());
+                        MakeObjectVectorChecker<ROSCommsDevice>())
+          .AddAttribute(
+              "AcousticDeviceList",
+              "The list of acoustic devices associated to the simulator.",
+              ObjectVectorValue(),
+              MakeObjectVectorAccessor(&ROSCommsSimulator::_acousticDevices),
+              MakeObjectVectorChecker<AcousticROSCommsDevice>())
+          .AddAttribute(
+              "CustomDeviceList",
+              "The list of custom devices associated to the simulator.",
+              ObjectVectorValue(),
+              MakeObjectVectorAccessor(&ROSCommsSimulator::_customDevices),
+              MakeObjectVectorChecker<CustomROSCommsDevice>());
 
   return tid;
 }
@@ -220,6 +232,8 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
     dev->SetLogLevel(errorLevel);
 
+    _InsertDeviceAsc<AcousticROSCommsDevice>(_acousticDevices, dev);
+
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;
     _AddDeviceToSet(dev->GetDccommsId(), dev);
@@ -301,9 +315,9 @@ bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
     acousticChannel->SetNoiseLevel(req.noiseLvl);
     acousticChannel->SetSalinity(req.salinity);
     acousticChannel->SetTemperature(req.temperature);
-    //TODO: implement acoustic channel logging
-    //auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
-    //acousticChannel->SetLogLevel(errorLevel);
+    // TODO: implement acoustic channel logging
+    // auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
+    // acousticChannel->SetLogLevel(errorLevel);
 
     _channelMap[id] = acousticChannel;
     res.res = true;
@@ -362,6 +376,7 @@ bool ROSCommsSimulator::_CommonPreAddDev(const std::string &dccommsId,
   }
   return exists;
 }
+
 bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
                                          AddCustomDevice::Response &res) {
 
@@ -397,6 +412,8 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
     dev->SetLogLevel(errorLevel);
 
+    _InsertDeviceAsc<CustomROSCommsDevice>(_customDevices, dev);
+
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
     (*mac2DevMap)[mac] = dev;
     _AddDeviceToSet(dev->GetDccommsId(), dev);
@@ -405,7 +422,6 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     Simulator::Schedule(Seconds(0 + 0.01 * mac),
                         MakeEvent(&ROSCommsDevice::Start, dev));
     res.res = true;
-
   } else {
     res.res = false;
   }
