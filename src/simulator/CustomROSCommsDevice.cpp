@@ -247,14 +247,14 @@ void CustomROSCommsDevice::PropagateNextPacket() {
   if (!TxFifoEmpty()) {
     auto packet = PopTxPacket();
     static_pointer_cast<CustomCommsChannel>(_txChannel)
-        ->SendPacket(_ownPtr, packet);
+        ->SendPacket(this, packet);
     Transmitting(false);
   } else
     Critical("internal error: TX fifo emtpy when calling TransmitNextPacket");
 }
 
 void CustomROSCommsDevice::PropagatePacket(ns3PacketPtr pkt) {
-  static_pointer_cast<CustomCommsChannel>(_txChannel)->SendPacket(_ownPtr, pkt);
+  static_pointer_cast<CustomCommsChannel>(_txChannel)->SendPacket(this, pkt);
 }
 
 void CustomROSCommsDevice::TransmitPacket(ns3PacketPtr pkt) {
@@ -289,9 +289,9 @@ void CustomROSCommsDevice::DoSend(ns3PacketPtr dlf) {
 }
 void CustomROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
                                            CHANNEL_LINK_TYPE linkType) {
-  if (!_ownPtr)
-    _ownPtr =
-        this; // std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
+//  if (!_ownPtr)
+//    _ownPtr =
+//        this; // std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
   if (channel->GetType() == CHANNEL_TYPE::CUSTOM_CHANNEL) {
     //_channel = static_pointer_cast<CustomCommsChannel>(channel);
 
@@ -299,11 +299,11 @@ void CustomROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
       _txChannel = channel;
     else if (linkType == CHANNEL_RX) {
       _rxChannel = channel;
-      static_pointer_cast<CustomCommsChannel>(_rxChannel)->AddDevice(_ownPtr);
+      static_pointer_cast<CustomCommsChannel>(_rxChannel)->AddDevice(this);
     } else if (linkType == CHANNEL_TXRX) {
       _txChannel = channel;
       _rxChannel = channel;
-      static_pointer_cast<CustomCommsChannel>(_rxChannel)->AddDevice(_ownPtr);
+      static_pointer_cast<CustomCommsChannel>(_rxChannel)->AddDevice(this);
     }
 
   } else {
@@ -312,9 +312,9 @@ void CustomROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
   }
 }
 void CustomROSCommsDevice::DoStart() {
-  if (!_ownPtr)
-    _ownPtr =
-        this; // std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
+//  if (!_ownPtr)
+//    _ownPtr =
+//        this; // std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
 }
 bool CustomROSCommsDevice::DoStarted() { return true; }
 void CustomROSCommsDevice::DoSetPosition(const tf::Vector3 &position) {

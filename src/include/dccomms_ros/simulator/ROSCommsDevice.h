@@ -118,7 +118,7 @@ protected:
   uint64_t _nanosPerByte;
   tf::Vector3 _position;
 
-  ROSCommsDevicePtr _ownPtr;
+  //ROSCommsDevicePtr _ownPtr;
 
   bool _commonStarted;
 };

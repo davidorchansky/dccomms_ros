@@ -115,7 +115,7 @@ private:
 
   uint32_t _maxDistance, _minDistance; // in dm
   tf::Vector3 _position;
-  CustomROSCommsDevicePtr _ownPtr;
+  //CustomROSCommsDevicePtr _ownPtr;
 
   NormalDist _ttDist;
   UniformRealDist _erDist;

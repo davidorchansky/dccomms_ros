@@ -63,7 +63,7 @@ void ROSCommsDevice::_StartDeviceService() {
 }
 
 void ROSCommsDevice::Start() {
-  _ownPtr = this; // shared_from_this();
+ // _ownPtr = this; // shared_from_this();
   _StartDeviceService();
   DoStart();
 }
@@ -75,7 +75,7 @@ void ROSCommsDevice::_StartNodeWorker() { _txserv.Start(); }
 void ROSCommsDevice::ReceiveFrame(ns3PacketPtr packet) {
   Debug("ROSCommsDevice: Frame received");
   char ser[5000];
-  _rxCbTrace(_ownPtr, packet);
+  _rxCbTrace(this, packet);
   NetsimHeader header;
   packet->RemoveHeader(header);
   auto size = packet->GetSize();
@@ -158,7 +158,7 @@ void ROSCommsDevice::_TxWork() {
       auto pkt =
           ns3::Create<ns3::Packet>(txdlf->GetBuffer(), txdlf->GetPacketSize());
       pkt->AddHeader(header);
-      _txCbTrace(_ownPtr, pkt);
+      _txCbTrace(this, pkt);
       NS_LOG_DEBUG("Send packet");
       Debug("ROSCommsDevice: Send frame");
       DoSend(pkt);
