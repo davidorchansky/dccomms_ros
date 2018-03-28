@@ -5,7 +5,8 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("ROSCommsDevice"); // NS3 LOG DOES NOT WORK HERE (TODO: FIX IT)
+NS_LOG_COMPONENT_DEFINE(
+    "ROSCommsDevice"); // NS3 LOG DOES NOT WORK HERE (TODO: FIX IT)
 namespace dccomms_ros {
 
 NS_OBJECT_ENSURE_REGISTERED(ROSCommsDevice);
@@ -25,13 +26,14 @@ ns3::TypeId ROSCommsDevice::GetTypeId(void) {
               ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_txCbTrace),
               "dccomms_ros::ROSCommsDevice::PacketTransmittingCallback")
           .AddTraceSource(
-              "PacketCollision", "Trace source indicating a packet has been corrupted "
-                                "by collision.",
+              "PacketCollision",
+              "Trace source indicating a packet has been corrupted "
+              "by collision.",
               ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_collisionCbTrace),
               "dccomms_ros::ROSCommsDevice::PacketCollision")
           .AddTraceSource(
               "PacketPropError", "Trace source indicating a packet has been "
-                                    "corrupted by attenuation.",
+                                 "corrupted by attenuation.",
               ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_propErrorCbTrace),
               "dccomms_ros::ROSCommsDevice::PacketPropagationError");
   return tid;
@@ -64,13 +66,14 @@ void ROSCommsDevice::_StartDeviceService() {
   });
   startWorker.detach();
 
-  auto waitRemainingNodesToGetReadyWorker = std::thread([this]() {
-    while (!_sim->Ready(this->GetDevType()))
-      std::this_thread::sleep_for(chrono::milliseconds(100));
-    _StartNodeWorker();
-  });
+  //  auto waitRemainingNodesToGetReadyWorker = std::thread([this]() {
+  //    while (!_sim->Ready(this->GetDevType()))
+  //      std::this_thread::sleep_for(chrono::milliseconds(100));
+  //    _StartNodeWorker();
+  //  });
 
-  waitRemainingNodesToGetReadyWorker.detach();
+  //  waitRemainingNodesToGetReadyWorker.detach();
+  _StartNodeWorker();
 }
 
 void ROSCommsDevice::Start() {
@@ -85,16 +88,20 @@ void ROSCommsDevice::_StartNodeWorker() { _txserv.Start(); }
 
 void ROSCommsDevice::ReceiveFrame(ns3PacketPtr packet) {
   Debug("ROSCommsDevice: Frame received");
-  char ser[5000];
-  _rxCbTrace(this, packet);
-  NetsimHeader header;
-  packet->RemoveHeader(header);
-  auto size = packet->GetSize();
-  packet->CopyData((uint8_t *)ser, size);
-  auto dccommsPacket = _rxpb->CreateFromBuffer(ser);
-  _receiveFrameMutex.lock();
-  _device << dccommsPacket;
-  _receiveFrameMutex.unlock();
+  if (Started()) {
+    char ser[5000];
+    _rxCbTrace(this, packet);
+    NetsimHeader header;
+    packet->RemoveHeader(header);
+    auto size = packet->GetSize();
+    packet->CopyData((uint8_t *)ser, size);
+    auto dccommsPacket = _rxpb->CreateFromBuffer(ser);
+    _receiveFrameMutex.lock();
+    _device << dccommsPacket;
+    _receiveFrameMutex.unlock();
+  } else {
+    Warn("Device's service has not been been started when packet reception");
+  }
 }
 
 void ROSCommsDevice::SetBitRate(uint32_t v) {
