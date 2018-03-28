@@ -5,7 +5,7 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("ROSCommsDevice"); //NS3 DOES NOT WORK (TODO: FIX IT)
+NS_LOG_COMPONENT_DEFINE("ROSCommsDevice"); // NS3 DOES NOT WORK (TODO: FIX IT)
 namespace dccomms_ros {
 
 NS_OBJECT_ENSURE_REGISTERED(ROSCommsDevice);
@@ -23,7 +23,17 @@ ns3::TypeId ROSCommsDevice::GetTypeId(void) {
               "PacketTransmitting", "Trace source indicating a packet has been "
                                     "delivered to the lower layer.",
               ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_txCbTrace),
-              "dccomms_ros::ROSCommsDevice::PacketTransmittingCallback");
+              "dccomms_ros::ROSCommsDevice::PacketTransmittingCallback")
+          .AddTraceSource(
+              "PacketCollision", "Trace source indicating a packet has been corrupted "
+                                "by collision.",
+              ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_collisionCbTrace),
+              "dccomms_ros::ROSCommsDevice::PacketCollision")
+          .AddTraceSource(
+              "PacketPropError", "Trace source indicating a packet has been "
+                                    "corrupted by attenuation.",
+              ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_propErrorCbTrace),
+              "dccomms_ros::ROSCommsDevice::PacketPropagationError");
   return tid;
 }
 
@@ -39,7 +49,8 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
   _commonStarted = false;
   _position = tf::Vector3(0, 0, 0);
-  LogComponentEnable("ROSCommsDevice", LOG_LEVEL_ALL); //NS3 DOES NOT WORK (TODO: FIX IT)
+  LogComponentEnable("ROSCommsDevice",
+                     LOG_LEVEL_ALL); // NS3 DOES NOT WORK (TODO: FIX IT)
   SetLogLevel(debug);
 }
 
@@ -63,7 +74,7 @@ void ROSCommsDevice::_StartDeviceService() {
 }
 
 void ROSCommsDevice::Start() {
- // _ownPtr = this; // shared_from_this();
+  // _ownPtr = this; // shared_from_this();
   _StartDeviceService();
   DoStart();
 }
@@ -180,7 +191,7 @@ void ROSCommsDevice::SetLogName(std::string name) {
 
 void ROSCommsDevice::SetLogLevel(cpplogging::LogLevel _level) {
   Loggable::SetLogLevel(_level);
- // _device->SetLogLevel(_level);
+  // _device->SetLogLevel(_level);
 }
 
 void ROSCommsDevice::LogToConsole(bool c) {

@@ -170,10 +170,12 @@ void CustomROSCommsDevice::HandleNextIncommingPacket() {
       if (ptr->collisionError) {
         // TODO: increase collision errors counter (traced value)
         Debug("CustomROSCommsDevice({}): Collision!", GetDccommsId());
+        _collisionCbTrace(this, ptr->packet);
       }
       if (ptr->propagationError) {
         // TODO: increase propagation errors counter (traced value)
         Debug("CustomROSCommsDevice({}): Propagation error!", GetDccommsId());
+        _propErrorCbTrace(this, ptr->packet);
       }
     } else {
       ReceiveFrame(ptr->packet);

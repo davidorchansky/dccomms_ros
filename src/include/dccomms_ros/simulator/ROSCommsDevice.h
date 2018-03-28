@@ -5,11 +5,11 @@
 #include <dccomms/CommsDeviceService.h>
 #include <dccomms/Utils.h>
 #include <dccomms_ros/simulator/CommsChannel.h>
+#include <dccomms_ros/simulator/NetsimPacket.h>
 #include <ns3/config-store-module.h>
 #include <ns3/core-module.h>
 #include <ns3/packet.h>
 #include <tf/transform_listener.h>
-#include <dccomms_ros/simulator/NetsimPacket.h>
 
 using namespace dccomms;
 using namespace cpplogging;
@@ -85,6 +85,11 @@ public:
   typedef void (*PacketTransmittingCallback)(std::string path,
                                              ROSCommsDevicePtr, ns3PacketPtr);
 
+  typedef void (*PacketCollision)(std::string path, ROSCommsDevicePtr,
+                                  ns3PacketPtr);
+  typedef void (*PacketPropagationError)(std::string path, ROSCommsDevicePtr,
+                                         ns3PacketPtr);
+
 protected:
   virtual std::string DoToString() = 0;
   virtual void DoSetMac(uint32_t mac) = 0;
@@ -100,6 +105,8 @@ protected:
 
   ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _rxCbTrace;
   ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _txCbTrace;
+  ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _propErrorCbTrace;
+  ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _collisionCbTrace;
 
 private:
   void _StartDeviceService();
@@ -118,7 +125,7 @@ protected:
   uint64_t _nanosPerByte;
   tf::Vector3 _position;
 
-  //ROSCommsDevicePtr _ownPtr;
+  // ROSCommsDevicePtr _ownPtr;
 
   bool _commonStarted;
 };
