@@ -157,8 +157,8 @@ void AcousticROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
                                              CHANNEL_LINK_TYPE linkType) {
   if (channel->GetType() == CHANNEL_TYPE::ACOUSTIC_UNDERWATER_CHANNEL) {
 
-    AcousticCommsChannelPtr acChannel =
-        static_pointer_cast<AcousticCommsChannel>(channel);
+    AcousticCommsChannel * acChannel =
+        static_cast<AcousticCommsChannel *>(ns3::PeekPointer(channel));
     _channel = acChannel->GetAquaSimChannel();
   } else {
     Log->critical(
@@ -288,8 +288,8 @@ bool AcousticROSCommsDevice::DoStarted() { return _started; }
 
 std::string AcousticROSCommsDevice::DoToString() {
 
-  dccomms::Ptr<AcousticCommsChannel> acousticChannel =
-      std::static_pointer_cast<AcousticCommsChannel>(_txChannel);
+  AcousticCommsChannel *acousticChannel =
+      static_cast<AcousticCommsChannel *>(ns3::PeekPointer(_txChannel));
 
   int maxBuffSize = 2048;
   char buff[maxBuffSize];

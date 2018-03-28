@@ -10,7 +10,7 @@ using namespace std;
 namespace dccomms_ros {
 
 
-class CustomCommsChannel : public CommsChannel, public virtual cpplogging::Logger {
+class CustomCommsChannel : public CommsChannel{
 public:
   CustomCommsChannel(uint32_t id);
   void SetMinPrTime(double prTime);
@@ -27,7 +27,7 @@ private:
 
 };
 
-typedef dccomms::Ptr<CustomCommsChannel> CustomCommsChannelPtr;
+typedef ns3::Ptr<CustomCommsChannel> CustomCommsChannelPtr;
 }
 
 #endif // COMMSCHANNELPROPERTIES_H

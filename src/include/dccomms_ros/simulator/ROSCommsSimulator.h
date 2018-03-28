@@ -6,6 +6,7 @@
 #include <dccomms_ros/simulator/AcousticROSCommsDevice.h>
 #include <dccomms_ros/simulator/CommsChannel.h>
 #include <dccomms_ros/simulator/CustomROSCommsDevice.h>
+#include <dccomms_ros/simulator/CustomCommsChannel.h>
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <functional>
 #include <memory>
@@ -196,9 +197,14 @@ private:
   std::vector<ns3::Ptr<ROSCommsDevice>> _devices;
   std::vector<ns3::Ptr<CustomROSCommsDevice>> _customDevices;
   std::vector<ns3::Ptr<AcousticROSCommsDevice>> _acousticDevices;
+  std::vector<ns3::Ptr<CustomCommsChannel>> _customChannels;
+  std::vector<ns3::Ptr<AcousticCommsChannel>> _acousticChannels;
+  std::vector<ns3::Ptr<CommsChannel>> _channels;
 
   template <typename T>
   void _InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices, ns3::Ptr<T> dev);
+  template <typename T>
+  void _InsertChannelAsc(std::vector<ns3::Ptr<T>> &channels, ns3::Ptr<T> channel);
 };
 
 template <typename T>
@@ -218,6 +224,26 @@ void ROSCommsSimulator::_InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices, ns3:
       devices.push_back(dev);
   } else
     devices.push_back(dev);
+}
+
+
+template <typename T>
+void ROSCommsSimulator::_InsertChannelAsc(std::vector<ns3::Ptr<T>> &channels, ns3::Ptr<T> chn) {
+
+  if (channels.size() > 0) {
+    uint32_t i = 0;
+    for (i = 0; i < channels.size(); i++) {
+      auto cchn = channels[i];
+      if (cchn->GetId() > chn->GetId()) {
+        channels.push_back(cchn);
+        channels[i] = chn;
+        break;
+      }
+    }
+    if (i >= channels.size())
+      channels.push_back(chn);
+  } else
+    channels.push_back(chn);
 }
 }
 #endif // WHROVSIMULATOR_H

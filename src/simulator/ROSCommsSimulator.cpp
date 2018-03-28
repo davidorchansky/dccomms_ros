@@ -35,17 +35,34 @@ TypeId ROSCommsSimulator::GetTypeId(void) {
                         MakeObjectVectorAccessor(&ROSCommsSimulator::_devices),
                         MakeObjectVectorChecker<ROSCommsDevice>())
           .AddAttribute(
-              "AcousticDeviceList",
+              "AcousticROSDeviceList",
               "The list of acoustic devices associated to the simulator.",
               ObjectVectorValue(),
               MakeObjectVectorAccessor(&ROSCommsSimulator::_acousticDevices),
               MakeObjectVectorChecker<AcousticROSCommsDevice>())
           .AddAttribute(
-              "CustomDeviceList",
+              "CustomROSDeviceList",
               "The list of custom devices associated to the simulator.",
               ObjectVectorValue(),
               MakeObjectVectorAccessor(&ROSCommsSimulator::_customDevices),
-              MakeObjectVectorChecker<CustomROSCommsDevice>());
+              MakeObjectVectorChecker<CustomROSCommsDevice>())
+          .AddAttribute("ROSChannelList",
+                        "The list of channels associated to the simulator.",
+                        ObjectVectorValue(),
+                        MakeObjectVectorAccessor(&ROSCommsSimulator::_channels),
+                        MakeObjectVectorChecker<CommsChannel>())
+          .AddAttribute(
+              "CustomROSChannelList",
+              "The list of custom channels associated to the simulator.",
+              ObjectVectorValue(),
+              MakeObjectVectorAccessor(&ROSCommsSimulator::_customChannels),
+              MakeObjectVectorChecker<CustomCommsChannel>())
+          .AddAttribute(
+              "AcousticROSChannelList",
+              "The list of acoustic channels associated to the simulator.",
+              ObjectVectorValue(),
+              MakeObjectVectorAccessor(&ROSCommsSimulator::_acousticChannels),
+              MakeObjectVectorChecker<AcousticCommsChannel>());
 
   return tid;
 }
@@ -130,7 +147,7 @@ void ROSCommsSimulator::_AddDeviceToSet(std::string iddev,
                                         ROSCommsDevicePtr dev) {
   _idDevMapMutex.lock();
   _dccommsDevMap[iddev] = dev;
-  _devices.push_back(dev);
+  _InsertDeviceAsc<ROSCommsDevice>(_devices, dev);
 
   static ns3::Ptr<ROSCommsSimulator> ptr = 0;
   if (ptr == 0) {
@@ -309,7 +326,7 @@ bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
   res.res = false;
   if (!_channelMap[id]) {
     auto acousticChannel =
-        dccomms::CreateObject<dccomms_ros::AcousticCommsChannel>(id);
+        ns3::CreateObject<dccomms_ros::AcousticCommsChannel>(id);
 
     acousticChannel->SetBandwidth(req.bandwidth);
     acousticChannel->SetNoiseLevel(req.noiseLvl);
@@ -320,6 +337,8 @@ bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
     // acousticChannel->SetLogLevel(errorLevel);
 
     _channelMap[id] = acousticChannel;
+    _InsertChannelAsc<CommsChannel>(_channels, acousticChannel);
+    _InsertChannelAsc<AcousticCommsChannel>(_acousticChannels, acousticChannel);
     res.res = true;
     Log->info("acoustic channel {} added", id);
   }
@@ -331,11 +350,13 @@ bool ROSCommsSimulator::_AddCustomChannel(AddCustomChannel::Request &req,
   uint32_t id = req.id;
   if (!_channelMap[id]) {
     CustomCommsChannelPtr channel =
-        dccomms::CreateObject<CustomCommsChannel>(id);
+        ns3::CreateObject<CustomCommsChannel>(id);
     channel->SetMinPrTime(req.minPrTime);
     channel->SetPrTimeInc(req.prTimeIncPerMeter);
     auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
     channel->SetLogLevel(errorLevel);
+    _InsertChannelAsc<CommsChannel>(_channels, channel);
+    _InsertChannelAsc<CustomCommsChannel>(_customChannels, channel);
     _channelMap[id] = channel;
     res.res = true;
     Log->info("custom channel {} added", id);

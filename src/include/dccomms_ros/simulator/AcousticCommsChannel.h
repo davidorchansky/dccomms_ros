@@ -43,7 +43,7 @@ private:
   ns3::Ptr<ns3::AquaSimPropagation> _prop;
 };
 
-typedef dccomms::Ptr<AcousticCommsChannel> AcousticCommsChannelPtr;
+typedef ns3::Ptr<AcousticCommsChannel> AcousticCommsChannelPtr;
 }
 
 #endif // COMMSCHANNELPROPERTIES_H
