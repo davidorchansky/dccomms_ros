@@ -290,7 +290,7 @@ void CustomROSCommsDevice::TransmitPacket(ns3PacketPtr pkt) {
 
 void CustomROSCommsDevice::DoSetMac(uint32_t mac) { _mac = mac; }
 void CustomROSCommsDevice::DoSend(ns3PacketPtr dlf) {
-  ns3::Simulator::ScheduleWithContext(GetMac(), ns3::NanoSeconds(0),
+  ns3::Simulator::ScheduleWithContext(GetMac(), ns3::NanoSeconds(_intrinsicDelay*1e6),
                                       &CustomROSCommsDevice::TransmitPacket,
                                       this, dlf);
 }
