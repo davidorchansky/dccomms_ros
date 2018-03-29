@@ -6,6 +6,14 @@ using namespace ns3;
 
 namespace dccomms_ros {
 
+NS_OBJECT_ENSURE_REGISTERED(CustomCommsChannel);
+
+ns3::TypeId CustomCommsChannel::GetTypeId(void) {
+  static ns3::TypeId tid =
+      ns3::TypeId("dccomms_ros::CustomCommsChannel").SetParent<CommsChannel>();
+  return tid;
+}
+
 CustomCommsChannel::CustomCommsChannel(uint32_t id) {
   _rosChannelId = id;
   SetLogLevel(debug);
@@ -33,11 +41,10 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
   for (CustomROSCommsDevicePtr dst : _devices) {
     if (dst != dev) {
       auto rxpos = dst->GetPosition();
-      auto distance = txpos.distance(rxpos); // distance = meters
-      auto dm = distance * 10;               // dm = decimeters
+      auto distance = txpos.distance(rxpos);
       auto maxdm = dev->GetMaxDistance();
       auto mindm = dev->GetMinDistance();
-      if (dm <= maxdm && dm >= mindm) { // dst is in range
+      if (distance <= maxdm && distance >= mindm) { // dst is in range
         auto delay = _minPrTime + _prTimeIncPerMeter * distance;
         auto totalTime = static_cast<uint64_t>(round(delay));
         // auto errRate = minErrRate + errRateInc * distance;

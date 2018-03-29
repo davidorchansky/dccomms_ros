@@ -19,7 +19,7 @@ public:
                          PacketBuilderPtr rxpb);
 
   DEV_TYPE GetDevType();
-  void SetMACProtocol(const std::string & name);
+  void SetMACProtocol(const std::string &name);
   void SetRange(double value);
   void SetPT(double value);
   void SetFreq(double value);
@@ -36,6 +36,12 @@ public:
   void SetBitErrorRate(uint32_t value);
   void SetInitialEnergy(double value);
 
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static ns3::TypeId GetTypeId(void);
+
 protected:
   void DoSetMac(uint32_t mac);
   void DoSend(ns3PacketPtr dlf);
@@ -44,8 +50,6 @@ protected:
   void DoSetPosition(const tf::Vector3 &position);
   bool DoStarted();
   std::string DoToString();
-
-
 
 private:
   ns3::Ptr<ns3::AquaSimChannel> _channel;
@@ -64,8 +68,8 @@ private:
   AQS_ROUTING_TYPE _routingType;
 
   std::string _macP;
-  double _range, _freq, _L, _K, _turnOnEnergy, _turnOffEnergy,
-  _preamble, _pTConsume, _pRConsume, _pIdle, _pT, _initialEnergy;
+  double _range, _freq, _L, _K, _turnOnEnergy, _turnOffEnergy, _preamble,
+      _pTConsume, _pRConsume, _pIdle, _pT, _initialEnergy;
 
   double _codingEff, _bitErrorRate;
   uint32_t _symbPerSec;

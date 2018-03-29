@@ -5,9 +5,19 @@
 #include <ns3/core-module.h>
 #include <ns3/node-list.h>
 
+using namespace ns3;
+
 namespace dccomms_ros {
 
-using namespace ns3;
+NS_OBJECT_ENSURE_REGISTERED(AcousticROSCommsDevice);
+
+TypeId AcousticROSCommsDevice::GetTypeId(void) {
+  static TypeId tid =
+      TypeId("dccomms_ros::AcousticROSCommsDevice").SetParent<ROSCommsDevice>();
+
+  return tid;
+}
+
 AcousticROSCommsDevice::AcousticROSCommsDevice(ROSCommsSimulatorPtr s,
                                                PacketBuilderPtr txpb,
                                                PacketBuilderPtr rxpb)
@@ -157,7 +167,7 @@ void AcousticROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
                                              CHANNEL_LINK_TYPE linkType) {
   if (channel->GetType() == CHANNEL_TYPE::ACOUSTIC_UNDERWATER_CHANNEL) {
 
-    AcousticCommsChannel * acChannel =
+    AcousticCommsChannel *acChannel =
         static_cast<AcousticCommsChannel *>(ns3::PeekPointer(channel));
     _channel = acChannel->GetAquaSimChannel();
   } else {

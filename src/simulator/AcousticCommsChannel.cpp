@@ -6,6 +6,14 @@
 
 namespace dccomms_ros {
 
+NS_OBJECT_ENSURE_REGISTERED(AcousticCommsChannel);
+
+ns3::TypeId AcousticCommsChannel::GetTypeId(void) {
+  static ns3::TypeId tid =
+      ns3::TypeId("dccomms_ros::AcousticCommsChannel").SetParent<CommsChannel>();
+  return tid;
+}
+
 AcousticCommsChannel::AcousticCommsChannel(uint32_t id) {
   _rosChannelId = id;
   _ns3ChannelId = ns3::ChannelList::GetNChannels();
@@ -13,7 +21,7 @@ AcousticCommsChannel::AcousticCommsChannel(uint32_t id) {
   _channelHelper.SetPropagation("ns3::AquaSimRangePropagation");
   _aquaSimChannel = _channelHelper.Create();
 
-  //https://www.nsnam.org/docs/manual/html/attributes.html#changing-values
+  // https://www.nsnam.org/docs/manual/html/attributes.html#changing-values
   ns3::PointerValue tmp;
   _aquaSimChannel->GetAttribute("SetProp", tmp);
   _prop = tmp.GetObject()->GetObject<ns3::AquaSimPropagation>();

@@ -13,7 +13,7 @@ NS_OBJECT_ENSURE_REGISTERED(CustomROSCommsDevice);
 
 TypeId CustomROSCommsDevice::GetTypeId(void) {
   static TypeId tid =
-      TypeId("ns3::CustomROSCommsDevice").SetParent<ROSCommsDevice>();
+      TypeId("dccomms_ros::CustomROSCommsDevice").SetParent<ROSCommsDevice>();
 
   return tid;
 }
@@ -132,13 +132,17 @@ bool CustomROSCommsDevice::ErrOnPkt(double range, ns3PacketPtr pkt) {
   return _rem->IsCorrupt(pkt);
 }
 
-void CustomROSCommsDevice::SetMaxDistance(uint32_t d) { _maxDistance = d; }
+void CustomROSCommsDevice::SetMaxDistance(double d) { _maxDistance = d; }
 
-uint32_t CustomROSCommsDevice::GetMaxDistance() { return _maxDistance; }
+double CustomROSCommsDevice::GetMaxDistance() { return _maxDistance; }
 
-void CustomROSCommsDevice::SetMinDistance(uint32_t d) { _minDistance = d; }
+void CustomROSCommsDevice::SetMinDistance(double d) { _minDistance = d; }
 
-uint32_t CustomROSCommsDevice::GetMinDistance() { return _minDistance; }
+double CustomROSCommsDevice::GetMinDistance() { return _minDistance; }
+
+void CustomROSCommsDevice::SetIntrinsicDelay(double d) { _intrinsicDelay = d; }
+
+double CustomROSCommsDevice::GetIntrinsicDelay() { return _intrinsicDelay; }
 
 inline void CustomROSCommsDevice::EnqueueTxPacket(ns3PacketPtr pkt) {
   _txFifo.push(pkt);
@@ -357,6 +361,8 @@ std::string CustomROSCommsDevice::DoToString() {
                                   "\tFrame ID: ................. '%s'\n"
                                   "\tTX channel: ............... '%s'\n"
                                   "\tRX channel: ............... '%s'\n"
+                                  "\tMax. distance: ............ %.2f m\n"
+                                  "\tMin. distance: ............ %.2f m\n"
                                   "\tBitrate: .................. %d bps\n"
                                   "\tBitrate SD: ............... %.3f\n"
                                   "\tTx Fifo Size: ............. %d bytes\n"
@@ -364,8 +370,8 @@ std::string CustomROSCommsDevice::DoToString() {
                                   "\tError Unit: ............... %s",
                _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
                _tfFrameId.c_str(), txChannelLinked.c_str(),
-               rxChannelLinked.c_str(), bitrate, bitrateSd, GetMaxTxFifoSize(),
-               expr.c_str(), eunit.c_str());
+               rxChannelLinked.c_str(), _maxDistance, _minDistance, bitrate,
+               bitrateSd, GetMaxTxFifoSize(), expr.c_str(), eunit.c_str());
 
   return std::string(buff);
 }

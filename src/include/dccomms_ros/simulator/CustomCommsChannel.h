@@ -9,8 +9,7 @@
 using namespace std;
 namespace dccomms_ros {
 
-
-class CustomCommsChannel : public CommsChannel{
+class CustomCommsChannel : public CommsChannel {
 public:
   CustomCommsChannel(uint32_t id);
   void SetMinPrTime(double prTime);
@@ -20,11 +19,16 @@ public:
   uint32_t GetId() { return _rosChannelId; }
   CHANNEL_TYPE GetType() { return CUSTOM_CHANNEL; }
 
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static ns3::TypeId GetTypeId(void);
+
 private:
   uint32_t _rosChannelId;
-  uint64_t _prTimeIncPerMeter, _minPrTime; //nanoseconds
+  uint64_t _prTimeIncPerMeter, _minPrTime; // nanoseconds
   std::list<CustomROSCommsDevicePtr> _devices;
-
 };
 
 typedef ns3::Ptr<CustomCommsChannel> CustomCommsChannelPtr;

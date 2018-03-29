@@ -349,8 +349,7 @@ bool ROSCommsSimulator::_AddCustomChannel(AddCustomChannel::Request &req,
                                           AddCustomChannel::Response &res) {
   uint32_t id = req.id;
   if (!_channelMap[id]) {
-    CustomCommsChannelPtr channel =
-        ns3::CreateObject<CustomCommsChannel>(id);
+    CustomCommsChannelPtr channel = ns3::CreateObject<CustomCommsChannel>(id);
     channel->SetMinPrTime(req.minPrTime);
     channel->SetPrTimeInc(req.prTimeIncPerMeter);
     auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
@@ -430,6 +429,7 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     dev->SetVariableBitRate(req.bitrate, req.bitrateSd);
     dev->SetMaxTxFifoSize(req.maxTxFifoSize);
     dev->SetRateErrorModel(req.errorRateExpr, req.errorUnit);
+    dev->SetIntrinsicDelay(req.intrinsicDelay);
     auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
     dev->SetLogLevel(errorLevel);
 

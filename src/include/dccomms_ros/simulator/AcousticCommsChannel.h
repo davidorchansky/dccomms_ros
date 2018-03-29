@@ -6,8 +6,6 @@
 #include <dccomms_ros_msgs/types.h>
 #include <list>
 #include <memory>
-#include <ns3/aqua-sim-channel.h>
-#include <ns3/internet-module.h>
 #include <ns3/aqua-sim-ng-module.h>
 #include <random>
 
@@ -33,12 +31,17 @@ public:
   double GetSalinity();
   double GetNoiseLevel();
 
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static ns3::TypeId GetTypeId(void);
+
 private:
   int _rosChannelId;
   int _ns3ChannelId;
   AquaSimChannelPtr _aquaSimChannel;
   static AquaSimChannelSet _aquaSimChannels;
-  ns3::InternetStackHelper _internet;
   ns3::AquaSimChannelHelper _channelHelper;
   ns3::Ptr<ns3::AquaSimPropagation> _prop;
 };

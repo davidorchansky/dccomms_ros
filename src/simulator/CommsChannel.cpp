@@ -1,5 +1,7 @@
 #include <dccomms_ros/simulator/CommsChannel.h>
 
+using namespace ns3;
+
 namespace dccomms_ros {
 
 NS_OBJECT_ENSURE_REGISTERED(CommsChannel);

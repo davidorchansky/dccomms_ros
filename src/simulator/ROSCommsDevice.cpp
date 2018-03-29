@@ -13,7 +13,7 @@ NS_OBJECT_ENSURE_REGISTERED(ROSCommsDevice);
 
 ns3::TypeId ROSCommsDevice::GetTypeId(void) {
   static ns3::TypeId tid =
-      ns3::TypeId("ns3::ROSCommsDevice")
+      ns3::TypeId("dccomms_ros::ROSCommsDevice")
           .SetParent<Object>()
           .AddTraceSource(
               "PacketReceived", "Trace source indicating a packet has been "

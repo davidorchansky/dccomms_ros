@@ -28,6 +28,11 @@ public:
     packet = NULL;
   }
   bool Error() { return propagationError || collisionError; }
+  /**
+   * \brief Get the type ID.
+   * \return the object TypeId
+   */
+  static ns3::TypeId GetTypeId(void);
 };
 
 class SimpleVarExprEval {
@@ -37,7 +42,7 @@ public:
   typedef exprtk::parser<double> parser_t;
 
   SimpleVarExprEval();
-  void CompileExpr(const std::string & expr, const std::string &var);
+  void CompileExpr(const std::string &expr, const std::string &var);
   double ComputeVal(double var);
 
 private:
@@ -56,14 +61,16 @@ public:
   void SetVariableBitRate(double trTimeMean, double trTimeSd = 0); // as bps
   void SetMinPktErrorRate(double minPktErrorRate);
   void SetPktErrorRateInc(double pktErrorRateInc);
-  void SetMaxDistance(uint32_t d);
-  void SetMinDistance(uint32_t d);
+  void SetMaxDistance(double d);
+  void SetMinDistance(double d);
+  void SetIntrinsicDelay(double d);
 
   void GetBitRate(double &trTimeMean, double &trTimeSd); // as bps
   double GetMinPktErrorRate();
   double GetPktErrorRateInc();
-  uint32_t GetMaxDistance();
-  uint32_t GetMinDistance();
+  double GetMaxDistance();
+  double GetMinDistance();
+  double GetIntrinsicDelay();
 
   void PropagateNextPacket();
   void PropagatePacket(ns3PacketPtr pkt);
@@ -112,10 +119,11 @@ private:
   uint32_t _mac;
   double _bitRateMean, _bitRateSd;
   double _minPktErrorRate, _pktErrorRateIncPerMeter;
+  double _intrinsicDelay; //ms
 
-  uint32_t _maxDistance, _minDistance; // in dm
+  double _maxDistance, _minDistance; // in meters
   tf::Vector3 _position;
-  //CustomROSCommsDevicePtr _ownPtr;
+  // CustomROSCommsDevicePtr _ownPtr;
 
   NormalDist _ttDist;
   UniformRealDist _erDist;
