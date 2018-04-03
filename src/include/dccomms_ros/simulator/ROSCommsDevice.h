@@ -85,10 +85,13 @@ public:
   typedef void (*PacketTransmittingCallback)(std::string path,
                                              ROSCommsDevicePtr, ns3PacketPtr);
 
-  typedef void (*PacketCollision)(std::string path, ROSCommsDevicePtr,
+  typedef void (*PacketCollisionCallback)(std::string path, ROSCommsDevicePtr,
                                   ns3PacketPtr);
-  typedef void (*PacketPropagationError)(std::string path, ROSCommsDevicePtr,
+  typedef void (*PacketPropagationErrorCallback)(std::string path, ROSCommsDevicePtr,
                                          ns3PacketPtr);
+
+  typedef void (*CourseChangeCallback)(std::string path, ROSCommsDevicePtr,
+                                         const tf::Vector3 &);
 
 protected:
   virtual std::string DoToString() = 0;
@@ -107,6 +110,7 @@ protected:
   ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _txCbTrace;
   ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _propErrorCbTrace;
   ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _collisionCbTrace;
+  ns3::TracedCallback<ROSCommsDevicePtr, const tf::Vector3 &> _courseChangesCbTrace;
 
 private:
   void _StartDeviceService();

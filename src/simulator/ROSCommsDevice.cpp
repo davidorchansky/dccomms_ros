@@ -30,12 +30,16 @@ ns3::TypeId ROSCommsDevice::GetTypeId(void) {
               "Trace source indicating a packet has been corrupted "
               "by collision.",
               ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_collisionCbTrace),
-              "dccomms_ros::ROSCommsDevice::PacketCollision")
+              "dccomms_ros::ROSCommsDevice::PacketCollisionCallback")
           .AddTraceSource(
               "PacketPropError", "Trace source indicating a packet has been "
                                  "corrupted by attenuation.",
               ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_propErrorCbTrace),
-              "dccomms_ros::ROSCommsDevice::PacketPropagationError");
+              "dccomms_ros::ROSCommsDevice::PacketPropagationErrorCallback")
+          .AddTraceSource(
+              "CourseChange", "Device's position updated.",
+              MakeTraceSourceAccessor(&ROSCommsDevice::_courseChangesCbTrace),
+              "dccomms_ros::ROSCommsDevice::CourseChangeCallback");
   return tid;
 }
 
@@ -225,6 +229,7 @@ void ROSCommsDevice::SetTfFrameId(const string &id) { _tfFrameId = id; }
 
 void ROSCommsDevice::SetPosition(const tf::Vector3 &position) {
   _position = position;
+  _courseChangesCbTrace(this, _position);
   DoSetPosition(position);
 }
 

@@ -13,13 +13,13 @@ public:
   NetsimHeader();
   virtual ~NetsimHeader();
 
-  void SetSeqNum(uint32_t data);
+  void SetSeqNum(uint64_t data);
   void SetPacketSize(uint32_t size);
   void SetDst(uint32_t addr);
   void SetSrc(uint32_t addr);
   void SetPacketError(bool v);
 
-  uint32_t GetSeqNum(void) const;
+  uint64_t GetSeqNum(void) const;
   uint32_t GetPacketSize(void) const;
   uint32_t GetDst(void) const;
   uint32_t GetSrc(void) const;
@@ -43,7 +43,8 @@ public:
   }
 
 private:
-  uint32_t _seq, _packetSize, _dst, _src;
+  uint64_t _seq;
+  uint32_t _packetSize, _dst, _src;
   bool _error;
 };
 }
