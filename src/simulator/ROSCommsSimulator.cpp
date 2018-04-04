@@ -579,7 +579,7 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
         std::string tfFrameId = dev->GetTfFrameId();
         try {
           ros::Time now = ros::Time::now();
-          listener.lookupTransform(tfFrameId, "/world", ros::Time(0),
+          listener.lookupTransform("/world", tfFrameId, ros::Time(0),
                                    transform);
           tf::Vector3 position = transform.getOrigin();
           dev->SetPosition(position);
