@@ -80,6 +80,17 @@ void ROSCommsDevice::_StartDeviceService() {
   _StartNodeWorker();
 }
 
+void ROSCommsDevice::Stop() {
+  auto level = Log->level();
+  Log->set_level(spdlog::level::info);
+  Info("Stopping comms service...");
+  _device->Stop();
+  Info("Stopping packet sender service...");
+  _txserv.Stop();
+  Info("Device stopped");
+  Log->set_level(level);
+}
+
 void ROSCommsDevice::Start() {
   // _ownPtr = this; // shared_from_this();
   _StartDeviceService();
@@ -117,6 +128,8 @@ void ROSCommsDevice::SetDccommsId(const std::string name) {
   _name = name;
   _txdlf = _txpb->Create();
   _device->SetCommsDeviceId(_name);
+  SetLogName(_name);
+  _device->SetLogName(_name + ":Service");
 }
 
 std::string ROSCommsDevice::GetDccommsId() { return _name; }
@@ -163,36 +176,41 @@ uint32_t ROSCommsDevice::GetMac() { return _mac; }
 
 void ROSCommsDevice::_TxWork() {
   NS_LOG_FUNCTION(this);
-  _device->WaitForFramesFromRxFifo();
-  _device->SetPhyLayerState(CommsDeviceService::BUSY);
-  unsigned int txFifoSize;
-  do {
-    _device >> _txdlf;
-    txFifoSize = _device->GetRxFifoSize();
-    //    Log->info("(dccommsId: {}) received packet from the upper layer. tx
-    //    fifo "
-    //              "size: {} bytes",
-    //              GetDccommsId(), txFifoSize);
-    PacketPtr txdlf = _txpb->CreateFromBuffer(_txdlf->GetBuffer());
-    if (txdlf->PacketIsOk()) {
-      // PACKET OK
-      auto header = NetsimHeader::Build(txdlf);
-      auto pkt =
-          ns3::Create<ns3::Packet>(txdlf->GetBuffer(), txdlf->GetPacketSize());
-      pkt->AddHeader(header);
-      _txCbTrace(this, pkt);
-      NS_LOG_DEBUG("Send packet");
-      Debug("ROSCommsDevice: Send frame");
-      DoSend(pkt);
-      uint32_t packetSize = static_cast<uint32_t>(txdlf->GetPacketSize());
-      uint64_t transmissionTime = packetSize * _nanosPerByte;
-      std::this_thread::sleep_for(std::chrono::nanoseconds(transmissionTime));
-    } else {
-      Log->critical("packet received with errors from the upper layer!");
-    }
-  } while (txFifoSize > 0);
+  try {
+    _device->WaitForFramesFromRxFifo();
+    _device->SetPhyLayerState(CommsDeviceService::BUSY);
+    unsigned int txFifoSize;
+    do {
+      _device >> _txdlf;
+      txFifoSize = _device->GetRxFifoSize();
+      PacketPtr txdlf = _txpb->CreateFromBuffer(_txdlf->GetBuffer());
+      if (txdlf->PacketIsOk()) {
+        // PACKET OK
+        auto header = NetsimHeader::Build(txdlf);
+        auto pkt = ns3::Create<ns3::Packet>(txdlf->GetBuffer(),
+                                            txdlf->GetPacketSize());
+        pkt->AddHeader(header);
+        _txCbTrace(this, pkt);
+        NS_LOG_DEBUG("Send packet");
+        Debug("ROSCommsDevice: Send frame");
+        DoSend(pkt);
+        uint32_t packetSize = static_cast<uint32_t>(txdlf->GetPacketSize());
+        uint64_t transmissionTime = packetSize * _nanosPerByte;
+        std::this_thread::sleep_for(std::chrono::nanoseconds(transmissionTime));
+      } else {
+        Log->critical("packet received with errors from the upper layer!");
+      }
+    } while (txFifoSize > 0);
 
-  _device->SetPhyLayerState(CommsDeviceService::READY);
+    _device->SetPhyLayerState(CommsDeviceService::READY);
+  } catch (CommsException e) {
+    if(e.code != COMMS_EXCEPTION_STOPPED)
+      Warn("CommsException in the packet sender service: {}", e.what());
+  } catch (exception e) {
+    Error("Something failed in the packet sender service: {}", e.what());
+  } catch (int e) {
+    Error("Something failed in the packet sender service. Code: {}", e);
+  }
 }
 
 void ROSCommsDevice::SetLogName(std::string name) {

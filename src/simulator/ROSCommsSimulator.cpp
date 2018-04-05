@@ -67,7 +67,8 @@ TypeId ROSCommsSimulator::GetTypeId(void) {
   return tid;
 }
 
-ROSCommsSimulator::ROSCommsSimulator() : _linkUpdaterWorker(this), _this(this) {
+ROSCommsSimulator::ROSCommsSimulator()
+    : _linkUpdaterWorker(this), _linkUpdaterLoopRate(10) {
   SetLogName("CommsSimulator");
   LogToConsole(true);
   FlushLogOn(cpplogging::LogLevel::info);
@@ -223,7 +224,7 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     if (!rxpb)
       rxpb = GetDefaultPacketBuilder();
     ns3::Ptr<AcousticROSCommsDevice> dev =
-        ns3::CreateObject<AcousticROSCommsDevice>(_this, txpb, rxpb);
+        ns3::CreateObject<AcousticROSCommsDevice>(this, txpb, rxpb);
 
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
@@ -417,7 +418,7 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     if (!rxpb)
       rxpb = GetDefaultPacketBuilder();
     CustomROSCommsDevicePtr dev =
-        ns3::CreateObject<CustomROSCommsDevice>(_this, txpb, rxpb);
+        ns3::CreateObject<CustomROSCommsDevice>(this, txpb, rxpb);
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
@@ -450,6 +451,32 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
   return res.res;
 }
 
+void ROSCommsSimulator::Stop() {
+  auto level = Log->level();
+  Log->set_level(spdlog::level::info);
+  Info("Stopping ns3...");
+  Simulator::Stop();
+  try {
+    Info("Stopping TF worker...");
+    _linkUpdaterWorker.Stop();
+    Info("Stopping devices...");
+    for (auto dev : _devices) {
+      dev->Stop();
+    }
+  } catch (CommsException e) {
+    if (e.code != COMMS_EXCEPTION_STOPPED)
+      Warn("CommsException trying to stop the network simulator: {}", e.what());
+  } catch (exception e) {
+    Error("Something failed when trying to stop the network simulator: {}",
+          e.what());
+  } catch (int e) {
+    Error(
+        "Something failed when trying to stop the network simulator. Code: {}",
+        e);
+  }
+  Info("Network simulator stopped");
+  Log->set_level(level);
+}
 void ROSCommsSimulator::StartROSInterface() {
   /*
    * http://www.boost.org/doc/libs/1_63_0/libs/bind/doc/html/bind.html#bind.purpose.using_bind_with_functions_and_fu
@@ -473,16 +500,7 @@ void ROSCommsSimulator::StartROSInterface() {
       "add_custom_channel", &ROSCommsSimulator::_AddCustomChannel, this);
   _addCustomDeviceService = _rosNode.advertiseService(
       "add_custom_net_device", &ROSCommsSimulator::_AddCustomDevice, this);
-  _linkUpdaterWorker.Start();
-
-  std::thread rosLoop([this]() {
-    ros::Rate rate(_publish_rate);
-    while (ros::ok()) {
-
-      rate.sleep();
-    }
-  });
-  rosLoop.detach();
+  _StartLinkUpdaterWork();
 }
 
 bool ROSCommsSimulator::_StartSimulation(
@@ -553,52 +571,44 @@ void ROSCommsSimulator::_Run() {
   task.detach();
 }
 
+void ROSCommsSimulator::_StartLinkUpdaterWork() {
+  _callPositionUpdatedCb = false;
+  _showLinkUpdaterLogTimer.Reset();
+  _linkUpdaterLoopRate = ros::Rate(_updatePositionRate);
+  _linkUpdaterWorker.Start();
+}
+
 void ROSCommsSimulator::_LinkUpdaterWork() {
-  tf::TransformListener listener;
-
-  dccomms::Timer showLogTimer;
-  bool callPositionUpdatedCb = false;
-  unsigned int positionUpdatedCbInterval = _positionUpdatedCbMinPeriod;
-  showLogTimer.Reset();
-
-  ros::Rate loop_rate(_updatePositionRate);
-
-  std::string frameId0, frameId1;
-  while (1) {
-
-    if (showLogTimer.Elapsed() > positionUpdatedCbInterval) {
-      callPositionUpdatedCb = true;
-    }
-
-    _devLinksMutex.lock();
-    tf::StampedTransform transform;
-    for (std::pair<const uint32_t, Mac2DevMapPtr> type2Devs : _type2DevMap) {
-      Mac2DevMapPtr mac2DevMap = type2Devs.second;
-      for (std::pair<const uint32_t, ROSCommsDevicePtr> mac2Dev : *mac2DevMap) {
-        ROSCommsDevicePtr dev = mac2Dev.second;
-        std::string tfFrameId = dev->GetTfFrameId();
-        try {
-          ros::Time now = ros::Time::now();
-          listener.lookupTransform("/world", tfFrameId, ros::Time(0),
-                                   transform);
-          tf::Vector3 position = transform.getOrigin();
-          dev->SetPosition(position);
-          if (callPositionUpdatedCb)
-            PositionUpdatedCb(dev, position);
-        } catch (std::exception &e) {
-          if (callPositionUpdatedCb)
-            Log->warn("An exception has ocurred in the link updater work: {}",
-                      std::string(e.what()));
-        }
+  if (_showLinkUpdaterLogTimer.Elapsed() > _positionUpdatedCbMinPeriod) {
+    _callPositionUpdatedCb = true;
+  }
+  _devLinksMutex.lock();
+  tf::StampedTransform transform;
+  for (std::pair<const uint32_t, Mac2DevMapPtr> type2Devs : _type2DevMap) {
+    Mac2DevMapPtr mac2DevMap = type2Devs.second;
+    for (std::pair<const uint32_t, ROSCommsDevicePtr> mac2Dev : *mac2DevMap) {
+      ROSCommsDevicePtr dev = mac2Dev.second;
+      std::string tfFrameId = dev->GetTfFrameId();
+      try {
+        // ros::Time now = ros::Time::now();
+        listener.lookupTransform("/world", tfFrameId, ros::Time(0), transform);
+        tf::Vector3 position = transform.getOrigin();
+        dev->SetPosition(position);
+        if (_callPositionUpdatedCb)
+          PositionUpdatedCb(dev, position);
+      } catch (std::exception &e) {
+        if (_callPositionUpdatedCb)
+          Log->warn("An exception has ocurred in the link updater work: {}",
+                    std::string(e.what()));
       }
     }
-    _devLinksMutex.unlock();
-    loop_rate.sleep();
+  }
+  _devLinksMutex.unlock();
+  _linkUpdaterLoopRate.sleep();
 
-    if (callPositionUpdatedCb) {
-      callPositionUpdatedCb = false;
-      showLogTimer.Reset();
-    }
+  if (_callPositionUpdatedCb) {
+    _callPositionUpdatedCb = false;
+    _showLinkUpdaterLogTimer.Reset();
   }
 }
 

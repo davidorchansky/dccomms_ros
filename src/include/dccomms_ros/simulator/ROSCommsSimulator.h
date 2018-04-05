@@ -121,8 +121,10 @@ public:
   bool AddCustomChannel(dccomms_ros_msgs::AddCustomChannel::Request &req);
   bool AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req);
   bool StartSimulation();
+  void _StartLinkUpdaterWork();
 
   static ns3::TypeId GetTypeId(void);
+  void Stop();
 
   friend class ROSCommsDevice;
 
@@ -189,9 +191,12 @@ private:
   Id2ChannelMap _channelMap;
   //////////
   ROSCommsSimulatorPtr _this;
-  bool _started;
+  tf::TransformListener listener;
+  dccomms::Timer _showLinkUpdaterLogTimer;
+  bool _started, _callPositionUpdatedCb;
   double _positionUpdatedCbMinPeriod;
   uint32_t _updatePositionRate;
+  ros::Rate _linkUpdaterLoopRate;
 
   PacketBuilderMap _packetBuilderMap;
   std::vector<ns3::Ptr<ROSCommsDevice>> _devices;

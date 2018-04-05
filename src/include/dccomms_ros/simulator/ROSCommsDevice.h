@@ -73,6 +73,7 @@ public:
 
   virtual DEV_TYPE GetDevType() = 0;
   bool Started();
+  void Stop();
 
   /**
    * \brief Get the type ID.
