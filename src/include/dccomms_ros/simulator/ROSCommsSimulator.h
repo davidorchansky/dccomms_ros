@@ -5,8 +5,8 @@
 #include <dccomms/dccomms.h>
 #include <dccomms_ros/simulator/AcousticROSCommsDevice.h>
 #include <dccomms_ros/simulator/CommsChannel.h>
-#include <dccomms_ros/simulator/CustomROSCommsDevice.h>
 #include <dccomms_ros/simulator/CustomCommsChannel.h>
+#include <dccomms_ros/simulator/CustomROSCommsDevice.h>
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <functional>
 #include <memory>
@@ -128,6 +128,8 @@ public:
 
   friend class ROSCommsDevice;
 
+  std::vector<ns3::Ptr<ROSCommsDevice>> GetDevices() { return _devices; }
+
 private:
   const char _timeFormat[100] = "%Y-%m-%d %H:%M:%S";
   int _publish_rate;
@@ -209,11 +211,13 @@ private:
   template <typename T>
   void _InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices, ns3::Ptr<T> dev);
   template <typename T>
-  void _InsertChannelAsc(std::vector<ns3::Ptr<T>> &channels, ns3::Ptr<T> channel);
+  void _InsertChannelAsc(std::vector<ns3::Ptr<T>> &channels,
+                         ns3::Ptr<T> channel);
 };
 
 template <typename T>
-void ROSCommsSimulator::_InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices, ns3::Ptr<T> dev) {
+void ROSCommsSimulator::_InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices,
+                                         ns3::Ptr<T> dev) {
 
   if (devices.size() > 0) {
     uint32_t i = 0;
@@ -231,9 +235,9 @@ void ROSCommsSimulator::_InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices, ns3:
     devices.push_back(dev);
 }
 
-
 template <typename T>
-void ROSCommsSimulator::_InsertChannelAsc(std::vector<ns3::Ptr<T>> &channels, ns3::Ptr<T> chn) {
+void ROSCommsSimulator::_InsertChannelAsc(std::vector<ns3::Ptr<T>> &channels,
+                                          ns3::Ptr<T> chn) {
 
   if (channels.size() > 0) {
     uint32_t i = 0;

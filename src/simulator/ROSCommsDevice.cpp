@@ -62,21 +62,24 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
 
 ROSCommsDevice::~ROSCommsDevice() {}
 
+void ROSCommsDevice::_BuildMac2SeqMap() {
+  auto devs = _sim->GetDevices();
+  for (auto dev : devs) {
+    if (dev->GetDevType() == GetDevType() && dev->GetMac() != GetMac()) {
+      _macToSeq[dev->GetMac()] = 0;
+    }
+  }
+}
+
 void ROSCommsDevice::_StartDeviceService() {
   auto startWorker = std::thread([this]() {
     _device->Start();
+    _BuildMac2SeqMap();
     _commonStarted = true;
     _device->SetPhyLayerState(CommsDeviceService::READY);
   });
   startWorker.detach();
 
-  //  auto waitRemainingNodesToGetReadyWorker = std::thread([this]() {
-  //    while (!_sim->Ready(this->GetDevType()))
-  //      std::this_thread::sleep_for(chrono::milliseconds(100));
-  //    _StartNodeWorker();
-  //  });
-
-  //  waitRemainingNodesToGetReadyWorker.detach();
   _StartNodeWorker();
 }
 
@@ -189,6 +192,9 @@ void ROSCommsDevice::_TxWork() {
         auto header = NetsimHeader::Build(txdlf);
         auto pkt = ns3::Create<ns3::Packet>(txdlf->GetBuffer(),
                                             txdlf->GetPacketSize());
+        auto seq = _macToSeq[_txdlf->GetDestAddr()];
+        header.SetSeqNum(seq);
+        _macToSeq[_txdlf->GetDestAddr()] = seq + 1;
         pkt->AddHeader(header);
         _txCbTrace(this, pkt);
         NS_LOG_DEBUG("Send packet");
@@ -204,7 +210,7 @@ void ROSCommsDevice::_TxWork() {
 
     _device->SetPhyLayerState(CommsDeviceService::READY);
   } catch (CommsException e) {
-    if(e.code != COMMS_EXCEPTION_STOPPED)
+    if (e.code != COMMS_EXCEPTION_STOPPED)
       Warn("CommsException in the packet sender service: {}", e.what());
   } catch (exception e) {
     Error("Something failed in the packet sender service: {}", e.what());

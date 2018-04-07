@@ -18,6 +18,7 @@ namespace dccomms_ros {
 enum PacketErrorType { PE_PROP, PE_COL };
 class ROSCommsDevice;
 typedef ns3::Ptr<ROSCommsDevice> ROSCommsDevicePtr;
+typedef std::unordered_map<uint32_t, uint64_t> macToCurrentSeqMap;
 
 class ROSCommsSimulator;
 // typedef dccomms::Ptr<ROSCommsSimulator> ROSCommsSimulatorPtr;
@@ -106,6 +107,7 @@ protected:
 
   ROSCommsSimulatorPtr _sim;
   PacketBuilderPtr _txpb, _rxpb;
+  void _BuildMac2SeqMap();
 
   ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _rxCbTrace;
   ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _txCbTrace;
@@ -129,6 +131,7 @@ protected:
   uint32_t _bitRate;
   uint64_t _nanosPerByte;
   tf::Vector3 _position;
+  macToCurrentSeqMap _macToSeq;
 
   // ROSCommsDevicePtr _ownPtr;
 
