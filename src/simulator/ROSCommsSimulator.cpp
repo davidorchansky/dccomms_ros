@@ -71,7 +71,7 @@ ROSCommsSimulator::ROSCommsSimulator()
     : _linkUpdaterWorker(this), _linkUpdaterLoopRate(10) {
   SetLogName("CommsSimulator");
   LogToConsole(true);
-  FlushLogOn(cpplogging::LogLevel::info);
+  //FlushLogOn(cpplogging::LogLevel::info);
   _linkUpdaterWorker.SetWork(&ROSCommsSimulator::_LinkUpdaterWork);
   _Init();
 }
