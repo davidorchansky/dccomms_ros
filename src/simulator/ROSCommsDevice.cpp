@@ -251,10 +251,14 @@ void ROSCommsDevice::FlushLogOn(cpplogging::LogLevel level) {
 
 void ROSCommsDevice::SetTfFrameId(const string &id) { _tfFrameId = id; }
 
-void ROSCommsDevice::SetPosition(const tf::Vector3 &position) {
+void ROSCommsDevice::_SetPosition(const tf::Vector3 &position) {
   _position = position;
   _courseChangesCbTrace(this, _position);
   DoSetPosition(position);
+}
+void ROSCommsDevice::SetPosition(const tf::Vector3 &position) {
+  ns3::Simulator::ScheduleWithContext(
+      GetMac(), ns3::Seconds(0), &ROSCommsDevice::_SetPosition, this, position);
 }
 
 tf::Vector3 ROSCommsDevice::GetPosition() { return _position; }

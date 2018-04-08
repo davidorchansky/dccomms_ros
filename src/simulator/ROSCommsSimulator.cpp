@@ -5,6 +5,7 @@
 #include <dccomms_ros/simulator/AcousticROSCommsDevice.h>
 #include <dccomms_ros/simulator/CustomCommsChannel.h>
 #include <dccomms_ros/simulator/CustomROSCommsDevice.h>
+#include <dccomms_ros/simulator/NetsimTime.h>
 #include <dccomms_ros/simulator/PacketBuilderLoader.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
 #include <dccomms_ros_msgs/CheckDevice.h>
@@ -71,7 +72,7 @@ ROSCommsSimulator::ROSCommsSimulator()
     : _linkUpdaterWorker(this), _linkUpdaterLoopRate(10) {
   SetLogName("CommsSimulator");
   LogToConsole(true);
-  //FlushLogOn(cpplogging::LogLevel::info);
+  // FlushLogOn(cpplogging::LogLevel::info);
   _linkUpdaterWorker.SetWork(&ROSCommsSimulator::_LinkUpdaterWork);
   _Init();
 }
@@ -559,6 +560,7 @@ bool ROSCommsSimulator::Ready(DEV_TYPE devType) {
 }
 
 void ROSCommsSimulator::_Run() {
+  NetsimTime::Reset();
   std::thread task([this]() {
     Simulator::Schedule(
         Seconds(0),

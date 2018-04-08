@@ -119,6 +119,7 @@ private:
   void _StartDeviceService();
   void _StartNodeWorker();
   void _TxWork();
+  void _SetPosition(const tf::Vector3 &position);
 
 protected:
   std::mutex _receiveFrameMutex;
