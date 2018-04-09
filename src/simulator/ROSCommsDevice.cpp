@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <dccomms_ros/simulator/NetsimLogFormatter.h>
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
 #include <dccomms_ros_msgs/types.h>
@@ -58,6 +59,7 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
   LogComponentEnable("ROSCommsDevice",
                      LOG_LEVEL_ALL); // NS3 DOES NOT WORK (TODO: FIX IT)
   SetLogLevel(debug);
+  SetLogFormatter(make_shared<NetsimLogFormatter>("%v"));
 }
 
 ROSCommsDevice::~ROSCommsDevice() {}
@@ -106,9 +108,9 @@ void ROSCommsDevice::_StartNodeWorker() { _txserv.Start(); }
 
 void ROSCommsDevice::ReceiveFrame(ns3PacketPtr packet) {
   Debug("ROSCommsDevice: Frame received");
+  _rxCbTrace(this, packet);
   if (Started()) {
     char ser[5000];
-    _rxCbTrace(this, packet);
     NetsimHeader header;
     packet->RemoveHeader(header);
     auto size = packet->GetSize();
@@ -139,6 +141,7 @@ std::string ROSCommsDevice::GetDccommsId() { return _name; }
 
 void ROSCommsDevice::SetMaxTxFifoSize(uint32_t size) {
   _device->SetMaxQueueSize(size);
+  DoSetMaxTxFifoSize(size);
 }
 
 uint32_t ROSCommsDevice::GetMaxTxFifoSize() {
@@ -200,9 +203,9 @@ void ROSCommsDevice::_TxWork() {
         NS_LOG_DEBUG("Send packet");
         Debug("ROSCommsDevice: Send frame");
         DoSend(pkt);
-        uint32_t packetSize = static_cast<uint32_t>(txdlf->GetPacketSize());
-        uint64_t transmissionTime = packetSize * _nanosPerByte;
-        std::this_thread::sleep_for(std::chrono::nanoseconds(transmissionTime));
+//        uint32_t packetSize = static_cast<uint32_t>(txdlf->GetPacketSize());
+//        uint64_t transmissionTime = packetSize * _nanosPerByte;
+//        std::this_thread::sleep_for(std::chrono::nanoseconds(transmissionTime));
       } else {
         Log->critical("packet received with errors from the upper layer!");
       }

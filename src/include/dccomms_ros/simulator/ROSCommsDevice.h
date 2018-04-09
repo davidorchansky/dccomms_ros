@@ -104,6 +104,7 @@ protected:
   virtual void DoStart() = 0;
   virtual void DoSetPosition(const tf::Vector3 &position) = 0;
   virtual bool DoStarted() = 0;
+  virtual void DoSetMaxTxFifoSize(uint32_t size) = 0;
 
   ROSCommsSimulatorPtr _sim;
   PacketBuilderPtr _txpb, _rxpb;
@@ -133,6 +134,9 @@ protected:
   uint64_t _nanosPerByte;
   tf::Vector3 _position;
   macToCurrentSeqMap _macToSeq;
+  uint32_t _maxTxFifoSize;
+  uint32_t _currentTxFifoSize;
+  uint32_t _currentNumberOfPacketsInTxFifo;
 
   // ROSCommsDevicePtr _ownPtr;
 

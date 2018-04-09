@@ -49,6 +49,7 @@ protected:
   void DoStart();
   void DoSetPosition(const tf::Vector3 &position);
   bool DoStarted();
+  void DoSetMaxTxFifoSize(uint32_t size);
   std::string DoToString();
 
 private:

@@ -15,24 +15,30 @@ namespace dccomms_ros {
 class CustomROSCommsDevice;
 typedef ns3::Ptr<CustomROSCommsDevice> CustomROSCommsDevicePtr;
 
-class IncommingPacket;
-typedef dccomms::Ptr<IncommingPacket> IncommingPacketPtr;
-class IncommingPacket {
+class IncomingPacket;
+typedef dccomms::Ptr<IncomingPacket> IncomingPacketPtr;
+class IncomingPacket {
 public:
   bool propagationError;
   bool collisionError;
   ns3PacketPtr packet;
-  IncommingPacket() {
+  IncomingPacket() {
     propagationError = false;
     collisionError = false;
     packet = NULL;
   }
   bool Error() { return propagationError || collisionError; }
-  /**
-   * \brief Get the type ID.
-   * \return the object TypeId
-   */
-  static ns3::TypeId GetTypeId(void);
+};
+
+class OutcomingPacket;
+typedef dccomms::Ptr<OutcomingPacket> OutcomingPacketPtr;
+class OutcomingPacket {
+public:
+  uint32_t packetSize;
+  ns3PacketPtr packet;
+  OutcomingPacket() {
+    packet = NULL;
+  }
 };
 
 class SimpleVarExprEval {
@@ -72,7 +78,7 @@ public:
   double GetMinDistance();
   double GetIntrinsicDelay();
 
-  void PropagateNextPacket();
+  // void PropagateNextPacket();
   void PropagatePacket(ns3PacketPtr pkt);
   void TransmitPacket(ns3PacketPtr pkt);
   inline void SetTransmitting(bool v) { Transmitting(v); }
@@ -89,12 +95,12 @@ public:
   typedef std::default_random_engine RandEngGen;
   typedef std::uniform_real_distribution<double> UniformRealDist;
 
-  inline void EnqueueTxPacket(ns3PacketPtr pkt);
+  inline void EnqueueTxPacket(ns3PacketPtr pkt, uint32_t size);
   inline bool TxFifoEmpty();
   ns3PacketPtr PopTxPacket();
 
   void AddNewPacket(ns3PacketPtr pkt, bool propagationError);
-  void HandleNextIncommingPacket();
+  void HandleNextIncomingPacket();
 
   void MarkIncommingPacketsAsCollisioned();
   bool Transmitting();
@@ -113,13 +119,14 @@ protected:
   virtual void DoStart();
   virtual void DoSetPosition(const tf::Vector3 &position);
   virtual bool DoStarted();
+  virtual void DoSetMaxTxFifoSize(uint32_t size);
   std::string DoToString();
 
 private:
   uint32_t _mac;
   double _bitRateMean, _bitRateSd;
   double _minPktErrorRate, _pktErrorRateIncPerMeter;
-  double _intrinsicDelay; //ms
+  double _intrinsicDelay; // ms
 
   double _maxDistance, _minDistance; // in meters
   tf::Vector3 _position;
@@ -129,8 +136,8 @@ private:
   UniformRealDist _erDist;
   RandEngGen _ttGenerator, _erGenerator;
 
-  std::queue<ns3PacketPtr> _txFifo;
-  std::list<IncommingPacketPtr> _incommingPackets;
+  std::list<IncomingPacketPtr> _incomingPackets;
+  std::list<OutcomingPacketPtr> _outcomingPackets;
 
   CommsChannelPtr _txChannel, _rxChannel;
   // DEV_STATUS _status;

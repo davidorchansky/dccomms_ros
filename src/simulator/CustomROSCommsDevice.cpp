@@ -25,7 +25,11 @@ CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
   Transmitting(false);
   Receiving(false);
   LogComponentEnable("CustomROSCommsDevice",
-                     LOG_LEVEL_ALL); // NS3 DOES NOT WORK (TODO: FIX IT)
+                     LOG_LEVEL_ALL); // NS3 LOG DOES NOT WORK (TODO: FIX IT)
+
+  _currentNumberOfPacketsInTxFifo = 0;
+  _currentTxFifoSize = 0;
+  _maxTxFifoSize = 2048;
 }
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
@@ -144,31 +148,46 @@ void CustomROSCommsDevice::SetIntrinsicDelay(double d) { _intrinsicDelay = d; }
 
 double CustomROSCommsDevice::GetIntrinsicDelay() { return _intrinsicDelay; }
 
-inline void CustomROSCommsDevice::EnqueueTxPacket(ns3PacketPtr pkt) {
-  _txFifo.push(pkt);
+inline void CustomROSCommsDevice::EnqueueTxPacket(ns3PacketPtr pkt,
+                                                  uint32_t size) {
+  uint32_t leftSpace = _maxTxFifoSize - _currentTxFifoSize;
+  if (leftSpace >= size) {
+    OutcomingPacketPtr opkt = dccomms::CreateObject<OutcomingPacket>();
+    opkt->packet = pkt;
+    opkt->packetSize = size;
+    _outcomingPackets.push_back(opkt);
+    _currentTxFifoSize += size;
+  } else {
+    // Drop packet
+    Warn("{} Outcoming packet dropped! Tx Fifo size: {}", GetDccommsId(),
+         _currentTxFifoSize);
+  }
 }
 ns3PacketPtr CustomROSCommsDevice::PopTxPacket() {
-  auto pkt = _txFifo.front();
-  _txFifo.pop();
-  return pkt;
+  auto opkt = _outcomingPackets.front();
+  _outcomingPackets.pop_front();
+  _currentTxFifoSize -= opkt->packetSize;
+  return opkt->packet;
 }
-inline bool CustomROSCommsDevice::TxFifoEmpty() { return _txFifo.empty(); }
+inline bool CustomROSCommsDevice::TxFifoEmpty() {
+  return _outcomingPackets.empty();
+}
 
 void CustomROSCommsDevice::MarkIncommingPacketsAsCollisioned() {
   // Mark all packets invalid (collisioned)
   Debug("CustomROSCommsDevice({}): MarkIncommingPacketsAsCollisioned",
         GetDccommsId());
-  for (auto ipkt : _incommingPackets) {
+  for (auto ipkt : _incomingPackets) {
     ipkt->collisionError = true;
   }
 }
 
-void CustomROSCommsDevice::HandleNextIncommingPacket() {
+void CustomROSCommsDevice::HandleNextIncomingPacket() {
   NS_LOG_FUNCTION(this);
   Debug("CustomROSCommsDevice({}): HandleNextIncommingPacket", GetDccommsId());
-  if (!_incommingPackets.empty()) {
-    IncommingPacketPtr ptr = _incommingPackets.front();
-    _incommingPackets.pop_front();
+  if (!_incomingPackets.empty()) {
+    IncomingPacketPtr ptr = _incomingPackets.front();
+    _incomingPackets.pop_front();
     if (ptr->Error()) {
       // TODO: increase packet errors counter (traced value)
       if (ptr->collisionError) {
@@ -195,7 +214,7 @@ void CustomROSCommsDevice::AddNewPacket(ns3PacketPtr pkt,
                                         bool propagationError) {
   NS_LOG_FUNCTION(this);
   Debug("CustomROSCommsDevice({}): AddNewPacket", GetDccommsId());
-  IncommingPacketPtr ipkt = dccomms::CreateObject<IncommingPacket>();
+  IncomingPacketPtr ipkt = dccomms::CreateObject<IncomingPacket>();
   ipkt->propagationError = propagationError;
   NetsimHeader header;
   pkt->PeekHeader(header);
@@ -207,7 +226,7 @@ void CustomROSCommsDevice::AddNewPacket(ns3PacketPtr pkt,
   } else {
     Receiving(true);
     ipkt->packet = pkt;
-    _incommingPackets.push_back(ipkt);
+    _incomingPackets.push_back(ipkt);
 
     auto pktSize = header.GetPacketSize();
     auto byteTrt = GetNanosPerByte();
@@ -218,8 +237,12 @@ void CustomROSCommsDevice::AddNewPacket(ns3PacketPtr pkt,
           GetDccommsId(), pktSize, trTime / 1e9);
     ns3::Simulator::ScheduleWithContext(
         GetMac(), ns3::NanoSeconds(trTime),
-        &CustomROSCommsDevice::HandleNextIncommingPacket, this);
+        &CustomROSCommsDevice::HandleNextIncomingPacket, this);
   }
+}
+
+void CustomROSCommsDevice::DoSetMaxTxFifoSize(uint32_t size) {
+  _maxTxFifoSize = size;
 }
 
 bool CustomROSCommsDevice::Transmitting() { return _transmitting; }
@@ -228,14 +251,9 @@ void CustomROSCommsDevice::Transmitting(bool transmitting) {
   Debug("CustomROSCommsDevice({}): Setting transmitting status: {}",
         GetDccommsId(), transmitting);
   _transmitting = transmitting;
-  if (!TxFifoEmpty()) {
-    if (!_transmitting) {
-      auto pkt = PopTxPacket();
-      TransmitPacket(pkt);
-    } else {
-      Critical("internal error: TX fifo not empty when calling SetStatus with "
-               "not SEND");
-    }
+  if (!_transmitting && !TxFifoEmpty()) {
+    auto pkt = PopTxPacket();
+    TransmitPacket(pkt);
   }
 }
 
@@ -248,16 +266,17 @@ void CustomROSCommsDevice::Receiving(bool receiving) {
         GetDccommsId(), receiving);
 }
 
-void CustomROSCommsDevice::PropagateNextPacket() {
-  NS_LOG_FUNCTION(this);
-  if (!TxFifoEmpty()) {
-    auto packet = PopTxPacket();
-    static_cast<CustomCommsChannel *>(ns3::PeekPointer(_txChannel))
-        ->SendPacket(this, packet);
-    Transmitting(false);
-  } else
-    Critical("internal error: TX fifo emtpy when calling TransmitNextPacket");
-}
+// void CustomROSCommsDevice::PropagateNextPacket() {
+//  NS_LOG_FUNCTION(this);
+//  if (!TxFifoEmpty()) {
+//    auto packet = PopTxPacket();
+//    static_cast<CustomCommsChannel *>(ns3::PeekPointer(_txChannel))
+//        ->SendPacket(this, packet);
+//    Transmitting(false);
+//  } else {
+//    Critical("internal error: TX fifo emtpy when calling TransmitNextPacket");
+//  }
+//}
 
 void CustomROSCommsDevice::PropagatePacket(ns3PacketPtr pkt) {
   static_cast<CustomCommsChannel *>(ns3::PeekPointer(_txChannel))
@@ -269,8 +288,9 @@ void CustomROSCommsDevice::TransmitPacket(ns3PacketPtr pkt) {
   Debug("CustomROSCommsDevice: Transmit packet");
   NetsimHeader header;
   pkt->PeekHeader(header);
-  if (_rxChannel != _txChannel || _rxChannel == _txChannel && !Receiving()) {
-    auto pktSize = header.GetPacketSize();
+  auto pktSize = header.GetPacketSize();
+  if (!Transmitting() &&
+      (_rxChannel != _txChannel || _rxChannel == _txChannel && !Receiving())) {
     auto byteTrt =
         GetNextTt(); // It's like GetNanosPerByte but with a variation
     auto trTime = pktSize * byteTrt;
@@ -284,15 +304,15 @@ void CustomROSCommsDevice::TransmitPacket(ns3PacketPtr pkt) {
     PropagatePacket(pkt);
   } else {
     Debug("CustomROSCommsDevice({}): Enqueue packet", GetDccommsId());
-    EnqueueTxPacket(pkt);
+    EnqueueTxPacket(pkt, pktSize);
   }
 }
 
 void CustomROSCommsDevice::DoSetMac(uint32_t mac) { _mac = mac; }
 void CustomROSCommsDevice::DoSend(ns3PacketPtr dlf) {
-  ns3::Simulator::ScheduleWithContext(GetMac(), ns3::NanoSeconds(_intrinsicDelay*1e6),
-                                      &CustomROSCommsDevice::TransmitPacket,
-                                      this, dlf);
+  ns3::Simulator::ScheduleWithContext(
+      GetMac(), ns3::NanoSeconds(_intrinsicDelay * 1e6),
+      &CustomROSCommsDevice::TransmitPacket, this, dlf);
 }
 void CustomROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
                                            CHANNEL_LINK_TYPE linkType) {

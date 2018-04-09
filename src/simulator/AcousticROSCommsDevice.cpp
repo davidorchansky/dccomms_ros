@@ -228,6 +228,8 @@ void AcousticROSCommsDevice::SetInitialEnergy(double value) {
   _initialEnergy = value;
 }
 
+void AcousticROSCommsDevice::DoSetMaxTxFifoSize(uint32_t size) {}
+
 void AcousticROSCommsDevice::DoStart() {
 
   if (_macP != "")
