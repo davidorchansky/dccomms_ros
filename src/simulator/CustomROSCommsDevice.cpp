@@ -189,17 +189,9 @@ void CustomROSCommsDevice::HandleNextIncomingPacket() {
     IncomingPacketPtr ptr = _incomingPackets.front();
     _incomingPackets.pop_front();
     if (ptr->Error()) {
-      // TODO: increase packet errors counter (traced value)
-      if (ptr->collisionError) {
-        // TODO: increase collision errors counter (traced value)
-        Debug("CustomROSCommsDevice({}): Collision!", GetDccommsId());
-        _collisionCbTrace(this, ptr->packet);
-      }
-      if (ptr->propagationError) {
-        // TODO: increase propagation errors counter (traced value)
-        Debug("CustomROSCommsDevice({}): Propagation error!", GetDccommsId());
-        _propErrorCbTrace(this, ptr->packet);
-      }
+      Debug("Packet received with errors");
+      _pktErrorCbTrace(this, ptr->packet, ptr->propagationError,
+                       ptr->collisionError);
     } else {
       ReceiveFrame(ptr->packet);
     }
@@ -252,6 +244,7 @@ void CustomROSCommsDevice::Transmitting(bool transmitting) {
         GetDccommsId(), transmitting);
   _transmitting = transmitting;
   if (!_transmitting && !TxFifoEmpty()) {
+    Debug("Transmit next packet in fifo");
     auto pkt = PopTxPacket();
     TransmitPacket(pkt);
   }

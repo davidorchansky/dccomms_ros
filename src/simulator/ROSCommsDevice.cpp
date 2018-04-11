@@ -27,20 +27,19 @@ ns3::TypeId ROSCommsDevice::GetTypeId(void) {
               ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_txCbTrace),
               "dccomms_ros::ROSCommsDevice::PacketTransmittingCallback")
           .AddTraceSource(
-              "PacketCollision",
-              "Trace source indicating a packet has been corrupted "
-              "by collision.",
-              ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_collisionCbTrace),
-              "dccomms_ros::ROSCommsDevice::PacketCollisionCallback")
-          .AddTraceSource(
-              "PacketPropError", "Trace source indicating a packet has been "
-                                 "corrupted by attenuation.",
-              ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_propErrorCbTrace),
+              "PacketError", "Trace source indicating a packet has been "
+                             "corrupted.",
+              ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_pktErrorCbTrace),
               "dccomms_ros::ROSCommsDevice::PacketPropagationErrorCallback")
           .AddTraceSource(
               "CourseChange", "Device's position updated.",
               MakeTraceSourceAccessor(&ROSCommsDevice::_courseChangesCbTrace),
-              "dccomms_ros::ROSCommsDevice::CourseChangeCallback");
+              "dccomms_ros::ROSCommsDevice::CourseChangeCallback")
+          .AddTraceSource(
+              "TxFifoSize",
+              "Current number of bytes in device's transmission fifo",
+              MakeTraceSourceAccessor(&ROSCommsDevice::_currentTxFifoSize),
+              "ns3::TracedValueCallback::Uint32");
   return tid;
 }
 
@@ -51,6 +50,7 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
   _txpb = txpb;
   _device = CommsDeviceService::BuildCommsDeviceService(
       _txpb, CommsDeviceService::IPHY_TYPE_PHY);
+  _device->SetBlockingTransmission(false);
   _device->SetLogLevel(cpplogging::LogLevel::info);
   SetLogLevel(cpplogging::info);
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
@@ -79,6 +79,12 @@ void ROSCommsDevice::_StartDeviceService() {
     _BuildMac2SeqMap();
     _commonStarted = true;
     _device->SetPhyLayerState(CommsDeviceService::READY);
+    std::this_thread::sleep_for(chrono::seconds(4));
+    // flush input
+    while (_device->GetRxFifoSize() > 0) {
+      _device >> _txdlf;
+      std::this_thread::sleep_for(chrono::milliseconds(200));
+    }
   });
   startWorker.detach();
 
@@ -92,6 +98,7 @@ void ROSCommsDevice::Stop() {
   _device->Stop();
   Info("Stopping packet sender service...");
   _txserv.Stop();
+  FlushLog();
   Info("Device stopped");
   Log->set_level(level);
 }
@@ -135,6 +142,7 @@ void ROSCommsDevice::SetDccommsId(const std::string name) {
   _device->SetCommsDeviceId(_name);
   SetLogName(_name);
   _device->SetLogName(_name + ":Service");
+  _device->LogToFile(name + "_log");
 }
 
 std::string ROSCommsDevice::GetDccommsId() { return _name; }
@@ -203,9 +211,10 @@ void ROSCommsDevice::_TxWork() {
         NS_LOG_DEBUG("Send packet");
         Debug("ROSCommsDevice: Send frame");
         DoSend(pkt);
-//        uint32_t packetSize = static_cast<uint32_t>(txdlf->GetPacketSize());
-//        uint64_t transmissionTime = packetSize * _nanosPerByte;
-//        std::this_thread::sleep_for(std::chrono::nanoseconds(transmissionTime));
+        //        uint32_t packetSize =
+        //        static_cast<uint32_t>(txdlf->GetPacketSize());
+        //        uint64_t transmissionTime = packetSize * _nanosPerByte;
+        //        std::this_thread::sleep_for(std::chrono::nanoseconds(transmissionTime));
       } else {
         Log->critical("packet received with errors from the upper layer!");
       }

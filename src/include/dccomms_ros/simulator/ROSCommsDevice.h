@@ -86,12 +86,8 @@ public:
                                          ns3PacketPtr);
   typedef void (*PacketTransmittingCallback)(std::string path,
                                              ROSCommsDevicePtr, ns3PacketPtr);
-
-  typedef void (*PacketCollisionCallback)(std::string path, ROSCommsDevicePtr,
-                                  ns3PacketPtr);
-  typedef void (*PacketPropagationErrorCallback)(std::string path, ROSCommsDevicePtr,
-                                         ns3PacketPtr);
-
+  typedef void (*PacketErrorCallback)(std::string path, ROSCommsDevicePtr,
+                                         ns3PacketPtr, bool, bool);
   typedef void (*CourseChangeCallback)(std::string path, ROSCommsDevicePtr,
                                          const tf::Vector3 &);
 
@@ -112,8 +108,7 @@ protected:
 
   ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _rxCbTrace;
   ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _txCbTrace;
-  ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _propErrorCbTrace;
-  ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _collisionCbTrace;
+  ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr, bool, bool> _pktErrorCbTrace;
   ns3::TracedCallback<ROSCommsDevicePtr, const tf::Vector3 &> _courseChangesCbTrace;
 
 private:
@@ -135,7 +130,7 @@ protected:
   tf::Vector3 _position;
   macToCurrentSeqMap _macToSeq;
   uint32_t _maxTxFifoSize;
-  uint32_t _currentTxFifoSize;
+  TracedValue<uint32_t> _currentTxFifoSize;
   uint32_t _currentNumberOfPacketsInTxFifo;
 
   // ROSCommsDevicePtr _ownPtr;
