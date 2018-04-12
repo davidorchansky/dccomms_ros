@@ -60,6 +60,7 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
                      LOG_LEVEL_ALL); // NS3 DOES NOT WORK (TODO: FIX IT)
   SetLogLevel(debug);
   SetLogFormatter(make_shared<NetsimLogFormatter>("%v"));
+  FlushLogOn(off);
 }
 
 ROSCommsDevice::~ROSCommsDevice() {}
@@ -142,7 +143,6 @@ void ROSCommsDevice::SetDccommsId(const std::string name) {
   _device->SetCommsDeviceId(_name);
   SetLogName(_name);
   _device->SetLogName(_name + ":Service");
-  _device->LogToFile(name + "_log");
 }
 
 std::string ROSCommsDevice::GetDccommsId() { return _name; }

@@ -36,9 +36,7 @@ class OutcomingPacket {
 public:
   uint32_t packetSize;
   ns3PacketPtr packet;
-  OutcomingPacket() {
-    packet = NULL;
-  }
+  OutcomingPacket() { packet = NULL; }
 };
 
 class SimpleVarExprEval {
@@ -78,9 +76,11 @@ public:
   double GetMinDistance();
   double GetIntrinsicDelay();
 
-  // void PropagateNextPacket();
   void PropagatePacket(ns3PacketPtr pkt);
   void TransmitPacket(ns3PacketPtr pkt);
+  void TransmitEnqueuedPacket();
+  void BeginPacketTransmission(const ns3PacketPtr & pkt, const uint32_t & pktSize);
+
   inline void SetTransmitting(bool v) { Transmitting(v); }
   bool ErrOnPkt(double range, ns3PacketPtr pkt);
   uint64_t GetNextTt(); // get next ms/byte
@@ -97,7 +97,7 @@ public:
 
   inline void EnqueueTxPacket(ns3PacketPtr pkt, uint32_t size);
   inline bool TxFifoEmpty();
-  ns3PacketPtr PopTxPacket();
+  OutcomingPacketPtr PopTxPacket();
 
   void AddNewPacket(ns3PacketPtr pkt, bool propagationError);
   void HandleNextIncomingPacket();

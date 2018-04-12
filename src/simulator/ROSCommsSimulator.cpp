@@ -434,6 +434,7 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     dev->SetIntrinsicDelay(req.intrinsicDelay);
     auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
     dev->SetLogLevel(errorLevel);
+    //dev->LogToFile(dccommsId);
 
     _InsertDeviceAsc<CustomROSCommsDevice>(_customDevices, dev);
 
