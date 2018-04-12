@@ -39,6 +39,11 @@ ns3::TypeId ROSCommsDevice::GetTypeId(void) {
               "TxFifoSize",
               "Current number of bytes in device's transmission fifo",
               MakeTraceSourceAccessor(&ROSCommsDevice::_currentTxFifoSize),
+              "ns3::TracedValueCallback::Uint32")
+          .AddTraceSource(
+              "TxPacketDrops",
+              "Number of transmitted packet drops due to the TxFifo is full",
+              MakeTraceSourceAccessor(&ROSCommsDevice::_txPacketDrops),
               "ns3::TracedValueCallback::Uint32");
   return tid;
 }
@@ -61,6 +66,7 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
   SetLogLevel(debug);
   SetLogFormatter(make_shared<NetsimLogFormatter>("%v"));
   FlushLogOn(off);
+  _txPacketDrops = 0;
 }
 
 ROSCommsDevice::~ROSCommsDevice() {}

@@ -159,8 +159,9 @@ inline void CustomROSCommsDevice::EnqueueTxPacket(ns3PacketPtr pkt,
     _currentTxFifoSize += size;
   } else {
     // Drop packet
-    Warn("{} Outcoming packet dropped! Tx Fifo size: {}", GetDccommsId(),
-         _currentTxFifoSize);
+    _txPacketDrops += 1;
+    Warn("{} Outcoming packet dropped! Tx Fifo size: {}. Packet Drops: {}",
+         GetDccommsId(), _currentTxFifoSize, _txPacketDrops);
   }
 }
 OutcomingPacketPtr CustomROSCommsDevice::PopTxPacket() {
@@ -195,7 +196,8 @@ void CustomROSCommsDevice::HandleNextIncomingPacket() {
     } else {
       ReceiveFrame(ptr->packet);
     }
-    Receiving(false);
+    if (_incomingPackets.empty())
+      Receiving(false);
   } else {
     Critical("internal error: incomming packets queue empty when "
              "HandleNextIncommingPacket!");
@@ -210,27 +212,25 @@ void CustomROSCommsDevice::AddNewPacket(ns3PacketPtr pkt,
   ipkt->propagationError = propagationError;
   NetsimHeader header;
   pkt->PeekHeader(header);
+  ipkt->packet = pkt;
+  _incomingPackets.push_back(ipkt);
   // TODO: check if propagation error and increase traced value
   if (Receiving() || _txChannel == _rxChannel && Transmitting()) {
     // TODO: increase colission errors traced value
     MarkIncommingPacketsAsCollisioned(); // Should be a maximum of 1 packet in
                                          // the _incommingPackets queue
-  } else {
-    Receiving(true);
-    ipkt->packet = pkt;
-    _incomingPackets.push_back(ipkt);
-
-    auto pktSize = header.GetPacketSize();
-    auto byteTrt = GetNanosPerByte();
-    auto trTime = pktSize * byteTrt;
-    Debug("CustomROSCommsDevice({}): Receiving packet: size({} bytes) ; "
-          "rcTime({} "
-          "secs)",
-          GetDccommsId(), pktSize, trTime / 1e9);
-    ns3::Simulator::ScheduleWithContext(
-        GetMac(), ns3::NanoSeconds(trTime),
-        &CustomROSCommsDevice::HandleNextIncomingPacket, this);
   }
+  Receiving(true);
+  auto pktSize = header.GetPacketSize();
+  auto byteTrt = GetNanosPerByte();
+  auto trTime = pktSize * byteTrt;
+  Debug("CustomROSCommsDevice({}): Receiving packet: size({} bytes) ; "
+        "rcTime({} "
+        "secs)",
+        GetDccommsId(), pktSize, trTime / 1e9);
+  ns3::Simulator::ScheduleWithContext(
+      GetMac(), ns3::NanoSeconds(trTime),
+      &CustomROSCommsDevice::HandleNextIncomingPacket, this);
 }
 
 void CustomROSCommsDevice::DoSetMaxTxFifoSize(uint32_t size) {

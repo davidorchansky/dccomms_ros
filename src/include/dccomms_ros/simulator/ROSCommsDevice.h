@@ -130,7 +130,7 @@ protected:
   tf::Vector3 _position;
   macToCurrentSeqMap _macToSeq;
   uint32_t _maxTxFifoSize;
-  TracedValue<uint32_t> _currentTxFifoSize;
+  TracedValue<uint32_t> _currentTxFifoSize, _txPacketDrops;
   uint32_t _currentNumberOfPacketsInTxFifo;
 
   // ROSCommsDevicePtr _ownPtr;
