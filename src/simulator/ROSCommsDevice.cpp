@@ -66,10 +66,25 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
   SetLogLevel(debug);
   SetLogFormatter(make_shared<NetsimLogFormatter>("%v"));
   FlushLogOn(off);
-  _txPacketDrops = 0;
+  InitTracedValues();
 }
 
 ROSCommsDevice::~ROSCommsDevice() {}
+
+void ROSCommsDevice::InitTracedValues() {
+  _txPacketDrops = UINT32_MAX;
+  _currentNumberOfPacketsInTxFifo = UINT32_MAX;
+  _currentTxFifoSize = UINT32_MAX;
+}
+
+void ROSCommsDevice::StartTracedValues() {
+
+  _txPacketDrops = 0;
+  _currentNumberOfPacketsInTxFifo = 0;
+  _currentTxFifoSize = 0;
+}
+
+//void ROSCommsDevice::StopTracedValues() { InitTracedValues(); }
 
 void ROSCommsDevice::_BuildMac2SeqMap() {
   auto devs = _sim->GetDevices();
@@ -100,6 +115,7 @@ void ROSCommsDevice::_StartDeviceService() {
 
 void ROSCommsDevice::Stop() {
   auto level = Log->level();
+  //StopTracedValues();
   Log->set_level(spdlog::level::info);
   Info("Stopping comms service...");
   _device->Stop();
@@ -111,7 +127,9 @@ void ROSCommsDevice::Stop() {
 }
 
 void ROSCommsDevice::Start() {
-  // _ownPtr = this; // shared_from_this();
+  ns3::Simulator::ScheduleWithContext(GetMac(), ns3::Seconds(0),
+                                      &ROSCommsDevice::StartTracedValues, this);
+//  ns3::Simulator::ScheduleDestroy(&ROSCommsDevice::StopTracedValues, this);
   _StartDeviceService();
   DoStart();
 }

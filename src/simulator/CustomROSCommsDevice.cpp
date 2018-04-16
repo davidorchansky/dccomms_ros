@@ -26,9 +26,6 @@ CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
   Receiving(false);
   LogComponentEnable("CustomROSCommsDevice",
                      LOG_LEVEL_ALL); // NS3 LOG DOES NOT WORK (TODO: FIX IT)
-
-  _currentNumberOfPacketsInTxFifo = 0;
-  _currentTxFifoSize = 0;
   _maxTxFifoSize = 2048;
 }
 

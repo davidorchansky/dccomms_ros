@@ -91,6 +91,10 @@ public:
   typedef void (*CourseChangeCallback)(std::string path, ROSCommsDevicePtr,
                                          const tf::Vector3 &);
 
+  void InitTracedValues();
+  void StartTracedValues();
+//  void StopTracedValues();
+
 protected:
   virtual std::string DoToString() = 0;
   virtual void DoSetMac(uint32_t mac) = 0;
