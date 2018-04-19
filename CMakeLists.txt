@@ -3,6 +3,8 @@ project(dccomms_ros CXX)
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
+SET(MODULES_DIR "modules" )
+
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
@@ -30,14 +32,52 @@ function(GETPROJECTS result curdir)
   SET(${result} ${dirlist} PARENT_SCOPE)
 endfunction()
 
-####### HANDLE DEPENDENCIES ######
+#BEGIN RESOLVE GIT REVISION
+#https://bravenewmethod.com/2017/07/14/git-revision-as-compiler-definition-in-build-with-cmake/
+message(STATUS "Resolving GIT Version...")
+set(_build_version "unknown")
+find_package(Git)
+if(GIT_FOUND)
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE _build_version
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  message( STATUS "GIT hash: ${_build_version}")
+else()
+  message(STATUS "GIT not found")
+endif()
+string(TIMESTAMP _time_stamp)
+#END RESOLVE GIT REVISION
 
-SET(${PROJECT_NAME}_DEPS_DIR "modules")
-SET(${PROJECT_NAME}_TMP0 ${CMAKE_CURRENT_SOURCE_DIR}/${${PROJECT_NAME}_DEPS_DIR})
-GETPROJECTS(${PROJECT_NAME}_DEPS ${${PROJECT_NAME}_TMP0})
-message(STATUS "Dependencies found in ${${PROJECT_NAME}_TMP0}: ${${PROJECT_NAME}_DEPS}")
-FOREACH(subdir ${${PROJECT_NAME}_DEPS})
-        add_subdirectory(${${PROJECT_NAME}_DEPS_DIR}/${subdir})
+####### HANDLE DEPENDENCIES ######
+SET(DEPS_DIR ${MODULES_DIR})
+SET(TMP0 ${CMAKE_CURRENT_SOURCE_DIR}/${DEPS_DIR})
+GETPROJECTS(DEPS ${TMP0})
+message(STATUS "Dependencies found in ${TMP0}: ${DEPS}")
+FOREACH(subdir ${DEPS})
+if(GIT_FOUND)
+  SET(SUBPROJECT_PATH ${DEPS_DIR}/${subdir})
+  SET(SUBPROJECT_FULL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${SUBPROJECT_PATH})
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${SUBPROJECT_FULL_PATH}
+    OUTPUT_VARIABLE _sub_build_version
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  SET(SUBPROJECT_GIT_NAME ${subdir}_${_sub_build_version})
+  message(STATUS "Subproject generated git name: " ${SUBPROJECT_GIT_NAME})
+  if (TARGET ${subdir})
+      message(WARNING "Subproject ${SUBPROJECT_GIT_NAME} (${subdir}) has already been built!")
+  else()
+      add_subdirectory(${SUBPROJECT_PATH})
+  endif()
+else()
+  message(STATUS "GIT not found")
+endif()
 ENDFOREACH()
 
 SET(NS3_BUILD ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/build/)
