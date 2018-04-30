@@ -172,12 +172,12 @@ void ROSCommsDevice::SetDccommsId(const std::string name) {
 std::string ROSCommsDevice::GetDccommsId() { return _name; }
 
 void ROSCommsDevice::SetMaxTxFifoSize(uint32_t size) {
-  _device->SetMaxQueueSize(size);
+  _device->SetMaxQueueSize(UINT16_MAX);
   DoSetMaxTxFifoSize(size);
 }
 
 uint32_t ROSCommsDevice::GetMaxTxFifoSize() {
-  return _device->GetMaxQueueSize();
+  return _maxTxFifoSize;
 }
 
 void ROSCommsDevice::SetMac(uint32_t mac) {
