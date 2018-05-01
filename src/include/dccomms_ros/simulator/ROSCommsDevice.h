@@ -17,7 +17,9 @@ namespace dccomms_ros {
 
 enum PacketErrorType { PE_PROP, PE_COL };
 class ROSCommsDevice;
-typedef ns3::Ptr<ROSCommsDevice> ROSCommsDevicePtr;
+typedef ns3::Ptr<ROSCommsDevice> ROSCommsDeviceNs3Ptr;
+//typedef dccomms::Ptr<ROSCommsDevice> ROSCommsDevicePtr;
+typedef ROSCommsDevice * ROSCommsDevicePtr;
 typedef std::unordered_map<uint32_t, uint64_t> macToCurrentSeqMap;
 
 class ROSCommsSimulator;
@@ -65,10 +67,10 @@ public:
 
   void Start();
 
-  void LinkToChannel(CommsChannelPtr channel,
+  void LinkToChannel(CommsChannelNs3Ptr channel,
                      CHANNEL_LINK_TYPE linkType = CHANNEL_TXRX);
-  CommsChannelPtr GetLinkedTxChannel();
-  CommsChannelPtr GetLinkedRxChannel();
+  CommsChannelNs3Ptr GetLinkedTxChannel();
+  CommsChannelNs3Ptr GetLinkedRxChannel();
 
   tf::Vector3 GetPosition();
 
@@ -82,24 +84,25 @@ public:
    */
   static ns3::TypeId GetTypeId(void);
 
-  typedef void (*PacketReceivedCallback)(std::string path, ROSCommsDevicePtr,
+  typedef void (*PacketReceivedCallback)(std::string path, ROSCommsDevice*,
                                          ns3PacketPtr);
   typedef void (*PacketTransmittingCallback)(std::string path,
-                                             ROSCommsDevicePtr, ns3PacketPtr);
-  typedef void (*PacketErrorCallback)(std::string path, ROSCommsDevicePtr,
+                                             ROSCommsDevice*, ns3PacketPtr);
+  typedef void (*PacketErrorCallback)(std::string path, ROSCommsDevice*,
                                          ns3PacketPtr, bool, bool);
-  typedef void (*CourseChangeCallback)(std::string path, ROSCommsDevicePtr,
+  typedef void (*CourseChangeCallback)(std::string path, ROSCommsDevice*,
                                          const tf::Vector3 &);
 
   void InitTracedValues();
   void StartTracedValues();
 //  void StopTracedValues();
+  void Send(const PacketPtr & pkt);
 
 protected:
   virtual std::string DoToString() = 0;
   virtual void DoSetMac(uint32_t mac) = 0;
   virtual void DoSend(ns3PacketPtr dlf) = 0;
-  virtual void DoLinkToChannel(CommsChannelPtr channel,
+  virtual void DoLinkToChannel(CommsChannelNs3Ptr channel,
                                CHANNEL_LINK_TYPE linkType = CHANNEL_TXRX) = 0;
   virtual void DoStart() = 0;
   virtual void DoSetPosition(const tf::Vector3 &position) = 0;
@@ -110,10 +113,10 @@ protected:
   PacketBuilderPtr _txpb, _rxpb;
   void _BuildMac2SeqMap();
 
-  ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _rxCbTrace;
-  ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr> _txCbTrace;
-  ns3::TracedCallback<ROSCommsDevicePtr, ns3PacketPtr, bool, bool> _pktErrorCbTrace;
-  ns3::TracedCallback<ROSCommsDevicePtr, const tf::Vector3 &> _courseChangesCbTrace;
+  ns3::TracedCallback<ROSCommsDevice*, ns3PacketPtr> _rxCbTrace;
+  ns3::TracedCallback<ROSCommsDevice*, ns3PacketPtr> _txCbTrace;
+  ns3::TracedCallback<ROSCommsDevice*, ns3PacketPtr, bool, bool> _pktErrorCbTrace;
+  ns3::TracedCallback<ROSCommsDevice*, const tf::Vector3 &> _courseChangesCbTrace;
 
 private:
   void _StartDeviceService();
@@ -124,7 +127,7 @@ private:
 protected:
   std::mutex _receiveFrameMutex;
   CommsDeviceServicePtr _device;
-  CommsChannelPtr _txChannel, _rxChannel;
+  CommsChannelNs3Ptr _txChannel, _rxChannel;
   ServiceThread<ROSCommsDevice> _txserv;
   PacketPtr _txdlf;
   std::string _name, _tfFrameId;

@@ -84,7 +84,7 @@ void ROSCommsDevice::StartTracedValues() {
   _currentTxFifoSize = 0;
 }
 
-//void ROSCommsDevice::StopTracedValues() { InitTracedValues(); }
+// void ROSCommsDevice::StopTracedValues() { InitTracedValues(); }
 
 void ROSCommsDevice::_BuildMac2SeqMap() {
   auto devs = _sim->GetDevices();
@@ -115,7 +115,7 @@ void ROSCommsDevice::_StartDeviceService() {
 
 void ROSCommsDevice::Stop() {
   auto level = Log->level();
-  //StopTracedValues();
+  // StopTracedValues();
   Log->set_level(spdlog::level::info);
   Info("Stopping comms service...");
   _device->Stop();
@@ -129,7 +129,7 @@ void ROSCommsDevice::Stop() {
 void ROSCommsDevice::Start() {
   ns3::Simulator::ScheduleWithContext(GetMac(), ns3::Seconds(0),
                                       &ROSCommsDevice::StartTracedValues, this);
-//  ns3::Simulator::ScheduleDestroy(&ROSCommsDevice::StopTracedValues, this);
+  //  ns3::Simulator::ScheduleDestroy(&ROSCommsDevice::StopTracedValues, this);
   _StartDeviceService();
   DoStart();
 }
@@ -185,7 +185,7 @@ void ROSCommsDevice::SetMac(uint32_t mac) {
   DoSetMac(_mac);
 }
 
-void ROSCommsDevice::LinkToChannel(CommsChannelPtr channel,
+void ROSCommsDevice::LinkToChannel(CommsChannelNs3Ptr channel,
                                    CHANNEL_LINK_TYPE linkType) {
   if (channel->GetType() == CHANNEL_TYPE::ACOUSTIC_UNDERWATER_CHANNEL) {
     linkType = CHANNEL_LINK_TYPE::CHANNEL_TXRX;
@@ -208,7 +208,7 @@ void ROSCommsDevice::LinkToChannel(CommsChannelPtr channel,
   DoLinkToChannel(channel, linkType);
 }
 
-CommsChannelPtr ROSCommsDevice::GetLinkedTxChannel() { return _txChannel; }
+CommsChannelNs3Ptr ROSCommsDevice::GetLinkedTxChannel() { return _txChannel; }
 
 uint32_t ROSCommsDevice::GetMac() { return _mac; }
 
@@ -223,22 +223,8 @@ void ROSCommsDevice::_TxWork() {
       txFifoSize = _device->GetRxFifoSize();
       PacketPtr txdlf = _txpb->CreateFromBuffer(_txdlf->GetBuffer());
       if (txdlf->PacketIsOk()) {
-        // PACKET OK
-        auto header = NetsimHeader::Build(txdlf);
-        auto pkt = ns3::Create<ns3::Packet>(txdlf->GetBuffer(),
-                                            txdlf->GetPacketSize());
-        auto seq = _macToSeq[_txdlf->GetDestAddr()];
-        header.SetSeqNum(seq);
-        _macToSeq[_txdlf->GetDestAddr()] = seq + 1;
-        pkt->AddHeader(header);
-        _txCbTrace(this, pkt);
-        NS_LOG_DEBUG("Send packet");
-        Debug("ROSCommsDevice: Send frame");
-        DoSend(pkt);
-        //        uint32_t packetSize =
-        //        static_cast<uint32_t>(txdlf->GetPacketSize());
-        //        uint64_t transmissionTime = packetSize * _nanosPerByte;
-        //        std::this_thread::sleep_for(std::chrono::nanoseconds(transmissionTime));
+        ns3::Simulator::ScheduleWithContext(GetMac(), ns3::Seconds(0),
+                                            &ROSCommsDevice::Send, this, txdlf);
       } else {
         Log->critical("packet received with errors from the upper layer!");
       }
@@ -253,6 +239,20 @@ void ROSCommsDevice::_TxWork() {
   } catch (int e) {
     Error("Something failed in the packet sender service. Code: {}", e);
   }
+}
+
+void ROSCommsDevice::Send(const PacketPtr &txdlf) {
+  auto header = NetsimHeader::Build(txdlf);
+  auto pkt =
+      ns3::Create<ns3::Packet>(txdlf->GetBuffer(), txdlf->GetPacketSize());
+  auto seq = _macToSeq[_txdlf->GetDestAddr()];
+  header.SetSeqNum(seq);
+  _macToSeq[_txdlf->GetDestAddr()] = seq + 1;
+  pkt->AddHeader(header);
+  _txCbTrace(this, pkt);
+  NS_LOG_DEBUG("Send packet");
+  Debug("ROSCommsDevice: Send frame");
+  DoSend(pkt);
 }
 
 void ROSCommsDevice::SetLogName(std::string name) {

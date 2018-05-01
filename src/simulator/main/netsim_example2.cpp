@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
   });
   int printPositionPeriod = 50;
   sim->SetPositionUpdatedCb(
-      [Log](ROSCommsDevicePtr dev, tf::Vector3 pos) {
+      [Log](ROSCommsDeviceNs3Ptr dev, tf::Vector3 pos) {
         Log->Debug("Dev '{}': P: [{},{},{}]", dev->GetDccommsId(), pos.x(),
                    pos.y(), pos.z());
 

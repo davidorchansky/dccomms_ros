@@ -11,12 +11,25 @@ using namespace dccomms;
 using namespace cpplogging;
 
 namespace dccomms_ros {
+class AcousticROSCommsDevice;
+typedef ns3::Ptr<AcousticROSCommsDevice> AcousticROSCommsDeviceNs3Ptr;
+//typedef dccomms::Ptr<AcousticROSCommsDevice> AcousticROSCommsDevicePtr;
+typedef AcousticROSCommsDevice *AcousticROSCommsDevicePtr;
 
 enum AQS_ROUTING_TYPE { AQS_NOROUTING, AQS_ROUTING_DUMMY, AQS_ROUTING_VBF };
 class AcousticROSCommsDevice : public ROSCommsDevice {
 public:
   AcousticROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr txpb,
                          PacketBuilderPtr rxpb);
+
+  static AcousticROSCommsDeviceNs3Ptr Build(ROSCommsSimulatorPtr sim,
+                                         PacketBuilderPtr txpb,
+                                         PacketBuilderPtr rxpb) {
+    auto dev = ns3::CreateObject<AcousticROSCommsDevice>(sim, txpb, rxpb);
+    //auto dev = dccomms::CreateObject<AcousticROSCommsDevice>(sim, txpb, rxpb);
+    return dev;
+    // return new AcousticROSCommsDevice(sim, txpb, rxpb);
+  }
 
   DEV_TYPE GetDevType();
   void SetMACProtocol(const std::string &name);
@@ -45,7 +58,7 @@ public:
 protected:
   void DoSetMac(uint32_t mac);
   void DoSend(ns3PacketPtr dlf);
-  void DoLinkToChannel(CommsChannelPtr channel, CHANNEL_LINK_TYPE linkTyp);
+  void DoLinkToChannel(CommsChannelNs3Ptr channel, CHANNEL_LINK_TYPE linkTyp);
   void DoStart();
   void DoSetPosition(const tf::Vector3 &position);
   bool DoStarted();

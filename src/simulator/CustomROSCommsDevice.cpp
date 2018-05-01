@@ -303,7 +303,7 @@ void CustomROSCommsDevice::DoSend(ns3PacketPtr dlf) {
       GetMac(), ns3::NanoSeconds(_intrinsicDelay * 1e6),
       &CustomROSCommsDevice::TransmitPacket, this, dlf);
 }
-void CustomROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
+void CustomROSCommsDevice::DoLinkToChannel(CommsChannelNs3Ptr channel,
                                            CHANNEL_LINK_TYPE linkType) {
   //  if (!_ownPtr)
   //    _ownPtr =

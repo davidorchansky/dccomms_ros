@@ -13,7 +13,9 @@ namespace dccomms_ros {
 
 // enum DEV_STATUS { RECV, SEND, IDLE };
 class CustomROSCommsDevice;
-typedef ns3::Ptr<CustomROSCommsDevice> CustomROSCommsDevicePtr;
+typedef ns3::Ptr<CustomROSCommsDevice> CustomROSCommsDeviceNs3Ptr;
+// typedef dccomms::Ptr<CustomROSCommsDevice> CustomROSCommsDevicePtr;
+typedef CustomROSCommsDevice *CustomROSCommsDevicePtr;
 
 class IncomingPacket;
 typedef dccomms::Ptr<IncomingPacket> IncomingPacketPtr;
@@ -62,6 +64,15 @@ public:
   CustomROSCommsDevice(ROSCommsSimulatorPtr, PacketBuilderPtr txpb,
                        PacketBuilderPtr rxpb);
 
+  static CustomROSCommsDeviceNs3Ptr Build(ROSCommsSimulatorPtr sim,
+                                       PacketBuilderPtr txpb,
+                                       PacketBuilderPtr rxpb) {
+    auto dev = ns3::CreateObject<CustomROSCommsDevice>(sim, txpb, rxpb);
+    // auto dev = dccomms::CreateObject<CustomROSCommsDevice>(sim, txpb, rxpb);
+    return dev;
+    // return new CustomROSCommsDevice(sim, txpb, rxpb);
+  }
+
   void SetVariableBitRate(double trTimeMean, double trTimeSd = 0); // as bps
   void SetMinPktErrorRate(double minPktErrorRate);
   void SetPktErrorRateInc(double pktErrorRateInc);
@@ -79,7 +90,8 @@ public:
   void PropagatePacket(ns3PacketPtr pkt);
   void TransmitPacket(ns3PacketPtr pkt);
   void TransmitEnqueuedPacket();
-  void BeginPacketTransmission(const ns3PacketPtr & pkt, const uint32_t & pktSize);
+  void BeginPacketTransmission(const ns3PacketPtr &pkt,
+                               const uint32_t &pktSize);
 
   inline void SetTransmitting(bool v) { Transmitting(v); }
   bool ErrOnPkt(double range, ns3PacketPtr pkt);
@@ -114,7 +126,7 @@ public:
 protected:
   virtual void DoSetMac(uint32_t mac);
   virtual void DoSend(ns3PacketPtr dlf);
-  virtual void DoLinkToChannel(CommsChannelPtr channel,
+  virtual void DoLinkToChannel(CommsChannelNs3Ptr channel,
                                CHANNEL_LINK_TYPE linkType);
   virtual void DoStart();
   virtual void DoSetPosition(const tf::Vector3 &position);
@@ -139,7 +151,7 @@ private:
   std::list<IncomingPacketPtr> _incomingPackets;
   std::list<OutcomingPacketPtr> _outcomingPackets;
 
-  CommsChannelPtr _txChannel, _rxChannel;
+  CommsChannelNs3Ptr _txChannel, _rxChannel;
   // DEV_STATUS _status;
   bool _transmitting, _receiving;
   ns3::Ptr<ns3::RateErrorModel> _rem;

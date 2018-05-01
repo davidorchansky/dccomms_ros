@@ -27,18 +27,18 @@ void CustomCommsChannel::SetPrTimeInc(double inc) {
   _prTimeIncPerMeter = inc * 1000000;
 } // from millis to nanos
 
-void CustomCommsChannel::AddDevice(CustomROSCommsDevicePtr dev) {
+void CustomCommsChannel::AddDevice(CustomROSCommsDeviceNs3Ptr dev) {
   _devices.push_back(dev);
 }
 
-void CustomCommsChannel::SendPacket(CustomROSCommsDevicePtr dev,
+void CustomCommsChannel::SendPacket(CustomROSCommsDeviceNs3Ptr dev,
                                     ns3PacketPtr pkt) {
   Debug("CustomCommsChannel: SendPacket");
   auto txpos = dev->GetPosition();
   // auto minErrRate = dev->GetMinPktErrorRate();
   // auto errRateInc = dev->GetPktErrorRateInc();
 
-  for (CustomROSCommsDevicePtr dst : _devices) {
+  for (CustomROSCommsDeviceNs3Ptr dst : _devices) {
     if (dst != dev) {
       auto rxpos = dst->GetPosition();
       auto distance = txpos.distance(rxpos);

@@ -94,7 +94,7 @@ public:
   void SetReceivePDUCb(
       std::function<void(ROSCommsDevice *rxdev, dccomms::PacketPtr)> cb);
   void SetPositionUpdatedCb(
-      std::function<void(ROSCommsDevicePtr dev, tf::Vector3)> cb,
+      std::function<void(ROSCommsDeviceNs3Ptr dev, tf::Vector3)> cb,
       double cbMinPeriod, uint32_t positionUpdateRate =
                               10); // callback period = ms ; update rate = Hz
 
@@ -128,7 +128,7 @@ public:
 
   friend class ROSCommsDevice;
 
-  std::vector<ns3::Ptr<ROSCommsDevice>> GetDevices() { return _devices; }
+  std::vector<ROSCommsDeviceNs3Ptr> GetDevices() { return _devices; }
 
 private:
   const char _timeFormat[100] = "%Y-%m-%d %H:%M:%S";
@@ -141,7 +141,7 @@ private:
 
   std::function<void(ROSCommsDevice *dev, dccomms::PacketPtr)> TransmitPDUCb,
       ReceivePDUCb;
-  std::function<void(ROSCommsDevicePtr dev, tf::Vector3)> PositionUpdatedCb;
+  std::function<void(ROSCommsDeviceNs3Ptr dev, tf::Vector3)> PositionUpdatedCb;
 
   bool _AddAcousticDevice(dccomms_ros_msgs::AddAcousticDevice::Request &req,
                           dccomms_ros_msgs::AddAcousticDevice::Response &res);
@@ -160,7 +160,7 @@ private:
   bool _AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req,
                         dccomms_ros_msgs::AddCustomDevice::Response &res);
 
-  void _AddDeviceToSet(std::string iddev, ROSCommsDevicePtr dev);
+  void _AddDeviceToSet(std::string iddev, ROSCommsDeviceNs3Ptr dev);
   bool _DeviceExists(std::string iddev);
   bool _ChannelExists(uint32_t id);
   void _RemoveDeviceFromSet(std::string iddev);
@@ -170,9 +170,9 @@ private:
 
   bool _CommonPreAddDev(const std::string &dccommsId, DEV_TYPE deviceType,
                         uint32_t mac);
-  ROSCommsDevicePtr _GetDevice(std::string iddev);
+  ROSCommsDeviceNs3Ptr _GetDevice(std::string iddev);
 
-  CommsChannelPtr _GetChannel(int id);
+  CommsChannelNs3Ptr _GetChannel(int id);
 
   ros::ServiceServer _addDevService, _checkDevService, _addChannelService,
       _removeDevService, _linkDeviceToChannelService, _startSimulationService,
@@ -201,23 +201,20 @@ private:
   ros::Rate _linkUpdaterLoopRate;
 
   PacketBuilderMap _packetBuilderMap;
-  std::vector<ns3::Ptr<ROSCommsDevice>> _devices;
-  std::vector<ns3::Ptr<CustomROSCommsDevice>> _customDevices;
-  std::vector<ns3::Ptr<AcousticROSCommsDevice>> _acousticDevices;
-  std::vector<ns3::Ptr<CustomCommsChannel>> _customChannels;
-  std::vector<ns3::Ptr<AcousticCommsChannel>> _acousticChannels;
-  std::vector<ns3::Ptr<CommsChannel>> _channels;
+  std::vector<ROSCommsDeviceNs3Ptr> _devices;
+  std::vector<CustomROSCommsDeviceNs3Ptr> _customDevices;
+  std::vector<AcousticROSCommsDeviceNs3Ptr> _acousticDevices;
+  std::vector<CustomCommsChannelNs3Ptr> _customChannels;
+  std::vector<AcousticCommsChannelNs3Ptr> _acousticChannels;
+  std::vector<CommsChannelNs3Ptr> _channels;
 
+  template <typename T> void _InsertDeviceAsc(std::vector<T> &devices, T dev);
   template <typename T>
-  void _InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices, ns3::Ptr<T> dev);
-  template <typename T>
-  void _InsertChannelAsc(std::vector<ns3::Ptr<T>> &channels,
-                         ns3::Ptr<T> channel);
+  void _InsertChannelAsc(std::vector<T> &channels, T channel);
 };
 
 template <typename T>
-void ROSCommsSimulator::_InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices,
-                                         ns3::Ptr<T> dev) {
+void ROSCommsSimulator::_InsertDeviceAsc(std::vector<T> &devices, T dev) {
 
   if (devices.size() > 0) {
     uint32_t i = 0;
@@ -236,8 +233,7 @@ void ROSCommsSimulator::_InsertDeviceAsc(std::vector<ns3::Ptr<T>> &devices,
 }
 
 template <typename T>
-void ROSCommsSimulator::_InsertChannelAsc(std::vector<ns3::Ptr<T>> &channels,
-                                          ns3::Ptr<T> chn) {
+void ROSCommsSimulator::_InsertChannelAsc(std::vector<T> &channels, T chn) {
 
   if (channels.size() > 0) {
     uint32_t i = 0;

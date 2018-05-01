@@ -163,7 +163,7 @@ void AcousticROSCommsDevice::DoSend(ns3PacketPtr ns3pkt) {
   }
 }
 
-void AcousticROSCommsDevice::DoLinkToChannel(CommsChannelPtr channel,
+void AcousticROSCommsDevice::DoLinkToChannel(CommsChannelNs3Ptr channel,
                                              CHANNEL_LINK_TYPE linkType) {
   if (channel->GetType() == CHANNEL_TYPE::ACOUSTIC_UNDERWATER_CHANNEL) {
 

@@ -14,8 +14,8 @@ public:
   CustomCommsChannel(uint32_t id);
   void SetMinPrTime(double prTime);
   void SetPrTimeInc(double inc);
-  void AddDevice(CustomROSCommsDevicePtr dev);
-  void SendPacket(CustomROSCommsDevicePtr dev, ns3PacketPtr pkt);
+  void AddDevice(CustomROSCommsDeviceNs3Ptr dev);
+  void SendPacket(CustomROSCommsDeviceNs3Ptr dev, ns3PacketPtr pkt);
   uint32_t GetId() { return _rosChannelId; }
   CHANNEL_TYPE GetType() { return CUSTOM_CHANNEL; }
 
@@ -28,10 +28,10 @@ public:
 private:
   uint32_t _rosChannelId;
   uint64_t _prTimeIncPerMeter, _minPrTime; // nanoseconds
-  std::list<CustomROSCommsDevicePtr> _devices;
+  std::list<CustomROSCommsDeviceNs3Ptr> _devices;
 };
 
-typedef ns3::Ptr<CustomCommsChannel> CustomCommsChannelPtr;
+typedef ns3::Ptr<CustomCommsChannel> CustomCommsChannelNs3Ptr;
 }
 
 #endif // COMMSCHANNELPROPERTIES_H

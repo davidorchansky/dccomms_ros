@@ -129,7 +129,7 @@ void ROSCommsSimulator::SetReceivePDUCb(
 }
 
 void ROSCommsSimulator::SetPositionUpdatedCb(
-    std::function<void(ROSCommsDevicePtr dev, tf::Vector3)> cb,
+    std::function<void(ROSCommsDeviceNs3Ptr dev, tf::Vector3)> cb,
     double cbMinPeriod, uint32_t positionUpdateRate) {
   PositionUpdatedCb = cb;
   _positionUpdatedCbMinPeriod = cbMinPeriod;
@@ -139,17 +139,17 @@ void ROSCommsSimulator::SetPositionUpdatedCb(
 void ROSCommsSimulator::_Init() {
   SetTransmitPDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
   SetReceivePDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
-  SetPositionUpdatedCb([](ROSCommsDevicePtr dev, tf::Vector3 pos) {}, 1000);
+  SetPositionUpdatedCb([](ROSCommsDeviceNs3Ptr dev, tf::Vector3 pos) {}, 1000);
   _publish_rate = 10;
   GlobalValue::Bind("SimulatorImplementationType",
                     StringValue("ns3::RealtimeSimulatorImpl"));
 }
 
 void ROSCommsSimulator::_AddDeviceToSet(std::string iddev,
-                                        ROSCommsDevicePtr dev) {
+                                        ROSCommsDeviceNs3Ptr dev) {
   _idDevMapMutex.lock();
-  _dccommsDevMap[iddev] = dev;
-  _InsertDeviceAsc<ROSCommsDevice>(_devices, dev);
+  _dccommsDevMap[iddev] = PeekPointer(dev);
+  _InsertDeviceAsc<ROSCommsDeviceNs3Ptr>(_devices, dev);
 
   static ns3::Ptr<ROSCommsSimulator> ptr = 0;
   if (ptr == 0) {
@@ -191,8 +191,8 @@ bool ROSCommsSimulator::_CheckChannel(CheckChannel::Request &req,
   return true;
 }
 
-ROSCommsDevicePtr ROSCommsSimulator::_GetDevice(std::string iddev) {
-  ROSCommsDevicePtr dev;
+ROSCommsDeviceNs3Ptr ROSCommsSimulator::_GetDevice(std::string iddev) {
+  ROSCommsDeviceNs3Ptr dev;
   auto devIt = _dccommsDevMap.find(iddev);
   if (devIt != _dccommsDevMap.end()) {
     dev = devIt->second;
@@ -224,8 +224,7 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     auto rxpb = GetPacketBuilder(dccommsId, RX_PACKET);
     if (!rxpb)
       rxpb = GetDefaultPacketBuilder();
-    ns3::Ptr<AcousticROSCommsDevice> dev =
-        ns3::CreateObject<AcousticROSCommsDevice>(this, txpb, rxpb);
+    auto dev = AcousticROSCommsDevice::Build(this, txpb, rxpb);
 
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
@@ -251,10 +250,10 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
     dev->SetLogLevel(errorLevel);
 
-    _InsertDeviceAsc<AcousticROSCommsDevice>(_acousticDevices, dev);
+    _InsertDeviceAsc<AcousticROSCommsDeviceNs3Ptr>(_acousticDevices, dev);
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
-    (*mac2DevMap)[mac] = dev;
+    (*mac2DevMap)[mac] = PeekPointer(dev);
     _AddDeviceToSet(dev->GetDccommsId(), dev);
 
     Log->info("\nAdding device:\n{}", dev->ToString());
@@ -273,8 +272,8 @@ bool ROSCommsSimulator::_ChannelExists(uint32_t id) {
   return _GetChannel(id) ? true : false;
 }
 
-CommsChannelPtr ROSCommsSimulator::_GetChannel(int id) {
-  CommsChannelPtr channel;
+CommsChannelNs3Ptr ROSCommsSimulator::_GetChannel(int id) {
+  CommsChannelNs3Ptr channel;
   auto it = _channelMap.find(id);
   if (it != _channelMap.end()) {
     channel = it->second;
@@ -283,8 +282,8 @@ CommsChannelPtr ROSCommsSimulator::_GetChannel(int id) {
 }
 bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
                                           LinkDeviceToChannel::Response &res) {
-  ROSCommsDevicePtr dev = _GetDevice(req.dccommsId);
-  CommsChannelPtr channel = _GetChannel(req.channelId);
+  ROSCommsDeviceNs3Ptr dev = _GetDevice(req.dccommsId);
+  CommsChannelNs3Ptr channel = _GetChannel(req.channelId);
   if (!dev) {
     res.res = false;
     return res.res;
@@ -338,9 +337,9 @@ bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
     // auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
     // acousticChannel->SetLogLevel(errorLevel);
 
-    _channelMap[id] = acousticChannel;
-    _InsertChannelAsc<CommsChannel>(_channels, acousticChannel);
-    _InsertChannelAsc<AcousticCommsChannel>(_acousticChannels, acousticChannel);
+    _channelMap[id] = PeekPointer(acousticChannel);
+    _InsertChannelAsc<CommsChannelNs3Ptr>(_channels, acousticChannel);
+    _InsertChannelAsc<AcousticCommsChannelNs3Ptr>(_acousticChannels, acousticChannel);
     res.res = true;
     Log->info("acoustic channel {} added", id);
   }
@@ -351,14 +350,14 @@ bool ROSCommsSimulator::_AddCustomChannel(AddCustomChannel::Request &req,
                                           AddCustomChannel::Response &res) {
   uint32_t id = req.id;
   if (!_channelMap[id]) {
-    CustomCommsChannelPtr channel = ns3::CreateObject<CustomCommsChannel>(id);
+    CustomCommsChannelNs3Ptr channel = ns3::CreateObject<CustomCommsChannel>(id);
     channel->SetMinPrTime(req.minPrTime);
     channel->SetPrTimeInc(req.prTimeIncPerMeter);
     auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
     channel->SetLogLevel(errorLevel);
-    _InsertChannelAsc<CommsChannel>(_channels, channel);
-    _InsertChannelAsc<CustomCommsChannel>(_customChannels, channel);
-    _channelMap[id] = channel;
+    _InsertChannelAsc<CommsChannelNs3Ptr>(_channels, channel);
+    _InsertChannelAsc<CustomCommsChannelNs3Ptr>(_customChannels, channel);
+    _channelMap[id] = PeekPointer(channel);
     res.res = true;
     Log->info("custom channel {} added", id);
   } else {
@@ -418,8 +417,8 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     auto rxpb = GetPacketBuilder(dccommsId, RX_PACKET);
     if (!rxpb)
       rxpb = GetDefaultPacketBuilder();
-    CustomROSCommsDevicePtr dev =
-        ns3::CreateObject<CustomROSCommsDevice>(this, txpb, rxpb);
+
+    auto dev = CustomROSCommsDevice::Build(this, txpb, rxpb);
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
@@ -434,12 +433,12 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     dev->SetIntrinsicDelay(req.intrinsicDelay);
     auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
     dev->SetLogLevel(errorLevel);
-    //dev->LogToFile(dccommsId);
+    // dev->LogToFile(dccommsId);
 
-    _InsertDeviceAsc<CustomROSCommsDevice>(_customDevices, dev);
+    _InsertDeviceAsc<CustomROSCommsDeviceNs3Ptr>(_customDevices, dev);
 
     Mac2DevMapPtr mac2DevMap = _type2DevMap.find(deviceType)->second;
-    (*mac2DevMap)[mac] = dev;
+    (*mac2DevMap)[mac] = PeekPointer(dev);
     _AddDeviceToSet(dev->GetDccommsId(), dev);
 
     Log->info("\nAdding device:\n{}", dev->ToString());

@@ -19,6 +19,7 @@ public:
   static ns3::TypeId GetTypeId(void);
 };
 
-typedef ns3::Ptr<CommsChannel> CommsChannelPtr;
+typedef ns3::Ptr<CommsChannel> CommsChannelNs3Ptr;
+typedef CommsChannel *CommsChannelPtr;
 }
 #endif // COMMSCHANNELPROPERTIES_H
