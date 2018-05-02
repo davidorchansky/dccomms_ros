@@ -172,7 +172,6 @@ void ROSCommsDevice::SetDccommsId(const std::string name) {
 std::string ROSCommsDevice::GetDccommsId() { return _name; }
 
 void ROSCommsDevice::SetMaxTxFifoSize(uint32_t size) {
-  _device->SetMaxQueueSize(UINT16_MAX);
   DoSetMaxTxFifoSize(size);
 }
 
