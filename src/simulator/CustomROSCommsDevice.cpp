@@ -374,13 +374,14 @@ std::string CustomROSCommsDevice::DoToString() {
                                   "\tMin. distance: ............ %.2f m\n"
                                   "\tBitrate: .................. %d bps\n"
                                   "\tBitrate SD: ............... %.3f\n"
+                                  "\tIntrinsic delay (ms)....... %.3f\n"
                                   "\tTx Fifo Size: ............. %d bytes\n"
                                   "\tError Expression: ......... %s\n"
                                   "\tError Unit: ............... %s",
                _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
                _tfFrameId.c_str(), txChannelLinked.c_str(),
                rxChannelLinked.c_str(), _maxDistance, _minDistance, bitrate,
-               bitrateSd, GetMaxTxFifoSize(), expr.c_str(), eunit.c_str());
+               bitrateSd, _intrinsicDelay, GetMaxTxFifoSize(), expr.c_str(), eunit.c_str());
 
   return std::string(buff);
 }
