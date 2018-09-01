@@ -44,7 +44,7 @@ public:
   void SetDccommsId(const std::string name);
 
   void SetBitRate(uint32_t bps);
-  double GetNanosPerByte() { return _nanosPerByte; }
+  uint64_t GetNanosPerByte() { return _nanosPerByte; }
 
   void SetPosition(const tf::Vector3 &position);
   void SetMaxTxFifoSize(uint32_t size);

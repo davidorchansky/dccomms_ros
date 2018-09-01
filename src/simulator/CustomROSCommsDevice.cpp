@@ -1,5 +1,6 @@
 #include <dccomms_ros/simulator/CustomCommsChannel.h>
 #include <dccomms_ros/simulator/CustomROSCommsDevice.h>
+#include <dccomms_ros/simulator/NetsimTime.h>
 #include <ns3/core-module.h>
 #include <ns3/simulator.h>
 
@@ -31,18 +32,16 @@ CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
 
-void CustomROSCommsDevice::SetVariableBitRate(double mean, double sd) {
-  _bitRateMean = mean;
-  _bitRateSd = sd;
-  auto _ttMean = 8 * 1e9 / _bitRateMean; // nanos / byte
-  auto _ttSd = _bitRateSd > 0 ? 8 * 1e9 / _bitRateSd : 0;
-  _ttDist = NormalDist(_ttMean, _ttSd);
+void CustomROSCommsDevice::SetJitter(double tx, double rx) { // jitter in
+                                                             // milliseconds
+  _txJitterDist = UniformIntDist(0, static_cast<int>(tx * 1000));
+  _txJitter = tx;
+
+  _rxJitterDist = UniformIntDist(0, static_cast<int>(rx * 1000));
+  _rxJitter = rx;
 }
 
-void CustomROSCommsDevice::GetBitRate(double &mean, double &sd) {
-  mean = _bitRateMean;
-  sd = _bitRateSd;
-}
+void CustomROSCommsDevice::GetBitRate(double &bitrate) { bitrate = _bitRate; }
 
 void CustomROSCommsDevice::SetMinPktErrorRate(double minPktErrorRate) {
   _minPktErrorRate = minPktErrorRate;
@@ -56,15 +55,6 @@ void CustomROSCommsDevice::SetPktErrorRateInc(double inc) {
 
 double CustomROSCommsDevice::GetPktErrorRateInc() {
   return _pktErrorRateIncPerMeter;
-}
-
-uint64_t CustomROSCommsDevice::GetNextTt() {
-  auto tt = _ttDist(_ttGenerator);
-  if (tt < 0) {
-    Log->warn("trRate < 0: {} . Changing to its abs({}) value", tt, tt);
-    tt = -tt;
-  }
-  return tt;
 }
 
 void SimpleVarExprEval::CompileExpr(const string &expr,
@@ -145,15 +135,11 @@ void CustomROSCommsDevice::SetIntrinsicDelay(double d) { _intrinsicDelay = d; }
 
 double CustomROSCommsDevice::GetIntrinsicDelay() { return _intrinsicDelay; }
 
-inline void CustomROSCommsDevice::EnqueueTxPacket(ns3PacketPtr pkt,
-                                                  uint32_t size) {
+inline void CustomROSCommsDevice::EnqueueTxPacket(const OutcomingPacketPtr &opkt) {
   uint32_t leftSpace = _maxTxFifoSize - _currentTxFifoSize;
-  if (leftSpace >= size) {
-    OutcomingPacketPtr opkt = dccomms::CreateObject<OutcomingPacket>();
-    opkt->packet = pkt;
-    opkt->packetSize = size;
+  if (leftSpace >= opkt->packetSize) {
     _outcomingPackets.push_back(opkt);
-    _currentTxFifoSize += size;
+    _currentTxFifoSize += opkt->packetSize;
   } else {
     // Drop packet
     _txPacketDrops += 1;
@@ -180,19 +166,31 @@ void CustomROSCommsDevice::MarkIncommingPacketsAsCollisioned() {
   }
 }
 
+void CustomROSCommsDevice::ReceivePacketAfterJitter() {
+  auto ipkt = _rxJitteredPackets.front();
+  _rxJitteredPackets.pop_front();
+  if (ipkt->Error()) {
+    Debug("Packet received with errors");
+    _pktErrorCbTrace(this, ipkt->packet, ipkt->propagationError,
+                     ipkt->collisionError);
+  } else {
+    ReceiveFrame(ipkt->packet);
+  }
+}
+
 void CustomROSCommsDevice::HandleNextIncomingPacket() {
   NS_LOG_FUNCTION(this);
   Debug("CustomROSCommsDevice({}): HandleNextIncommingPacket", GetDccommsId());
   if (!_incomingPackets.empty()) {
     IncomingPacketPtr ptr = _incomingPackets.front();
     _incomingPackets.pop_front();
-    if (ptr->Error()) {
-      Debug("Packet received with errors");
-      _pktErrorCbTrace(this, ptr->packet, ptr->propagationError,
-                       ptr->collisionError);
-    } else {
-      ReceiveFrame(ptr->packet);
-    }
+
+    _rxJitteredPackets.push_back(ptr);
+    uint64_t jitter = GetNextRxJitter();
+    ns3::Simulator::ScheduleWithContext(
+        GetMac(), ns3::NanoSeconds(jitter),
+        &CustomROSCommsDevice::ReceivePacketAfterJitter, this);
+
     if (_incomingPackets.empty())
       Receiving(false);
   } else {
@@ -219,7 +217,7 @@ void CustomROSCommsDevice::AddNewPacket(ns3PacketPtr pkt,
   }
   Receiving(true);
   auto pktSize = header.GetPacketSize();
-  auto byteTrt = GetNanosPerByte();
+  auto byteTrt = header.GetNanosPerByte();
   auto trTime = pktSize * byteTrt;
   Debug("CustomROSCommsDevice({}): Receiving packet: size({} bytes) ; "
         "rcTime({} "
@@ -248,7 +246,7 @@ void CustomROSCommsDevice::Transmitting(bool transmitting) {
 void CustomROSCommsDevice::TransmitEnqueuedPacket() {
   Debug("Transmit next packet in fifo");
   auto pkt = PopTxPacket();
-  BeginPacketTransmission(pkt->packet, pkt->packetSize);
+  StartPacketTransmission(pkt);
 }
 
 bool CustomROSCommsDevice::Receiving() { return _receiving; }
@@ -267,42 +265,68 @@ void CustomROSCommsDevice::PropagatePacket(ns3PacketPtr pkt) {
       ->SendPacket(this, pkt);
 }
 
-void CustomROSCommsDevice::TransmitPacket(ns3PacketPtr pkt) {
+void CustomROSCommsDevice::TransmitPacket() {
   NS_LOG_FUNCTION(this);
   Debug("CustomROSCommsDevice: Transmit packet");
-  NetsimHeader header;
-  pkt->PeekHeader(header);
-  auto pktSize = header.GetPacketSize();
+  auto opkt = _txJitteredPackets.front();
+  _txJitteredPackets.pop_front();
   if (!Transmitting() &&
       (_rxChannel != _txChannel || _rxChannel == _txChannel && !Receiving())) {
-    BeginPacketTransmission(pkt, pktSize);
+    StartPacketTransmission(opkt);
 
   } else {
     Debug("CustomROSCommsDevice({}): Enqueue packet", GetDccommsId());
-    EnqueueTxPacket(pkt, pktSize);
+    EnqueueTxPacket(opkt);
   }
 }
 
-void CustomROSCommsDevice::BeginPacketTransmission(const ns3PacketPtr &pkt,
-                                                   const uint32_t &pktSize) {
-  auto byteTrt = GetNextTt(); // It's like GetNanosPerByte but with a variation
-  auto trTime = pktSize * byteTrt;
+uint64_t CustomROSCommsDevice::GetNextTxJitter() {
+  int tmp = _txJitterDist(_txJitterGenerator);
+  return static_cast<uint64_t>(tmp) * 1000;
+}
+uint64_t CustomROSCommsDevice::GetNextRxJitter() {
+  int tmp = _rxJitterDist(_rxJitterGenerator);
+  return static_cast<uint64_t>(tmp) * 1000;
+}
+
+void CustomROSCommsDevice::StartPacketTransmission(const OutcomingPacketPtr &opkt) {
+
+  auto byteTrt = GetNanosPerByte();
+  auto trTime = opkt->packetSize * byteTrt;
   Transmitting(true);
   Debug("CustomROSCommsDevice({}): Transmitting packet: size({} bytes) ; "
         "trTime({} secs)",
-        GetDccommsId(), pktSize, trTime / 1e9);
+        GetDccommsId(), opkt->packetSize, trTime / 1e9);
   ns3::Simulator::ScheduleWithContext(GetMac(), ns3::NanoSeconds(trTime),
                                       &CustomROSCommsDevice::SetTransmitting,
                                       this, false);
-  PropagatePacket(pkt);
+  PropagatePacket(opkt->packet);
 }
 
 void CustomROSCommsDevice::DoSetMac(uint32_t mac) { _mac = mac; }
 void CustomROSCommsDevice::DoSend(ns3PacketPtr dlf) {
   ns3::Simulator::ScheduleWithContext(
       GetMac(), ns3::NanoSeconds(_intrinsicDelay * 1e6),
-      &CustomROSCommsDevice::TransmitPacket, this, dlf);
+      &CustomROSCommsDevice::SchedulePacketTransmissionAfterJitter, this, dlf);
 }
+
+void CustomROSCommsDevice::SchedulePacketTransmissionAfterJitter(
+    const ns3PacketPtr &pkt) {
+  NetsimHeader header;
+  pkt->RemoveHeader(header);
+  header.SetNanosPerByte(GetNanosPerByte());
+  pkt->AddHeader(header);
+  auto pktSize = header.GetPacketSize();
+  uint64_t jitter = GetNextTxJitter();
+  OutcomingPacketPtr opkt = dccomms::CreateObject<OutcomingPacket>();
+  opkt->packet = pkt;
+  opkt->packetSize = pktSize;
+  _txJitteredPackets.push_back(opkt);
+  ns3::Simulator::ScheduleWithContext(GetMac(), ns3::NanoSeconds(jitter),
+                                      &CustomROSCommsDevice::TransmitPacket,
+                                      this);
+}
+
 void CustomROSCommsDevice::DoLinkToChannel(CommsChannelNs3Ptr channel,
                                            CHANNEL_LINK_TYPE linkType) {
   //  if (!_ownPtr)
@@ -357,8 +381,8 @@ std::string CustomROSCommsDevice::DoToString() {
   else
     rxChannelLinked = "not linked";
 
-  double bitrateD, bitrateSd;
-  GetBitRate(bitrateD, bitrateSd);
+  double bitrateD;
+  GetBitRate(bitrateD);
   uint32_t bitrate = (uint32_t)bitrateD;
   std::string expr, eunit;
   GetRateErrorModel(expr, eunit);
@@ -373,15 +397,18 @@ std::string CustomROSCommsDevice::DoToString() {
                                   "\tMax. distance: ............ %.2f m\n"
                                   "\tMin. distance: ............ %.2f m\n"
                                   "\tBitrate: .................. %d bps\n"
-                                  "\tBitrate SD: ............... %.3f\n"
                                   "\tIntrinsic delay (ms)....... %.3f\n"
+                                  "\tJitter\n"
+                                  "\t\ttx (ms): ................ %.3f\n"
+                                  "\t\trx (ms): ................ %.3f\n"
                                   "\tTx Fifo Size: ............. %d bytes\n"
                                   "\tError Expression: ......... %s\n"
                                   "\tError Unit: ............... %s",
                _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
                _tfFrameId.c_str(), txChannelLinked.c_str(),
                rxChannelLinked.c_str(), _maxDistance, _minDistance, bitrate,
-               bitrateSd, _intrinsicDelay, GetMaxTxFifoSize(), expr.c_str(), eunit.c_str());
+               _intrinsicDelay, _txJitter, _rxJitter, GetMaxTxFifoSize(),
+               expr.c_str(), eunit.c_str());
 
   return std::string(buff);
 }

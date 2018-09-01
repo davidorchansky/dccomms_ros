@@ -427,7 +427,7 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     dev->SetMinDistance(req.minDistance);
     dev->SetMinPktErrorRate(req.minPktErrorRate);
     dev->SetPktErrorRateInc(req.pktErrorRateIncPerMeter);
-    dev->SetVariableBitRate(req.bitrate, req.bitrateSd);
+    dev->SetJitter(req.txJitter, req.rxJitter);
     dev->SetMaxTxFifoSize(req.maxTxFifoSize);
     dev->SetRateErrorModel(req.errorRateExpr, req.errorUnit);
     dev->SetIntrinsicDelay(req.intrinsicDelay);

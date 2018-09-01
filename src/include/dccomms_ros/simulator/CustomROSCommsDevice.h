@@ -72,15 +72,14 @@ public:
     return dev;
     // return new CustomROSCommsDevice(sim, txpb, rxpb);
   }
-
-  void SetVariableBitRate(double trTimeMean, double trTimeSd = 0); // as bps
+  void SetJitter(double tx, double rx);
   void SetMinPktErrorRate(double minPktErrorRate);
   void SetPktErrorRateInc(double pktErrorRateInc);
   void SetMaxDistance(double d);
   void SetMinDistance(double d);
   void SetIntrinsicDelay(double d);
 
-  void GetBitRate(double &trTimeMean, double &trTimeSd); // as bps
+  void GetBitRate(double &bps); // as bps
   double GetMinPktErrorRate();
   double GetPktErrorRateInc();
   double GetMaxDistance();
@@ -88,14 +87,14 @@ public:
   double GetIntrinsicDelay();
 
   void PropagatePacket(ns3PacketPtr pkt);
-  void TransmitPacket(ns3PacketPtr pkt);
+  void TransmitPacket();
   void TransmitEnqueuedPacket();
-  void BeginPacketTransmission(const ns3PacketPtr &pkt,
-                               const uint32_t &pktSize);
+  void StartPacketTransmission(const OutcomingPacketPtr &opkt);
 
   inline void SetTransmitting(bool v) { Transmitting(v); }
   bool ErrOnPkt(double range, ns3PacketPtr pkt);
-  uint64_t GetNextTt(); // get next ms/byte
+  uint64_t GetNextTxJitter();
+  uint64_t GetNextRxJitter();
   void SetRateErrorModel(const std::string &expr, const std::string &unit);
   void GetRateErrorModel(std::string &expr, std::string &unit);
   //  inline DEV_STATUS GetStatus() { return _status; }
@@ -103,11 +102,12 @@ public:
 
   virtual DEV_TYPE GetDevType();
 
-  typedef std::normal_distribution<double> NormalDist;
+  typedef std::normal_distribution<double> NormalRealDist;
+  typedef std::uniform_int_distribution<int> UniformIntDist;
   typedef std::default_random_engine RandEngGen;
   typedef std::uniform_real_distribution<double> UniformRealDist;
 
-  inline void EnqueueTxPacket(ns3PacketPtr pkt, uint32_t size);
+  inline void EnqueueTxPacket(const OutcomingPacketPtr &opkt);
   inline bool TxFifoEmpty();
   OutcomingPacketPtr PopTxPacket();
 
@@ -122,6 +122,8 @@ public:
   void Receiving(bool);
 
   static ns3::TypeId GetTypeId(void);
+  void SchedulePacketTransmissionAfterJitter(const ns3PacketPtr & pkt);
+  void ReceivePacketAfterJitter();
 
 protected:
   virtual void DoSetMac(uint32_t mac);
@@ -136,7 +138,6 @@ protected:
 
 private:
   uint32_t _mac;
-  double _bitRateMean, _bitRateSd;
   double _minPktErrorRate, _pktErrorRateIncPerMeter;
   double _intrinsicDelay; // ms
 
@@ -144,12 +145,14 @@ private:
   tf::Vector3 _position;
   // CustomROSCommsDevicePtr _ownPtr;
 
-  NormalDist _ttDist;
+  NormalRealDist _ttDist;
   UniformRealDist _erDist;
-  RandEngGen _ttGenerator, _erGenerator;
+  UniformIntDist _txJitterDist, _rxJitterDist;
+  RandEngGen _ttGenerator, _erGenerator, _txJitterGenerator, _rxJitterGenerator;
 
-  std::list<IncomingPacketPtr> _incomingPackets;
-  std::list<OutcomingPacketPtr> _outcomingPackets;
+  std::list<IncomingPacketPtr> _incomingPackets, _rxJitteredPackets;
+  std::list<OutcomingPacketPtr> _outcomingPackets, _txJitteredPackets;
+
 
   CommsChannelNs3Ptr _txChannel, _rxChannel;
   // DEV_STATUS _status;
@@ -159,6 +162,7 @@ private:
   double _GetErrorRate(double meters);
   std::string _eexpr;
   SimpleVarExprEval _mExprEval;
+  double _txJitter, _rxJitter;
 };
 }
 #endif // COMMSNODE_H
