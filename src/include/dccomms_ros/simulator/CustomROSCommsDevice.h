@@ -85,6 +85,9 @@ public:
   double GetMaxDistance();
   double GetMinDistance();
   double GetIntrinsicDelay();
+  uint64_t GetNextPacketReceptionTime();
+  void SetNextPacketReceptionTime(uint64_t nanos);
+  uint64_t GetCurrentSimTime();
 
   void PropagatePacket(ns3PacketPtr pkt);
   void TransmitPacket();
@@ -163,6 +166,7 @@ private:
   std::string _eexpr;
   SimpleVarExprEval _mExprEval;
   double _txJitter, _rxJitter;
+  uint64_t _nextPacketReceptionTime;
 };
 }
 #endif // COMMSNODE_H

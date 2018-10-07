@@ -28,6 +28,7 @@ CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
   LogComponentEnable("CustomROSCommsDevice",
                      LOG_LEVEL_ALL); // NS3 LOG DOES NOT WORK (TODO: FIX IT)
   _maxTxFifoSize = 2048;
+  _nextPacketReceptionTime = 0;
 }
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
@@ -135,7 +136,8 @@ void CustomROSCommsDevice::SetIntrinsicDelay(double d) { _intrinsicDelay = d; }
 
 double CustomROSCommsDevice::GetIntrinsicDelay() { return _intrinsicDelay; }
 
-inline void CustomROSCommsDevice::EnqueueTxPacket(const OutcomingPacketPtr &opkt) {
+inline void
+CustomROSCommsDevice::EnqueueTxPacket(const OutcomingPacketPtr &opkt) {
   uint32_t leftSpace = _maxTxFifoSize - _currentTxFifoSize;
   if (leftSpace >= opkt->packetSize) {
     _outcomingPackets.push_back(opkt);
@@ -178,6 +180,18 @@ void CustomROSCommsDevice::ReceivePacketAfterJitter() {
   }
 }
 
+uint64_t CustomROSCommsDevice::GetNextPacketReceptionTime() {
+  return _nextPacketReceptionTime;
+}
+
+void CustomROSCommsDevice::SetNextPacketReceptionTime(uint64_t nanos) {
+  _nextPacketReceptionTime = nanos;
+}
+
+uint64_t CustomROSCommsDevice::GetCurrentSimTime() {
+  return NetsimTime::GetNanos();
+}
+
 void CustomROSCommsDevice::HandleNextIncomingPacket() {
   NS_LOG_FUNCTION(this);
   Debug("CustomROSCommsDevice({}): HandleNextIncommingPacket", GetDccommsId());
@@ -186,7 +200,17 @@ void CustomROSCommsDevice::HandleNextIncomingPacket() {
     _incomingPackets.pop_front();
 
     _rxJitteredPackets.push_back(ptr);
-    uint64_t jitter = GetNextRxJitter();
+    uint64_t jitter = GetNextRxJitter();                         // nanos
+    uint64_t nextPacketReception = GetNextPacketReceptionTime(); // nanos
+    uint64_t currentNanos = GetCurrentSimTime();                 // nanos
+    uint64_t jitteredReception = currentNanos + jitter;
+    if (nextPacketReception > currentNanos &&
+        jitteredReception <= nextPacketReception) {
+      jitteredReception = nextPacketReception + 1;
+      jitter = jitteredReception - currentNanos;
+    }
+    SetNextPacketReceptionTime(jitteredReception);
+
     ns3::Simulator::ScheduleWithContext(
         GetMac(), ns3::NanoSeconds(jitter),
         &CustomROSCommsDevice::ReceivePacketAfterJitter, this);
@@ -289,7 +313,8 @@ uint64_t CustomROSCommsDevice::GetNextRxJitter() {
   return static_cast<uint64_t>(tmp) * 1000;
 }
 
-void CustomROSCommsDevice::StartPacketTransmission(const OutcomingPacketPtr &opkt) {
+void CustomROSCommsDevice::StartPacketTransmission(
+    const OutcomingPacketPtr &opkt) {
 
   auto byteTrt = GetNanosPerByte();
   auto trTime = opkt->packetSize * byteTrt;
@@ -412,4 +437,4 @@ std::string CustomROSCommsDevice::DoToString() {
 
   return std::string(buff);
 }
-}
+} // namespace dccomms_ros
