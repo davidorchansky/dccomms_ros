@@ -29,6 +29,7 @@ CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
                      LOG_LEVEL_ALL); // NS3 LOG DOES NOT WORK (TODO: FIX IT)
   _maxTxFifoSize = 2048;
   _nextPacketReceptionTime = 0;
+  _neg = false;
 }
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
@@ -40,6 +41,16 @@ void CustomROSCommsDevice::SetJitter(double tx, double rx) { // jitter in
 
   _rxJitterDist = UniformIntDist(0, static_cast<int>(rx * 1000));
   _rxJitter = rx;
+
+  _rxJitterSd = 2;
+  double rx1 = std::round(rx * 1000 / 2);
+  double rx2 = std::round((rx + _rxJitterSd) * 1000 / 2);
+
+  _rxJitterBernoulliDist = std::bernoulli_distribution(0.5);
+
+  _rxJitterBase = static_cast<int64_t>(rx2 * 1000);
+  _rxJitterNormalDist =
+      NormalRealDist(static_cast<int64_t>(rx1), _rxJitterSd * 1000);
 }
 
 void CustomROSCommsDevice::GetBitRate(double &bitrate) { bitrate = _bitRate; }
@@ -168,9 +179,20 @@ void CustomROSCommsDevice::MarkIncommingPacketsAsCollisioned() {
   }
 }
 
-void CustomROSCommsDevice::ReceivePacketAfterJitter() {
+void CustomROSCommsDevice::ReceiveOldestPacketAfterJitter() {
   auto ipkt = _rxJitteredPackets.front();
   _rxJitteredPackets.pop_front();
+  if (ipkt->Error()) {
+    Debug("Packet received with errors");
+    _pktErrorCbTrace(this, ipkt->packet, ipkt->propagationError,
+                     ipkt->collisionError);
+  } else {
+    ReceiveFrame(ipkt->packet);
+  }
+}
+
+void CustomROSCommsDevice::ReceivePacketAfterJitter(
+    const IncomingPacketPtr &ipkt) {
   if (ipkt->Error()) {
     Debug("Packet received with errors");
     _pktErrorCbTrace(this, ipkt->packet, ipkt->propagationError,
@@ -192,28 +214,37 @@ uint64_t CustomROSCommsDevice::GetCurrentSimTime() {
   return NetsimTime::GetNanos();
 }
 
+void CustomROSCommsDevice::CheckOrderOfReceptions() {
+  //    std::size_t cont = _rxJitteredPackets.size();
+  //    for(std::size_t i = 0; i < cont; i++)
+  //    {
+  //        auto asd = _rxJitteredPackets[0];
+  //    }
+}
+
 void CustomROSCommsDevice::HandleNextIncomingPacket() {
   NS_LOG_FUNCTION(this);
   Debug("CustomROSCommsDevice({}): HandleNextIncommingPacket", GetDccommsId());
   if (!_incomingPackets.empty()) {
     IncomingPacketPtr ptr = _incomingPackets.front();
     _incomingPackets.pop_front();
-
-    _rxJitteredPackets.push_back(ptr);
-    uint64_t jitter = GetNextRxJitter();                         // nanos
+    uint64_t jitter = GetNextRxNormalJitter();                   // nanos
     uint64_t nextPacketReception = GetNextPacketReceptionTime(); // nanos
     uint64_t currentNanos = GetCurrentSimTime();                 // nanos
     uint64_t jitteredReception = currentNanos + jitter;
     if (nextPacketReception > currentNanos &&
         jitteredReception <= nextPacketReception) {
-      jitteredReception = nextPacketReception + 1;
+      jitteredReception = nextPacketReception + 1000000;
       jitter = jitteredReception - currentNanos;
     }
+
     SetNextPacketReceptionTime(jitteredReception);
 
+    ns3::EventImpl *event = ns3::MakeEvent(
+        &CustomROSCommsDevice::ReceivePacketAfterJitter, this, ptr);
+
     ns3::Simulator::ScheduleWithContext(
-        GetMac(), ns3::NanoSeconds(jitter),
-        &CustomROSCommsDevice::ReceivePacketAfterJitter, this);
+        GetMac(), ns3::NanoSeconds(static_cast<uint64_t>(jitter)), event);
 
     if (_incomingPackets.empty())
       Receiving(false);
@@ -311,6 +342,21 @@ uint64_t CustomROSCommsDevice::GetNextTxJitter() {
 uint64_t CustomROSCommsDevice::GetNextRxJitter() {
   int tmp = _rxJitterDist(_rxJitterGenerator);
   return static_cast<uint64_t>(tmp) * 1000;
+}
+
+uint64_t CustomROSCommsDevice::GetNextRxNormalJitter() {
+  double tmp = _rxJitterNormalDist(_rxJitterGenerator) * 1000;
+  // bool positive = _rxJitterBernoulliDist(_rxJitterGenerator2);
+  int64_t jitter;
+  if (_neg)
+    jitter = static_cast<int64_t>(tmp);
+  else
+    jitter = -1 * static_cast<int64_t>(tmp);
+  auto res = _rxJitterBase + jitter;
+  if (res < 0)
+    res = 0;
+  _neg = !_neg;
+  return static_cast<uint64_t>(res);
 }
 
 void CustomROSCommsDevice::StartPacketTransmission(

@@ -24,9 +24,14 @@ public:
   bool propagationError;
   bool collisionError;
   ns3PacketPtr packet;
+  ns3::EventImpl * event;
+  uint64_t jitter, receptionTime;
   IncomingPacket() {
     propagationError = false;
     collisionError = false;
+    event = NULL;
+    jitter = 0;
+    receptionTime = 0;
     packet = NULL;
   }
   bool Error() { return propagationError || collisionError; }
@@ -98,6 +103,7 @@ public:
   bool ErrOnPkt(double range, ns3PacketPtr pkt);
   uint64_t GetNextTxJitter();
   uint64_t GetNextRxJitter();
+  uint64_t GetNextRxNormalJitter();
   void SetRateErrorModel(const std::string &expr, const std::string &unit);
   void GetRateErrorModel(std::string &expr, std::string &unit);
   //  inline DEV_STATUS GetStatus() { return _status; }
@@ -106,6 +112,7 @@ public:
   virtual DEV_TYPE GetDevType();
 
   typedef std::normal_distribution<double> NormalRealDist;
+  typedef std::normal_distribution<int> NormalIntDist;
   typedef std::uniform_int_distribution<int> UniformIntDist;
   typedef std::default_random_engine RandEngGen;
   typedef std::uniform_real_distribution<double> UniformRealDist;
@@ -113,6 +120,7 @@ public:
   inline void EnqueueTxPacket(const OutcomingPacketPtr &opkt);
   inline bool TxFifoEmpty();
   OutcomingPacketPtr PopTxPacket();
+  bool _neg;
 
   void AddNewPacket(ns3PacketPtr pkt, bool propagationError);
   void HandleNextIncomingPacket();
@@ -126,7 +134,9 @@ public:
 
   static ns3::TypeId GetTypeId(void);
   void SchedulePacketTransmissionAfterJitter(const ns3PacketPtr & pkt);
-  void ReceivePacketAfterJitter();
+  void ReceiveOldestPacketAfterJitter();
+  void ReceivePacketAfterJitter(const IncomingPacketPtr & pkt);
+  void CheckOrderOfReceptions();
 
 protected:
   virtual void DoSetMac(uint32_t mac);
@@ -149,9 +159,13 @@ private:
   // CustomROSCommsDevicePtr _ownPtr;
 
   NormalRealDist _ttDist;
+  NormalRealDist _rxJitterNormalDist;
   UniformRealDist _erDist;
+  double _rxJitterSd;
   UniformIntDist _txJitterDist, _rxJitterDist;
-  RandEngGen _ttGenerator, _erGenerator, _txJitterGenerator, _rxJitterGenerator;
+
+  std::bernoulli_distribution _rxJitterBernoulliDist;
+  RandEngGen _ttGenerator, _erGenerator, _txJitterGenerator, _rxJitterGenerator, _rxJitterGenerator2;
 
   std::list<IncomingPacketPtr> _incomingPackets, _rxJitteredPackets;
   std::list<OutcomingPacketPtr> _outcomingPackets, _txJitteredPackets;
@@ -166,6 +180,7 @@ private:
   std::string _eexpr;
   SimpleVarExprEval _mExprEval;
   double _txJitter, _rxJitter;
+  int64_t _rxJitterBase;
   uint64_t _nextPacketReceptionTime;
 };
 }
