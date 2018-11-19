@@ -182,17 +182,39 @@ SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/NetsimLogFormatter.cpp
         src/simulator/NetsimTime.cpp
 )
+
+#CHECK IF NS3 HAS ALREADY BEEN BUILT
+message(STATUS "Check NS3 libraries...")
+execute_process (
+    COMMAND bash -c "./ns3configured.sh"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE ns3configured
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
 #https://stackoverflow.com/questions/15972898/cmake-how-to-run-a-add-custom-command-before-everything-else
 #./waf configure --build-profile=debug --enable-examples --enable-tests --enable-sudo
 #./waf build
 #SET(WAF_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/waf)
-SET(WAF_EXECUTABLE ./waf)
-add_custom_target(
-  ns3
-  COMMAND ${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests #--enable-sudo
-  COMMAND ${WAF_EXECUTABLE} build
-  WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
-)
+if("${ns3configured}" STREQUAL "true")
+    message(STATUS "Build NS3.")
+    SET(WAF_EXECUTABLE ./waf)
+    add_custom_target(
+      ns3
+      COMMAND ${WAF_EXECUTABLE} build
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
+    )
+else()
+    message(STATUS "Configure and build NS3.")
+    SET(WAF_EXECUTABLE ./waf)
+    add_custom_target(
+      ns3
+      COMMAND ${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests #--enable-sudo
+      COMMAND ${WAF_EXECUTABLE} build
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
+    )
+endif()
 
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
