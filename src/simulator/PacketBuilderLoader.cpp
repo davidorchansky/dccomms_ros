@@ -2,9 +2,10 @@
 
 namespace dccomms_ros {
 
-// class_loader::MultiLibraryClassLoader PacketBuilderLoader::_loader(true);
+ClassLoaderMap PacketBuilderLoader::loaders;
 
-PacketBuilderLoaderException::PacketBuilderLoaderException(std::string msg, int cod) {
+PacketBuilderLoaderException::PacketBuilderLoaderException(std::string msg,
+                                                           int cod) {
   message = msg;
   code = cod;
 }
@@ -12,19 +13,25 @@ PacketBuilderLoaderException::PacketBuilderLoaderException(std::string msg, int 
 dccomms::PacketBuilderPtr
 PacketBuilderLoader::LoadPacketBuilder(const std::string &libName,
                                        const std::string className) {
-  class_loader::ClassLoader loader(libName);
+
+  auto loader = loaders[libName];
+  if (!loader) {
+    loader = ClassLoaderPtr(new class_loader::ClassLoader(libName));
+    loaders[libName] = loader;
+  }
   dccomms::IPacketBuilder *pb;
   std::vector<std::string> classes =
-      loader.getAvailableClasses<dccomms::IPacketBuilder>();
+      loader->getAvailableClasses<dccomms::IPacketBuilder>();
   for (unsigned int c = 0; c < classes.size(); ++c) {
     if (classes[c] == className) {
-      pb = loader.createUnmanagedInstance<dccomms::IPacketBuilder>(classes[c]);
+      pb = loader->createUnmanagedInstance<dccomms::IPacketBuilder>(classes[c]);
       break;
     }
   }
-  if(!pb)
-    throw PacketBuilderLoaderException("no '"+className+"' class found", PB_LOADER_EXCEPTION_NOCLASSFOUND);
+  if (!pb)
+    throw PacketBuilderLoaderException("no '" + className + "' class found",
+                                       PB_LOADER_EXCEPTION_NOCLASSFOUND);
 
   return dccomms::PacketBuilderPtr(pb);
 }
-}
+} // namespace dccomms_ros
