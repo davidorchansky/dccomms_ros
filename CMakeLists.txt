@@ -164,11 +164,6 @@ catkin_package(
 
 roslaunch_add_file_check(launch)
 
-SET(S100BRIDGE s100_bridge)
-add_executable(${S100BRIDGE} src/bridges/s100/s100_main.cpp)
-target_include_directories(${S100BRIDGE} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${S100BRIDGE} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
-
 SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/ROSCommsDevice.cpp
         src/simulator/ROSCommsSimulator.cpp
@@ -221,30 +216,18 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS
 target_link_libraries(${PROJECT_NAME}  ${ns3liblist} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 add_dependencies(${PROJECT_NAME} dccomms_ros_msgs_generate_messages_cpp ns3)
 
-add_executable (netsim_example1 src/simulator/main/netsim_example1.cpp)
-target_link_libraries(netsim_example1 ${PROJECT_NAME})
-
-add_executable (netsim_example2 src/simulator/main/netsim_example2.cpp)
-target_link_libraries(netsim_example2 ${PROJECT_NAME})
-
-add_executable (netsim_example3 src/simulator/main/netsim_example3.cpp)
-target_link_libraries(netsim_example3 ${PROJECT_NAME})
-
-add_executable (netsim_example4 src/simulator/main/netsim_example4.cpp)
-target_link_libraries(netsim_example4 ${PROJECT_NAME})
-
 #target_compile_options(pruebas PUBLIC "")
 #https://cmake.org/cmake/help/v3.4/command/find_library.html
 #https://stackoverflow.com/questions/31438916/cmake-cannot-find-library-using-link-directories
-add_executable (ns3-testing testing/simulator/ns3-testing.cpp)
+add_executable (ns3-testing examples/ns3-testing.cpp)
 target_link_libraries(ns3-testing ${PROJECT_NAME})
 target_include_directories(ns3-testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable (ns3-as-testing testing/simulator/ns3-as-testing.cpp)
+add_executable (ns3-as-testing examples/ns3-as-testing.cpp)
 target_link_libraries(ns3-as-testing ${PROJECT_NAME})
 target_include_directories(ns3-as-testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable (ns3-as-VBF testing/simulator/ns3-as-VBF.cpp)
+add_executable (ns3-as-VBF examples/ns3-as-VBF.cpp)
 target_link_libraries(ns3-as-VBF ${PROJECT_NAME})
 target_include_directories(ns3-as-VBF PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 ###############################################
