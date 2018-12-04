@@ -219,17 +219,18 @@ add_dependencies(${PROJECT_NAME} dccomms_ros_msgs_generate_messages_cpp ns3)
 #target_compile_options(pruebas PUBLIC "")
 #https://cmake.org/cmake/help/v3.4/command/find_library.html
 #https://stackoverflow.com/questions/31438916/cmake-cannot-find-library-using-link-directories
-add_executable (ns3-testing examples/ns3-testing.cpp)
-target_link_libraries(ns3-testing ${PROJECT_NAME})
-target_include_directories(ns3-testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable (example-0 ns3-scripts/example-0.cpp)
+target_link_libraries(example-0 ${PROJECT_NAME})
+target_include_directories(example-0 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable (ns3-as-testing examples/ns3-as-testing.cpp)
-target_link_libraries(ns3-as-testing ${PROJECT_NAME})
-target_include_directories(ns3-as-testing PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable (BMac ns3-scripts/BMac.cpp)
+target_link_libraries(BMac ${PROJECT_NAME})
+target_include_directories(BMac PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable (ns3-as-VBF examples/ns3-as-VBF.cpp)
-target_link_libraries(ns3-as-VBF ${PROJECT_NAME})
-target_include_directories(ns3-as-VBF PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable (VBF ns3-scripts/VBF.cpp)
+target_link_libraries(VBF ${PROJECT_NAME})
+target_include_directories(VBF PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 ###############################################
 ############ END netsim BUILD #################
 ###############################################
