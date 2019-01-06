@@ -231,6 +231,18 @@ add_executable (VBF ns3-scripts/VBF.cpp)
 target_link_libraries(VBF ${PROJECT_NAME})
 target_include_directories(VBF PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+add_executable (dccomms-csma ns3-scripts/dccomms-csma.cpp)
+target_link_libraries(dccomms-csma ${PROJECT_NAME})
+target_include_directories(dccomms-csma PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable (dccomms-wifi ns3-scripts/dccomms-wifi.cpp)
+target_link_libraries(dccomms-wifi ${PROJECT_NAME})
+target_include_directories(dccomms-wifi PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable (dccomms-sfamma ns3-scripts/dccomms-sfamma.cpp)
+target_link_libraries(dccomms-sfamma ${PROJECT_NAME})
+target_include_directories(dccomms-sfamma PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 ###############################################
 ############ END netsim BUILD #################
 ###############################################
