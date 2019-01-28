@@ -1,6 +1,10 @@
 #include <dccomms_ros/simulator/CustomCommsChannel.h>
 #include <dccomms_ros/simulator/CustomROSCommsDevice.h>
+#include <dccomms_ros/simulator/NetsimDevice.h>
+#include <dccomms_ros/simulator/NetsimPhy.h>
+#include <dccomms_ros/simulator/NetsimRouting.h>
 #include <dccomms_ros/simulator/NetsimTime.h>
+#include <ns3/aqua-sim-mac-aloha.h>
 #include <ns3/core-module.h>
 #include <ns3/simulator.h>
 
@@ -30,6 +34,7 @@ CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
   _maxTxFifoSize = 2048;
   _nextPacketReceptionTime = 0;
   _neg = false;
+  _started = false;
 }
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
@@ -198,7 +203,15 @@ void CustomROSCommsDevice::ReceivePacketAfterJitter(
     _pktErrorCbTrace(this, ipkt->packet, ipkt->propagationError,
                      ipkt->collisionError);
   } else {
-    ReceiveFrame(ipkt->packet);
+    if (_enableMacLayer) {
+      auto pkt = ipkt->packet;
+      NetsimHeader header;
+      pkt->RemoveHeader(header);
+      _macProt->RecvProcess(pkt);
+
+    } else {
+      ReceiveFrame(ipkt->packet);
+    }
   }
 }
 
@@ -265,7 +278,7 @@ void CustomROSCommsDevice::AddNewPacket(ns3PacketPtr pkt,
   ipkt->packet = pkt;
   _incomingPackets.push_back(ipkt);
   // TODO: check if propagation error and increase traced value
-  if (Receiving() || _txChannel == _rxChannel && Transmitting()) {
+  if (Receiving() || HalfDuplex() && Transmitting()) {
     // TODO: increase colission errors traced value
     MarkIncommingPacketsAsCollisioned(); // Should be a maximum of 1 packet in
                                          // the _incommingPackets queue
@@ -374,11 +387,29 @@ void CustomROSCommsDevice::StartPacketTransmission(
   PropagatePacket(opkt->packet);
 }
 
-void CustomROSCommsDevice::DoSetMac(uint32_t mac) { _mac = mac; }
-void CustomROSCommsDevice::DoSend(ns3PacketPtr dlf) {
+void CustomROSCommsDevice::PhySend(ns3PacketPtr dlf) {
   ns3::Simulator::ScheduleWithContext(
       GetMac(), ns3::NanoSeconds(_intrinsicDelay * 1e6),
       &CustomROSCommsDevice::SchedulePacketTransmissionAfterJitter, this, dlf);
+}
+
+void CustomROSCommsDevice::DoSetMac(uint32_t mac) { _mac = mac; }
+void CustomROSCommsDevice::DoSend(ns3PacketPtr dlf) {
+  while (!_started) {
+    this_thread::sleep_for(chrono::milliseconds(500));
+  }
+  if (_enableMacLayer) {
+    NetsimHeader header;
+    dlf->RemoveHeader(header);
+    uint16_t daddr = header.GetDst();
+
+    ns3::Simulator::ScheduleWithContext(GetMac(), ns3::NanoSeconds(0),
+                                        &ns3::AquaSimNetDevice::Send, _dev, dlf,
+                                        AquaSimAddress(daddr), 0);
+
+  } else {
+    PhySend(dlf);
+  }
 }
 
 void CustomROSCommsDevice::SchedulePacketTransmissionAfterJitter(
@@ -425,12 +456,32 @@ void CustomROSCommsDevice::DoLinkToChannel(CommsChannelNs3Ptr channel,
   }
 }
 void CustomROSCommsDevice::DoStart() {
-  //  if (!_ownPtr)
-  //    _ownPtr =
-  //        this; //
-  //        std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
+  auto aqmac = ns3::AquaSimAddress(static_cast<uint16_t>(_mac));
+
+  _phy = ns3::CreateObject<NetsimPhy>(this);
+  _routing = ns3::CreateObject<NetsimRouting>(this);
+  _macProt = ns3::CreateObject<AquaSimAloha>();
+
+  _dev = ns3::CreateObject<NetsimDevice>(this);
+
+  _macProt->SetAttribute("MaxTransmitDistance", DoubleValue(3500));
+  _macProt->SetAttribute("BitRate", DoubleValue(_bitRate));
+  _macProt->SetAttribute("EncodingEfficiency", DoubleValue(1));
+  _macProt->SetDevice(_dev);
+
+  _routing->SetMac(_macProt);
+  _routing->SetNetDevice(_dev);
+
+  _dev->SetPhy(_phy);
+  _dev->SetMac(_macProt);
+  _dev->SetRouting(_routing);
+  _dev->SetAddress(aqmac);
+  _dev->MacEnabled(_enableMacLayer);
+
+  _enableMacLayer = true;
+  _started = true;
 }
-bool CustomROSCommsDevice::DoStarted() { return true; }
+bool CustomROSCommsDevice::DoStarted() { return _started; }
 void CustomROSCommsDevice::DoSetPosition(const tf::Vector3 &position) {
   _position = position;
 }
@@ -459,22 +510,23 @@ std::string CustomROSCommsDevice::DoToString() {
   GetRateErrorModel(expr, eunit);
 
   int n;
-  n = snprintf(buff, maxBuffSize, "\tdccomms ID: ............... '%s'\n"
-                                  "\tMAC ....................... %d\n"
-                                  "\tDevice type ............... %s\n"
-                                  "\tFrame ID: ................. '%s'\n"
-                                  "\tTX channel: ............... '%s'\n"
-                                  "\tRX channel: ............... '%s'\n"
-                                  "\tMax. distance: ............ %.2f m\n"
-                                  "\tMin. distance: ............ %.2f m\n"
-                                  "\tBitrate: .................. %d bps\n"
-                                  "\tIntrinsic delay (ms)....... %.3f\n"
-                                  "\tJitter\n"
-                                  "\t\ttx (ms): ................ %.3f\n"
-                                  "\t\trx (ms): ................ %.3f\n"
-                                  "\tTx Fifo Size: ............. %d bytes\n"
-                                  "\tError Expression: ......... %s\n"
-                                  "\tError Unit: ............... %s",
+  n = snprintf(buff, maxBuffSize,
+               "\tdccomms ID: ............... '%s'\n"
+               "\tMAC ....................... %d\n"
+               "\tDevice type ............... %s\n"
+               "\tFrame ID: ................. '%s'\n"
+               "\tTX channel: ............... '%s'\n"
+               "\tRX channel: ............... '%s'\n"
+               "\tMax. distance: ............ %.2f m\n"
+               "\tMin. distance: ............ %.2f m\n"
+               "\tBitrate: .................. %d bps\n"
+               "\tIntrinsic delay (ms)....... %.3f\n"
+               "\tJitter\n"
+               "\t\ttx (ms): ................ %.3f\n"
+               "\t\trx (ms): ................ %.3f\n"
+               "\tTx Fifo Size: ............. %d bytes\n"
+               "\tError Expression: ......... %s\n"
+               "\tError Unit: ............... %s",
                _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
                _tfFrameId.c_str(), txChannelLinked.c_str(),
                rxChannelLinked.c_str(), _maxDistance, _minDistance, bitrate,

@@ -4,6 +4,7 @@
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <exprtk.hpp>
 #include <ns3/error-model.h>
+#include <ns3/aqua-sim-mac.h>
 #include <random>
 
 using namespace dccomms;
@@ -12,7 +13,11 @@ using namespace cpplogging;
 namespace dccomms_ros {
 
 // enum DEV_STATUS { RECV, SEND, IDLE };
+class NetsimDevice;
+class NetsimPhy;
+class NetsimRouting;
 class CustomROSCommsDevice;
+
 typedef ns3::Ptr<CustomROSCommsDevice> CustomROSCommsDeviceNs3Ptr;
 // typedef dccomms::Ptr<CustomROSCommsDevice> CustomROSCommsDevicePtr;
 typedef CustomROSCommsDevice *CustomROSCommsDevicePtr;
@@ -24,7 +29,7 @@ public:
   bool propagationError;
   bool collisionError;
   ns3PacketPtr packet;
-  ns3::EventImpl * event;
+  ns3::EventImpl *event;
   uint64_t jitter, receptionTime;
   IncomingPacket() {
     propagationError = false;
@@ -70,8 +75,8 @@ public:
                        PacketBuilderPtr rxpb);
 
   static CustomROSCommsDeviceNs3Ptr Build(ROSCommsSimulatorPtr sim,
-                                       PacketBuilderPtr txpb,
-                                       PacketBuilderPtr rxpb) {
+                                          PacketBuilderPtr txpb,
+                                          PacketBuilderPtr rxpb) {
     auto dev = ns3::CreateObject<CustomROSCommsDevice>(sim, txpb, rxpb);
     // auto dev = dccomms::CreateObject<CustomROSCommsDevice>(sim, txpb, rxpb);
     return dev;
@@ -98,6 +103,8 @@ public:
   void TransmitPacket();
   void TransmitEnqueuedPacket();
   void StartPacketTransmission(const OutcomingPacketPtr &opkt);
+
+  inline bool HalfDuplex() { return _txChannel == _rxChannel; }
 
   inline void SetTransmitting(bool v) { Transmitting(v); }
   bool ErrOnPkt(double range, ns3PacketPtr pkt);
@@ -133,10 +140,11 @@ public:
   void Receiving(bool);
 
   static ns3::TypeId GetTypeId(void);
-  void SchedulePacketTransmissionAfterJitter(const ns3PacketPtr & pkt);
+  void SchedulePacketTransmissionAfterJitter(const ns3PacketPtr &pkt);
   void ReceiveOldestPacketAfterJitter();
-  void ReceivePacketAfterJitter(const IncomingPacketPtr & pkt);
+  void ReceivePacketAfterJitter(const IncomingPacketPtr &pkt);
   void CheckOrderOfReceptions();
+  void PhySend(ns3PacketPtr dlf);
 
 protected:
   virtual void DoSetMac(uint32_t mac);
@@ -165,11 +173,11 @@ private:
   UniformIntDist _txJitterDist, _rxJitterDist;
 
   std::bernoulli_distribution _rxJitterBernoulliDist;
-  RandEngGen _ttGenerator, _erGenerator, _txJitterGenerator, _rxJitterGenerator, _rxJitterGenerator2;
+  RandEngGen _ttGenerator, _erGenerator, _txJitterGenerator, _rxJitterGenerator,
+      _rxJitterGenerator2;
 
   std::list<IncomingPacketPtr> _incomingPackets, _rxJitteredPackets;
   std::list<OutcomingPacketPtr> _outcomingPackets, _txJitteredPackets;
-
 
   CommsChannelNs3Ptr _txChannel, _rxChannel;
   // DEV_STATUS _status;
@@ -182,6 +190,12 @@ private:
   double _txJitter, _rxJitter;
   int64_t _rxJitterBase;
   uint64_t _nextPacketReceptionTime;
+  ns3::Ptr<NetsimDevice> _dev;
+  ns3::Ptr<NetsimPhy> _phy;
+  ns3::Ptr<ns3::AquaSimMac> _macProt;
+  ns3::Ptr<NetsimRouting> _routing;
+  bool _enableMacLayer;
+  bool _started;
 };
-}
+} // namespace dccomms_ros
 #endif // COMMSNODE_H

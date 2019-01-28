@@ -44,22 +44,28 @@
 
 using namespace ns3;
 
-NS_LOG_COMPONENT_DEFINE("BMac");
+NS_LOG_COMPONENT_DEFINE("MAComp");
 
 class Test : virtual public cpplogging::Logger {
 public:
   Test();
-  void RunTest();
-  void RoutingPacketTx(std::string context, Ptr<const Packet>);
-  void RoutingPacketRx(std::string context, Ptr<const Packet>);
+  void RunTest(int argc, char **argv);
+  void AppPacketTx(std::string context, Ptr<const Packet>);
+  void AppPacketRx(std::string context, Ptr<const Packet>);
   void MacPacketTx(std::string context, Ptr<const Packet>);
   void MacPacketRx(std::string context, Ptr<const Packet>);
+  void RoutingPacketRx(std::string context, Ptr<const Packet>);
   void CourseChange(std::string context, Ptr<const MobilityModel> model);
   void GetSimTime(const char *format, std::string &datetime,
                   double &secsFromStart);
   void SetSimulationStartDateTime();
-  void SendPacket(ns3::Ptr<NetDevice> &dev, Address &addr) {
-    auto pkt = ns3::Create<ns3::Packet>(200);
+  void SendPacket(ns3::Ptr<NetDevice> &dev, Address &addr, int pktSize) {
+    AquaSimAddress srcAdd, dstAdd;
+    srcAdd = AquaSimAddress::ConvertFrom(dev->GetAddress());
+    dstAdd = AquaSimAddress::ConvertFrom(addr);
+    Info("######################## SEND DATA FROM {} TO {}: {} bytes", srcAdd.GetAsInt(),
+         dstAdd.GetAsInt(), pktSize);
+    auto pkt = ns3::Create<ns3::Packet>(pktSize);
     dev->Send(pkt, addr, 0);
   }
 
@@ -83,6 +89,7 @@ Test::Test() {
   macLog.SetLogLevel(level);
   phyLog.SetLogLevel(level);
   mobilityLog.SetLogLevel(level);
+  LogToConsole(true);
 }
 
 void Test::SetSimulationStartDateTime() {
@@ -110,50 +117,7 @@ void Test::GetSimTime(const char *format, std::string &datetime,
   datetime = mbstr;
 }
 
-void Test::RoutingPacketRx(std::string context, Ptr<const Packet> pkt) {
-  AquaSimHeader ash;
-  pkt->PeekHeader(ash);
-  auto saddr = ash.GetSAddr().GetAsInt();
-  auto daddr = ash.GetDAddr().GetAsInt();
-  auto size = ash.GetSize();
-
-  std::string datetime;
-  double secs;
-  GetSimTime(timeFormat, datetime, secs);
-
-  routingLog.Info(
-      "({} secs; {}) {}: (Addr: {}) Received packet from {} ; {} bytes", secs,
-      datetime, context, daddr, saddr, size);
-}
-
-void Test::MacPacketRx(std::string context, Ptr<const Packet> pkt) {
-  std::string datetime;
-  double secs;
-  GetSimTime(timeFormat, datetime, secs);
-
-  routingLog.Info("({} secs; {}) {}: Received packet; {} bytes", secs, datetime,
-                  context, pkt->GetSize());
-}
-
-void Test::MacPacketTx(std::string context, Ptr<const Packet> pkt) {
-  std::string datetime;
-  double secs;
-  GetSimTime(timeFormat, datetime, secs);
-
-  routingLog.Info("({} secs; {}) {}: {} bytes", secs, datetime, context,
-                  pkt->GetSize());
-}
-
-void Test::CourseChange(std::string context, Ptr<const MobilityModel> model) {
-  Vector position = model->GetPosition();
-
-  std::string datetime;
-  double secs;
-  GetSimTime(timeFormat, datetime, secs);
-  mobilityLog.Info("({} secs; {}) {}: [x,y,z] = [{},{},{}]", secs, datetime,
-                   context, position.x, position.y, position.z);
-}
-void Test::RoutingPacketTx(std::string context, Ptr<const Packet> pkt) {
+void Test::AppPacketTx(std::string context, Ptr<const Packet> pkt) {
   AquaSimHeader ash;
   pkt->PeekHeader(ash);
   auto saddr = ash.GetSAddr().GetAsInt();
@@ -165,33 +129,100 @@ void Test::RoutingPacketTx(std::string context, Ptr<const Packet> pkt) {
   double secs;
   GetSimTime(timeFormat, datetime, secs);
 
-  routingLog.Info("({} secs; {}) {}: (Addr: {}) Transmitting packet to {}. "
-                  "Next hop: {} ; {} bytes",
-                  secs, datetime, context, saddr, daddr, nhaddr, size);
+  routingLog.Info(
+      "({} secs; {}) {}: (Addr: {}) Transmitting packet to routing layer {}. "
+      "Next hop: {} ; {} bytes",
+      secs, datetime, context, saddr, daddr, nhaddr, size);
 }
 
-void Test::RunTest() {
+void Test::AppPacketRx(std::string context, Ptr<const Packet> pkt) {
+  AquaSimHeader ash;
+  pkt->PeekHeader(ash);
+  auto saddr = ash.GetSAddr().GetAsInt();
+  auto daddr = ash.GetDAddr().GetAsInt();
+  auto size = ash.GetSize();
+
+  std::string datetime;
+  double secs;
+  GetSimTime(timeFormat, datetime, secs);
+
+  routingLog.Info("({} secs; {}) {}: (Addr: {}) Received packet from routing "
+                  "layer{} ; {} bytes",
+                  secs, datetime, context, daddr, saddr, size);
+}
+
+void Test::RoutingPacketRx(std::string context, Ptr<const Packet> pkt) {
+  std::string datetime;
+  double secs;
+  GetSimTime(timeFormat, datetime, secs);
+  AquaSimHeader ash;
+  Ptr<Packet> cpkt = pkt->Copy();
+  cpkt->RemoveHeader(ash);
+
+  routingLog.Info("({} secs; {}) {}: Received packet from mac layer; {} buffer "
+                  "bytes ; {} real bytes",
+                  secs, datetime, context, cpkt->GetSize(), ash.GetSize());
+}
+
+void Test::MacPacketTx(std::string context, Ptr<const Packet> pkt) {
+  std::string datetime;
+  double secs;
+  GetSimTime(timeFormat, datetime, secs);
+
+  routingLog.Info("({} secs; {}) {}: Transmitting packet to phy {} bytes", secs,
+                  datetime, context, pkt->GetSize());
+}
+
+void Test::MacPacketRx(std::string context, Ptr<const Packet> pkt) {
+  std::string datetime;
+  double secs;
+  GetSimTime(timeFormat, datetime, secs);
+
+  routingLog.Info("({} secs; {}) {}: Received packet from phy layer; {} bytes",
+                  secs, datetime, context, pkt->GetSize());
+}
+
+void Test::CourseChange(std::string context, Ptr<const MobilityModel> model) {
+  Vector position = model->GetPosition();
+
+  std::string datetime;
+  double secs;
+  GetSimTime(timeFormat, datetime, secs);
+  mobilityLog.Info("({} secs; {}) {}: [x,y,z] = [{},{},{}]", secs, datetime,
+                   context, position.x, position.y, position.z);
+}
+
+void Test::RunTest(int argc, char **argv) {
   int nodes = 3;
-  double range = 100;
-  uint devBitRate = 10e4;
+  double range = 500;
+  uint devBitRate = 900;
+  uint dataPktSize = 50;
+  double distance = 20;
+  bool debugMac = false;
+  bool debugChannel = false;
+  bool debugPhy = false;
+  int numPkts = 1;
+  std::string macProtName = "ns3::AquaSimBroadcastMac";
 
-  std::string asciiTraceFile = "bMAC-trace.asc";
+  std::string asciiTraceFile = "mac-test.asc";
 
-  /*
-   * **********
-   * Node -> NetDevice -> AquaSimNetDeive -> etc.
-   * Note: Nodelist keeps track of all nodes created.
-   * ---Also need to look into id of nodes and assignment of this
-   * ---need to look at assignment of address and making it unique per node.
-   *
-   *
-   *  Ensure to use NS_LOG when testing in terminal. ie. ./waf --run
-   * broadcastMAC_example NS_LOG=Node=level_all or export
-   * 'NS_LOG=*=level_all|prefix_func'
-   *  *********
-   */
+  CommandLine cmd;
+  cmd.AddValue("nodes", "Number of nodes", nodes);
+  cmd.AddValue("range", "Range of each node", range);
+  cmd.AddValue("distance", "Distance between nodes", distance);
+  cmd.AddValue("dev-bitrate", "Acoustic modems's bitrate", devBitRate);
+  cmd.AddValue("num-pkts", "Number of packets transmitted in every burst", numPkts);
+  cmd.AddValue("debug-mac", "Show debg messages in mac layer", debugMac);
+  cmd.AddValue("debug-phy", "Show debg messages in mac layer", debugPhy);
+  cmd.AddValue("debug-channel", "Show debg messages in mac layer",
+               debugChannel);
+  cmd.AddValue("pkt-size", "Data packet's size (bytes)", dataPktSize);
+  cmd.AddValue("mac",
+               "MAC protocol to be used: ns3::AquaSimFama, ns3::AquaSimSFama,"
+               "ns3::AquaSimBroadcastMac, ns3::AquaSimAloha",
+               macProtName);
 
-  LogComponentEnable("AquaSimFama", LogLevel(LOG_ALL | LOG_PREFIX_ALL));
+  cmd.Parse(argc, argv);
 
   std::cout << "-----------Initializing simulation-----------\n";
 
@@ -207,9 +238,35 @@ void Test::RunTest() {
   AquaSimHelper asHelper = AquaSimHelper::Default();
 
   asHelper.SetChannel(channel.Create());
-  asHelper.SetMac("ns3::AquaSimFama");
-  asHelper.SetMacAttribute("BitRate", DoubleValue(devBitRate * 0.8));
+  asHelper.SetMac(macProtName);
+  asHelper.SetMacAttribute("BitRate", DoubleValue(devBitRate));
   asHelper.SetMacAttribute("EncodingEfficiency", DoubleValue(1));
+
+  std::string debugComponent;
+  if (macProtName == "ns3::AquaSimSFama") {
+    debugComponent = "AquaSimSFama";
+  } else if (macProtName == "ns3::AquaSimFama") {
+    asHelper.SetMacAttribute("RTSToNextHop", BooleanValue(true));
+    asHelper.SetMacAttribute("DataPacketSize", IntegerValue(0));
+    asHelper.SetMacAttribute("MaxTransmitDistance", DoubleValue(range));
+    debugComponent = "AquaSimFama";
+  } else if (macProtName == "ns3::AquaSimBroadcastMac") {
+    debugComponent = "AquaSimBroadcastMac";
+  } else if (macProtName == "ns3::AquaSimAloha") {
+    asHelper.SetMacAttribute("MaxTransmitDistance", DoubleValue(range));
+    debugComponent = "AquaSimAloha";
+  }
+  if (debugMac) {
+    LogComponentEnable("AquaSimMac", LogLevel(LOG_ALL | LOG_PREFIX_ALL));
+    LogComponentEnable(debugComponent.c_str(),
+                       LogLevel(LOG_ALL | LOG_PREFIX_ALL));
+  }
+  if (debugPhy) {
+    LogComponentEnable("AquaSimPhyCmn", LogLevel(LOG_ALL | LOG_PREFIX_ALL));
+  }
+  if (debugChannel) {
+    LogComponentEnable("AquaSimChannel", LogLevel(LOG_ALL | LOG_PREFIX_ALL));
+  }
 
   MobilityHelper mobility;
   NetDeviceContainer devices;
@@ -251,7 +308,9 @@ void Test::RunTest() {
   mobility.Install(nodesCon);
 
   ns3::Ptr<NetDevice> dev0 = devices.Get(0);
-  ns3::Address sinkAddr = devices.Get(nodes - 1)->GetAddress();
+  ns3::Address dev2Addr = devices.Get(2)->GetAddress();
+
+  ns3::Ptr<NetDevice> dev1 = devices.Get(1);
 
   Packet::EnablePrinting();
   std::ofstream ascii(asciiTraceFile.c_str());
@@ -262,42 +321,36 @@ void Test::RunTest() {
 
   std::cout << "-----------Running Simulation-----------\n";
 
-  Config::Connect("/NodeList/*/DeviceList/*/Routing/PacketReceived",
-                  MakeCallback(&Test::RoutingPacketRx, this));
-  Config::Connect("/NodeList/*/DeviceList/*/Routing/PacketTransmitting",
-                  MakeCallback(&Test::RoutingPacketTx, this));
-
-  ns3::Config::Connect("/NodeList/*/DeviceList/0/Phy/MacRx",
-                       MakeCallback(&Test::MacPacketRx, this));
-
-  ns3::Config::Connect("/NodeList/*/DeviceList/0/Phy/MacTx",
-                       MakeCallback(&Test::MacPacketTx, this));
+  ns3::Config::Connect("/NodeList/*/DeviceList/0/Mac/RoutingRx",
+                       MakeCallback(&Test::RoutingPacketRx, this));
 
   Config::Connect("/NodeList/*/$ns3::MobilityModel/CourseChange",
                   MakeCallback(&Test::CourseChange, this));
 
-  std::thread app([&]() {
-    std::this_thread::sleep_for(std::chrono::seconds(20));
-    while (1) {
-      Simulator::Schedule(Seconds(1),
-                          MakeEvent(&Test::SendPacket, this, dev0, sinkAddr));
-      std::this_thread::sleep_for(std::chrono::seconds(4));
-    }
+  std::thread sch([&]() {
+    Simulator::Schedule(Seconds(0),
+                        MakeEvent(&Test::SetSimulationStartDateTime, this));
+    Simulator::Run();
   });
-  app.detach();
+  sch.detach();
 
-  //  Simulator::Schedule(Seconds(60),
-  //                      MakeEvent(&Test::SendPacket, this, dev0, addr3));
+  auto pktSize = dataPktSize;
+  std::this_thread::sleep_for(
+      std::chrono::seconds(2)); // increase this delay if RTSToNextHop == false
+  while (1) {
+    for (auto i = 0; i < numPkts; i++) {
+      Simulator::ScheduleWithContext(0, Seconds(0), &Test::SendPacket, this,
+                                     dev0, dev2Addr, pktSize);
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    }
+    std::this_thread::sleep_for(std::chrono::seconds(50));
+  };
 
-  Simulator::Schedule(Seconds(0),
-                      MakeEvent(&Test::SetSimulationStartDateTime, this));
-  Simulator::Run();
-  ;
   Simulator::Destroy();
 }
 
 int main(int argc, char *argv[]) {
   Test test;
-  test.RunTest();
+  test.RunTest(argc, argv);
   return 0;
 }

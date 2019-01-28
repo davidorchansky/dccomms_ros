@@ -1,5 +1,6 @@
 #include <dccomms/Packet.h>
 #include <iostream>
+#include <ns3/aqua-sim-header.h>
 #include <ns3/header.h>
 #include <ns3/packet.h>
 #include <ns3/ptr.h>
@@ -45,9 +46,25 @@ public:
     return header;
   }
 
+  static NetsimHeader Build(ns3::Ptr<ns3::Packet> pkt) {
+    AquaSimHeader ash;
+    pkt->PeekHeader(ash);
+    auto dst = ash.GetDAddr().GetAsInt();
+    auto src = ash.GetSAddr().GetAsInt();
+    auto pktSize = ash.GetSize();
+
+    NetsimHeader header;
+    header.SetSeqNum(0);
+    header.SetNanosPerByte(0);
+    header.SetDst(dst);
+    header.SetSrc(src);
+    header.SetPacketSize(pktSize);
+    return header;
+  }
+
 private:
   uint64_t _seq, _npb;
   uint32_t _packetSize, _dst, _src;
   bool _error;
 };
-}
+} // namespace dccomms_ros

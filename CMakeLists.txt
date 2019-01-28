@@ -176,6 +176,9 @@ SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/CommsChannel.cpp
         src/simulator/NetsimLogFormatter.cpp
         src/simulator/NetsimTime.cpp
+        src/simulator/NetsimDevice.cpp
+        src/simulator/NetsimPhy.cpp
+        src/simulator/NetsimRouting.cpp
 )
 
 #CHECK IF NS3 HAS ALREADY BEEN BUILT
@@ -239,9 +242,9 @@ add_executable (dccomms-wifi ns3-scripts/dccomms-wifi.cpp)
 target_link_libraries(dccomms-wifi ${PROJECT_NAME})
 target_include_directories(dccomms-wifi PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable (dccomms-sfamma ns3-scripts/dccomms-sfamma.cpp)
-target_link_libraries(dccomms-sfamma ${PROJECT_NAME})
-target_include_directories(dccomms-sfamma PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+add_executable (aqua-sim-mac ns3-scripts/aqua-sim-mac.cpp)
+target_link_libraries(aqua-sim-mac ${PROJECT_NAME})
+target_include_directories(aqua-sim-mac PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 ###############################################
 ############ END netsim BUILD #################

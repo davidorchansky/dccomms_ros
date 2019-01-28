@@ -243,7 +243,7 @@ void ROSCommsDevice::_TxWork() {
 void ROSCommsDevice::Send(const PacketPtr &txdlf) {
   auto header = NetsimHeader::Build(txdlf);
   auto pkt =
-      ns3::Create<ns3::Packet>(txdlf->GetBuffer(), txdlf->GetPacketSize());
+      ns3::Create<ns3::Packet>(txdlf->GetBuffer(), txdlf->GetBufferSize());
   auto seq = _macToSeq[_txdlf->GetDestAddr()];
   header.SetSeqNum(seq);
   _macToSeq[_txdlf->GetDestAddr()] = seq + 1;

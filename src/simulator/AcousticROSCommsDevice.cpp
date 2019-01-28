@@ -280,7 +280,7 @@ void AcousticROSCommsDevice::DoStart() {
                            MakeCallback(&AcousticROSCommsDevice::_Recv, this));
       ns3::Config::Connect(
           "/NodeList/" + std::to_string(_nodeListIndex) +
-              "/DeviceList/0/Mac/RoutingTx",
+              "/DeviceList/0/Mac/MacTx",
           MakeCallback(&AcousticROSCommsDevice::_SendTrace, this));
     } else {
       _device->MacEnabled(false);
