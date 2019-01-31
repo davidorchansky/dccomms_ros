@@ -37,10 +37,10 @@ public:
 
   static NetsimHeader Build(dccomms::PacketPtr pkt) {
     NetsimHeader header;
-    header.SetSeqNum(0);
     header.SetNanosPerByte(0);
     header.SetDst(pkt->GetDestAddr());
     header.SetSrc(pkt->GetSrcAddr());
+    header.SetSeqNum(pkt->GetSeq());
     header.SetPacketSize(pkt->GetPacketSize());
     header.SetPacketError(pkt->PacketIsOk());
     return header;
@@ -49,12 +49,13 @@ public:
   static NetsimHeader Build(ns3::Ptr<ns3::Packet> pkt) {
     AquaSimHeader ash;
     pkt->PeekHeader(ash);
+    auto seq = ash.GetSeqNum();
     auto dst = ash.GetDAddr().GetAsInt();
     auto src = ash.GetSAddr().GetAsInt();
     auto pktSize = ash.GetSize();
 
     NetsimHeader header;
-    header.SetSeqNum(0);
+    header.SetSeqNum(seq);
     header.SetNanosPerByte(0);
     header.SetDst(dst);
     header.SetSrc(src);

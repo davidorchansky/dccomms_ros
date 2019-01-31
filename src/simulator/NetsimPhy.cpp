@@ -16,6 +16,8 @@ ns3::TypeId NetsimPhy::GetTypeId(void) {
 NetsimPhy::NetsimPhy(CustomROSCommsDeviceNs3Ptr dev) { _dev = dev; }
 
 bool NetsimPhy::Recv(ns3::Ptr<ns3::Packet> pkt) {
+  AquaSimPacketStamp apsh;
+  pkt->RemoveHeader(apsh);
   auto header = NetsimHeader::Build(pkt);
   pkt->AddHeader(header);
   _dev->PhySend(pkt);

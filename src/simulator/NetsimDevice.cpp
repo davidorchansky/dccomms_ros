@@ -30,6 +30,7 @@ TransStatus NetsimDevice::GetTransmissionStatus() {
   } else {
     res = TransStatus::NIDLE;
   }
+  return res;
 }
 
 void NetsimDevice::SetTransmissionStatus(TransStatus status) {

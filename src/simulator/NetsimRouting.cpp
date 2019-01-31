@@ -18,10 +18,15 @@ NetsimRouting::NetsimRouting(CustomROSCommsDeviceNs3Ptr dev) { _dev = dev; }
 bool NetsimRouting::Recv(ns3::Ptr<ns3::Packet> pkt, const ns3::Address &dest,
                          uint16_t protocolNumber) {
   AquaSimHeader ash;
-  pkt->RemoveHeader(ash);
-  auto header = NetsimHeader::Build(pkt);
-  pkt->AddHeader(header);
-  _dev->ReceiveFrame(pkt);
+  pkt->PeekHeader(ash);
+  if (ash.GetDirection() == AquaSimHeader::DOWN) {
+    SendDown(pkt, ash.GetDAddr(), ns3::Seconds(0));
+  } else {
+    auto header = NetsimHeader::Build(pkt);
+    pkt->RemoveHeader(ash);
+    pkt->AddHeader(header);
+    _dev->ReceiveFrame(pkt);
+  }
   return true;
 }
 } // namespace dccomms_ros

@@ -207,6 +207,10 @@ void CustomROSCommsDevice::ReceivePacketAfterJitter(
       auto pkt = ipkt->packet;
       NetsimHeader header;
       pkt->RemoveHeader(header);
+      AquaSimHeader ash;
+      pkt->RemoveHeader(ash);
+      ash.SetDirection(AquaSimHeader::UP);
+      pkt->AddHeader(ash);
       _macProt->RecvProcess(pkt);
 
     } else {
@@ -401,12 +405,22 @@ void CustomROSCommsDevice::DoSend(ns3PacketPtr dlf) {
   if (_enableMacLayer) {
     NetsimHeader header;
     dlf->RemoveHeader(header);
-    uint16_t daddr = header.GetDst();
+    auto pktSize = header.GetPacketSize();
+    auto saddr = AquaSimAddress::ConvertFrom(_dev->GetAddress());
+    auto daddr = AquaSimAddress(static_cast<uint16_t>(header.GetDst()));
+    uint32_t seq = static_cast<uint32_t>(header.GetSeqNum());
+
+    ns3::AquaSimHeader ash;
+    ash.SetSAddr(saddr);
+    ash.SetDAddr(daddr);
+    ash.SetSize(static_cast<uint16_t>(pktSize));
+    ash.SetSeqNum(seq);
+    ash.SetDirection(AquaSimHeader::DOWN);
+    dlf->AddHeader(ash);
 
     ns3::Simulator::ScheduleWithContext(GetMac(), ns3::NanoSeconds(0),
-                                        &ns3::AquaSimNetDevice::Send, _dev, dlf,
-                                        AquaSimAddress(daddr), 0);
-
+                                        &ns3::AquaSimNetDevice::SendWithHeader,
+                                        _dev, dlf, 0);
   } else {
     PhySend(dlf);
   }
