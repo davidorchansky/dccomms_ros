@@ -339,7 +339,8 @@ bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
 
     _channelMap[id] = PeekPointer(acousticChannel);
     _InsertChannelAsc<CommsChannelNs3Ptr>(_channels, acousticChannel);
-    _InsertChannelAsc<AcousticCommsChannelNs3Ptr>(_acousticChannels, acousticChannel);
+    _InsertChannelAsc<AcousticCommsChannelNs3Ptr>(_acousticChannels,
+                                                  acousticChannel);
     res.res = true;
     Log->info("acoustic channel {} added", id);
   }
@@ -350,7 +351,8 @@ bool ROSCommsSimulator::_AddCustomChannel(AddCustomChannel::Request &req,
                                           AddCustomChannel::Response &res) {
   uint32_t id = req.id;
   if (!_channelMap[id]) {
-    CustomCommsChannelNs3Ptr channel = ns3::CreateObject<CustomCommsChannel>(id);
+    CustomCommsChannelNs3Ptr channel =
+        ns3::CreateObject<CustomCommsChannel>(id);
     channel->SetMinPrTime(req.minPrTime);
     channel->SetPrTimeInc(req.prTimeIncPerMeter);
     auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
@@ -431,6 +433,30 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     dev->SetMaxTxFifoSize(req.maxTxFifoSize);
     dev->SetRateErrorModel(req.errorRateExpr, req.errorUnit);
     dev->SetIntrinsicDelay(req.intrinsicDelay);
+
+    if (req.macProtocol != "") {
+      ObjectFactory factory;
+      std::string macProtocolName = GetMACPType(req.macProtocol);
+      factory.SetTypeId(macProtocolName);
+      factory.Set("BitRate", DoubleValue(req.bitrate));
+      factory.Set("EncodingEfficiency", DoubleValue(1));
+
+      double macDistance =
+          req.macDistance != 0 ? req.macDistance : req.maxDistance;
+      if (macProtocolName == "ns3::AquaSimSFama") {
+      } else if (macProtocolName == "ns3::AquaSimFama") {
+        factory.Set("RTSToNextHop", BooleanValue(true));
+        factory.Set("DataPacketSize", IntegerValue(0));
+        factory.Set("MaxTransmitDistance", DoubleValue(macDistance));
+      } else if (macProtocolName == "ns3::AquaSimBroadcastMac") {
+      } else if (macProtocolName == "ns3::AquaSimAloha") {
+        factory.Set("MaxTransmitDistance", DoubleValue(macDistance));
+      }
+      ns3::Ptr<AquaSimMac> macLayer = factory.Create<AquaSimMac>();
+      dev->SetMacLayer(macLayer);
+      dev->EnableMac(true);
+    } else
+      dev->EnableMac(false);
     auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
     dev->SetLogLevel(errorLevel);
     // dev->LogToFile(dccommsId);
@@ -644,4 +670,4 @@ bool ROSCommsSimulator::StartSimulation() {
   dccomms_ros_msgs::StartSimulation::Response res;
   return _StartSimulation(req, res);
 }
-}
+} // namespace dccomms_ros

@@ -1,9 +1,6 @@
 #include <dccomms_ros/simulator/AcousticCommsChannel.h>
 #include <dccomms_ros/simulator/AcousticROSCommsDevice.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
-#include <ns3/aqua-sim-header.h>
-#include <ns3/core-module.h>
-#include <ns3/node-list.h>
 
 using namespace ns3;
 
@@ -23,10 +20,6 @@ AcousticROSCommsDevice::AcousticROSCommsDevice(ROSCommsSimulatorPtr s,
                                                PacketBuilderPtr rxpb)
     : ROSCommsDevice(s, txpb, rxpb) {
   _started = false;
-  _nodeListIndex = ns3::NodeList::GetNNodes();
-  _node = ns3::CreateObject<ns3::Node>();
-  _mobh.SetMobilityModel("ns3::ConstantPositionMobilityModel");
-  _mobh.Install(_node);
 
   _asHelper = ns3::AquaSimHelper::Default();
   _routingType = AQS_NOROUTING;

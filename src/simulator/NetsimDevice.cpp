@@ -10,7 +10,7 @@ namespace dccomms_ros {
 NS_OBJECT_ENSURE_REGISTERED(NetsimDevice);
 
 ns3::TypeId NetsimDevice::GetTypeId(void) {
-  static ns3::TypeId tid = ns3::TypeId("dccomms_ros::NetsimDevice").SetParent<Object>();
+  static ns3::TypeId tid = ns3::TypeId("dccomms_ros::NetsimDevice").SetParent<AquaSimNetDevice>();
   return tid;
 }
 

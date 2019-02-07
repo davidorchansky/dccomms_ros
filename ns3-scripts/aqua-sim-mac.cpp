@@ -256,6 +256,7 @@ void Test::RunTest(int argc, char **argv) {
     asHelper.SetMacAttribute("MaxTransmitDistance", DoubleValue(range));
     debugComponent = "AquaSimAloha";
   }
+
   if (debugMac) {
     LogComponentEnable("AquaSimMac", LogLevel(LOG_ALL | LOG_PREFIX_ALL));
     LogComponentEnable(debugComponent.c_str(),
@@ -308,7 +309,7 @@ void Test::RunTest(int argc, char **argv) {
   mobility.Install(nodesCon);
 
   ns3::Ptr<NetDevice> dev0 = devices.Get(0);
-  ns3::Address dev2Addr = devices.Get(2)->GetAddress();
+  ns3::Address dev2Addr = devices.Get(nodes-1)->GetAddress();
 
   ns3::Ptr<NetDevice> dev1 = devices.Get(1);
 

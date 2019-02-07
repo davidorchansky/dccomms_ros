@@ -3,8 +3,8 @@
 
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <exprtk.hpp>
-#include <ns3/error-model.h>
 #include <ns3/aqua-sim-mac.h>
+#include <ns3/error-model.h>
 #include <random>
 
 using namespace dccomms;
@@ -145,6 +145,8 @@ public:
   void ReceivePacketAfterJitter(const IncomingPacketPtr &pkt);
   void CheckOrderOfReceptions();
   void PhySend(ns3PacketPtr dlf);
+  void EnableMac(bool v);
+  void SetMacLayer(ns3::Ptr<ns3::AquaSimMac> mac);
 
 protected:
   virtual void DoSetMac(uint32_t mac);
@@ -192,8 +194,8 @@ private:
   uint64_t _nextPacketReceptionTime;
   ns3::Ptr<NetsimDevice> _dev;
   ns3::Ptr<NetsimPhy> _phy;
-  ns3::Ptr<ns3::AquaSimMac> _macProt;
-  ns3::Ptr<NetsimRouting> _routing;
+  ns3::Ptr<ns3::AquaSimMac> _macLayer;
+  ns3::Ptr<NetsimRouting> _routingLayer;
   bool _enableMacLayer;
   bool _started;
 };

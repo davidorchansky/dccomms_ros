@@ -14,6 +14,7 @@
 #include <unordered_map>
 
 // ROS
+#include <cctype>
 #include <dccomms_ros_msgs/AddAcousticChannel.h>
 #include <dccomms_ros_msgs/AddAcousticDevice.h>
 #include <dccomms_ros_msgs/AddCustomChannel.h>
@@ -35,11 +36,16 @@ using namespace cpplogging;
 
 namespace dccomms_ros {
 
-static std::string GetMACPType(const string &name) {
-  std::string typestr;
+static std::string GetMACPType(const string &input) {
+  std::string typestr, name;
+  name = input;
+
+  std::transform(name.begin(), name.end(), name.begin(),
+                 [](unsigned char c) { return std::toupper(c); });
+
   if (name == "FAMA")
     typestr = "ns3::AquaSimFama";
-  else if (name == "Slotted-FAMA" || name == "SFAMA")
+  else if (name == "SLOTTED-FAMA" || name == "SFAMA" || name == "S-FAMA")
     typestr = "ns3::AquaSimSFama";
   else if (name == "UWAN-MAC")
     typestr = "ns3::AquaSimUwan";
@@ -53,7 +59,7 @@ static std::string GetMACPType(const string &name) {
     typestr = "ns3::AquaSimRMac";
   else if (name == "GOAL")
     typestr = "ns3::AquaSimGoal";
-  else if (name == "broadcast MAC" || name == "BMAC" || name == "B-MAC")
+  else if (name == "BROADCAST MAC" || name == "BMAC" || name == "B-MAC")
     typestr = "ns3::AquaSimBroadcastMac";
   else if (name == "T-MAC" || name == "TMAC")
     typestr = "ns3::AquaSimTMac";
@@ -95,8 +101,9 @@ public:
       std::function<void(ROSCommsDevice *rxdev, dccomms::PacketPtr)> cb);
   void SetPositionUpdatedCb(
       std::function<void(ROSCommsDeviceNs3Ptr dev, tf::Vector3)> cb,
-      double cbMinPeriod, uint32_t positionUpdateRate =
-                              10); // callback period = ms ; update rate = Hz
+      double cbMinPeriod,
+      uint32_t positionUpdateRate =
+          10); // callback period = ms ; update rate = Hz
 
   void GetSimTime(std::string &datetime, double &secsFromStart);
 
@@ -250,5 +257,5 @@ void ROSCommsSimulator::_InsertChannelAsc(std::vector<T> &channels, T chn) {
   } else
     channels.push_back(chn);
 }
-}
+} // namespace dccomms_ros
 #endif // WHROVSIMULATOR_H

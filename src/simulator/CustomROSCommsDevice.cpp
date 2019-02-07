@@ -211,7 +211,8 @@ void CustomROSCommsDevice::ReceivePacketAfterJitter(
       pkt->RemoveHeader(ash);
       ash.SetDirection(AquaSimHeader::UP);
       pkt->AddHeader(ash);
-      _macProt->RecvProcess(pkt);
+      _macRxCbTrace(this, pkt);
+      _macLayer->RecvProcess(pkt);
 
     } else {
       ReceiveFrame(ipkt->packet);
@@ -469,30 +470,44 @@ void CustomROSCommsDevice::DoLinkToChannel(CommsChannelNs3Ptr channel,
         "internal error: attempted to link device to a wrong channel type");
   }
 }
+
+void CustomROSCommsDevice::SetMacLayer(ns3::Ptr<AquaSimMac> mac) {
+  _macLayer = mac;
+}
+
+void CustomROSCommsDevice::EnableMac(bool v) { _enableMacLayer = v; }
+
 void CustomROSCommsDevice::DoStart() {
   auto aqmac = ns3::AquaSimAddress(static_cast<uint16_t>(_mac));
 
   _phy = ns3::CreateObject<NetsimPhy>(this);
-  _routing = ns3::CreateObject<NetsimRouting>(this);
-  _macProt = ns3::CreateObject<AquaSimAloha>();
-
+  _routingLayer = ns3::CreateObject<NetsimRouting>(this);
   _dev = ns3::CreateObject<NetsimDevice>(this);
 
-  _macProt->SetAttribute("MaxTransmitDistance", DoubleValue(3500));
-  _macProt->SetAttribute("BitRate", DoubleValue(_bitRate));
-  _macProt->SetAttribute("EncodingEfficiency", DoubleValue(1));
-  _macProt->SetDevice(_dev);
+  //  _macProt->SetAttribute("MaxTransmitDistance", DoubleValue(3500));
+  //  _macProt->SetAttribute("BitRate", DoubleValue(_bitRate));
+  //  _macProt->SetAttribute("EncodingEfficiency", DoubleValue(1));
+  if (_enableMacLayer) {
+    _macLayer->SetDevice(_dev);
 
-  _routing->SetMac(_macProt);
-  _routing->SetNetDevice(_dev);
+    _routingLayer->SetMac(_macLayer);
+    _routingLayer->SetNetDevice(_dev);
 
-  _dev->SetPhy(_phy);
-  _dev->SetMac(_macProt);
-  _dev->SetRouting(_routing);
-  _dev->SetAddress(aqmac);
-  _dev->MacEnabled(_enableMacLayer);
+    _dev->SetPhy(_phy);
+    _dev->SetMac(_macLayer);
+    _dev->SetRouting(_routingLayer);
+    _dev->SetAddress(aqmac);
+    _dev->MacEnabled(_enableMacLayer);
+    _node->AddDevice(_dev);
 
-  _enableMacLayer = true;
+    ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
+                             "/DeviceList/0/Mac/RoutingRx",
+                         MakeCallback(&CustomROSCommsDevice::_RoutingRxCb, this));
+
+    ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
+                             "/DeviceList/0/Mac/MacTx",
+                         MakeCallback(&CustomROSCommsDevice::_MacTxCb, this));
+  }
   _started = true;
 }
 bool CustomROSCommsDevice::DoStarted() { return _started; }

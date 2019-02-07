@@ -10,6 +10,9 @@
 #include <ns3/core-module.h>
 #include <ns3/packet.h>
 #include <tf/transform_listener.h>
+#include <ns3/aqua-sim-helper.h>
+#include <ns3/aqua-sim-net-device.h>
+#include <ns3/mobility-helper.h>
 
 using namespace dccomms;
 using namespace cpplogging;
@@ -18,8 +21,8 @@ namespace dccomms_ros {
 enum PacketErrorType { PE_PROP, PE_COL };
 class ROSCommsDevice;
 typedef ns3::Ptr<ROSCommsDevice> ROSCommsDeviceNs3Ptr;
-//typedef dccomms::Ptr<ROSCommsDevice> ROSCommsDevicePtr;
-typedef ROSCommsDevice * ROSCommsDevicePtr;
+// typedef dccomms::Ptr<ROSCommsDevice> ROSCommsDevicePtr;
+typedef ROSCommsDevice *ROSCommsDevicePtr;
 typedef std::unordered_map<uint32_t, uint64_t> macToCurrentSeqMap;
 
 class ROSCommsSimulator;
@@ -27,6 +30,7 @@ class ROSCommsSimulator;
 typedef ROSCommsSimulator *ROSCommsSimulatorPtr;
 
 typedef ns3::Ptr<ns3::Packet> ns3PacketPtr;
+typedef ns3::Ptr<const ns3::Packet> ns3ConstPacketPtr;
 // why inheritance for std::enable_shared_from_this??:
 //  https://stackoverflow.com/questions/11711034/stdshared-ptr-of-this
 //  https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
@@ -84,19 +88,19 @@ public:
    */
   static ns3::TypeId GetTypeId(void);
 
-  typedef void (*PacketReceivedCallback)(std::string path, ROSCommsDevice*,
-                                         ns3PacketPtr);
-  typedef void (*PacketTransmittingCallback)(std::string path,
-                                             ROSCommsDevice*, ns3PacketPtr);
-  typedef void (*PacketErrorCallback)(std::string path, ROSCommsDevice*,
-                                         ns3PacketPtr, bool, bool);
-  typedef void (*CourseChangeCallback)(std::string path, ROSCommsDevice*,
-                                         const tf::Vector3 &);
+  typedef void (*PacketReceivedCallback)(std::string path, ROSCommsDevice *,
+                                         ns3::Ptr<const ns3::Packet>);
+  typedef void (*PacketTransmittingCallback)(std::string path, ROSCommsDevice *,
+                                             ns3::Ptr<const ns3::Packet>);
+  typedef void (*PacketErrorCallback)(std::string path, ROSCommsDevice *,
+                                      ns3::Ptr<const ns3::Packet>, bool, bool);
+  typedef void (*CourseChangeCallback)(std::string path, ROSCommsDevice *,
+                                       const tf::Vector3 &);
 
   void InitTracedValues();
   void StartTracedValues();
-//  void StopTracedValues();
-  void Send(const PacketPtr & pkt);
+  //  void StopTracedValues();
+  void Send(const PacketPtr &pkt);
 
 protected:
   virtual std::string DoToString() = 0;
@@ -113,10 +117,19 @@ protected:
   PacketBuilderPtr _txpb, _rxpb;
   void _BuildMac2SeqMap();
 
-  ns3::TracedCallback<ROSCommsDevice*, ns3PacketPtr> _rxCbTrace;
-  ns3::TracedCallback<ROSCommsDevice*, ns3PacketPtr> _txCbTrace;
-  ns3::TracedCallback<ROSCommsDevice*, ns3PacketPtr, bool, bool> _pktErrorCbTrace;
-  ns3::TracedCallback<ROSCommsDevice*, const tf::Vector3 &> _courseChangesCbTrace;
+  ns3::TracedCallback<ROSCommsDevice *, ns3ConstPacketPtr> _rxCbTrace;
+  ns3::TracedCallback<ROSCommsDevice *, ns3ConstPacketPtr> _txCbTrace;
+  ns3::TracedCallback<ROSCommsDevice *, ns3ConstPacketPtr, bool, bool>
+      _pktErrorCbTrace;
+  ns3::TracedCallback<ROSCommsDevice *, const tf::Vector3 &>
+      _courseChangesCbTrace;
+  ns3::TracedCallback<ROSCommsDevice *, ns3ConstPacketPtr> _routingTxCbTrace, _routingRxCbTrace,
+      _macTxCbTrace, _macRxCbTrace;
+
+  void _RoutingTxCb(string context, ns3ConstPacketPtr pkt);
+  void _RoutingRxCb(string context, ns3ConstPacketPtr pkt);
+  void _MacTxCb(string context, ns3ConstPacketPtr pkt);
+  void _MacRxCb(string context, ns3ConstPacketPtr pkt);
 
 private:
   void _StartDeviceService();
@@ -140,9 +153,18 @@ protected:
   TracedValue<uint32_t> _currentTxFifoSize, _txPacketDrops;
   uint32_t _currentNumberOfPacketsInTxFifo;
 
+  ns3::Ptr<ns3::AquaSimMac> _macLayer;
+  ns3::Ptr<ns3::AquaSimRouting> _routingLayer;
+  ns3::Ptr<ns3::Node> _node;
+  ns3::Ptr<ns3::MobilityModel> _mobility;
+  ns3::AquaSimHelper _asHelper;
+  ns3::AquaSimAddress _aquaSimAddr;
+  ns3::MobilityHelper _mobh;
+  uint32_t _nodeListIndex;
+
   // ROSCommsDevicePtr _ownPtr;
 
   bool _commonStarted;
 };
-}
+} // namespace dccomms_ros
 #endif // COMMSNODE_H

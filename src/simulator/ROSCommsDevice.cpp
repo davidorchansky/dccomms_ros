@@ -3,6 +3,9 @@
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
 #include <dccomms_ros_msgs/types.h>
+#include <ns3/aqua-sim-header.h>
+#include <ns3/core-module.h>
+#include <ns3/node-list.h>
 
 using namespace ns3;
 
@@ -15,22 +18,43 @@ NS_OBJECT_ENSURE_REGISTERED(ROSCommsDevice);
 ns3::TypeId ROSCommsDevice::GetTypeId(void) {
   static ns3::TypeId tid =
       ns3::TypeId("dccomms_ros::ROSCommsDevice")
-          .SetParent<Object>()
+          .SetParent<AquaSimNetDevice>()
           .AddTraceSource(
-              "PacketReceived", "Trace source indicating a packet has been "
-                                "delivered to the upper layer.",
+              "PacketReceived",
+              "Trace source indicating a packet has been "
+              "delivered to the upper layer.",
               ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_rxCbTrace),
               "dccomms_ros::ROSCommsDevice::PacketReceivedCallback")
           .AddTraceSource(
-              "PacketTransmitting", "Trace source indicating a packet has been "
-                                    "delivered to the lower layer.",
+              "PacketTransmitting",
+              "Trace source indicating a packet has been "
+              "delivered to the lower layer.",
               ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_txCbTrace),
               "dccomms_ros::ROSCommsDevice::PacketTransmittingCallback")
           .AddTraceSource(
-              "PacketError", "Trace source indicating a packet has been "
-                             "corrupted.",
+              "PacketError",
+              "Trace source indicating a packet has been "
+              "corrupted.",
               ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_pktErrorCbTrace),
               "dccomms_ros::ROSCommsDevice::PacketPropagationErrorCallback")
+          .AddTraceSource(
+              "PhyRxError",
+              "Trace source indicating a packet has been "
+              "corrupted.",
+              ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_pktErrorCbTrace),
+              "dccomms_ros::ROSCommsDevice::PacketPropagationErrorCallback")
+          .AddTraceSource(
+              "MacTx",
+              "Trace source indicating a packet has been "
+              "delivered to the Phy Layer",
+              ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_macTxCbTrace),
+              "dccomms_ros::ROSCommsDevice::PacketTransmittingCallback")
+          .AddTraceSource(
+              "MacRx",
+              "Trace source indicating a packet has been "
+              "delivered to the Mac layer.",
+              ns3::MakeTraceSourceAccessor(&ROSCommsDevice::_macRxCbTrace),
+              "dccomms_ros::ROSCommsDevice::PacketReceivedCallback")
           .AddTraceSource(
               "CourseChange", "Device's position updated.",
               MakeTraceSourceAccessor(&ROSCommsDevice::_courseChangesCbTrace),
@@ -51,6 +75,11 @@ ns3::TypeId ROSCommsDevice::GetTypeId(void) {
 ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
                                PacketBuilderPtr rxpb)
     : _sim(s), _txserv(this) {
+
+  _nodeListIndex = ns3::NodeList::GetNNodes();
+  _node = ns3::CreateObject<ns3::Node>();
+  _mobh.SetMobilityModel("ns3::ConstantPositionMobilityModel");
+  _mobh.Install(_node);
   _rxpb = rxpb;
   _txpb = txpb;
   _device = CommsDeviceService::BuildCommsDeviceService(
@@ -82,6 +111,22 @@ void ROSCommsDevice::StartTracedValues() {
   _txPacketDrops = 0;
   _currentNumberOfPacketsInTxFifo = 0;
   _currentTxFifoSize = 0;
+}
+
+void ROSCommsDevice::_RoutingRxCb(string context, ns3ConstPacketPtr pkt) {
+  _routingRxCbTrace(this, pkt);
+}
+
+void ROSCommsDevice::_RoutingTxCb(string context, ns3ConstPacketPtr pkt) {
+  _routingTxCbTrace(this, pkt);
+}
+
+void ROSCommsDevice::_MacTxCb(string context, ns3ConstPacketPtr pkt) {
+  _macTxCbTrace(this, pkt);
+}
+
+void ROSCommsDevice::_MacRxCb(string context, ns3ConstPacketPtr pkt) {
+  _macRxCbTrace(this, pkt);
 }
 
 // void ROSCommsDevice::StopTracedValues() { InitTracedValues(); }
@@ -175,9 +220,7 @@ void ROSCommsDevice::SetMaxTxFifoSize(uint32_t size) {
   DoSetMaxTxFifoSize(size);
 }
 
-uint32_t ROSCommsDevice::GetMaxTxFifoSize() {
-  return _maxTxFifoSize;
-}
+uint32_t ROSCommsDevice::GetMaxTxFifoSize() { return _maxTxFifoSize; }
 
 void ROSCommsDevice::SetMac(uint32_t mac) {
   _mac = mac;
@@ -299,4 +342,4 @@ tf::Vector3 ROSCommsDevice::GetPosition() { return _position; }
 std::string ROSCommsDevice::GetTfFrameId() { return _tfFrameId; }
 
 std::string ROSCommsDevice::ToString() { return DoToString(); }
-}
+} // namespace dccomms_ros
