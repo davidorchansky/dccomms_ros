@@ -101,6 +101,7 @@ public:
   void StartTracedValues();
   //  void StopTracedValues();
   void Send(const PacketPtr &pkt);
+  void SetMacMaxTransmitDistance(double v);
 
 protected:
   virtual std::string DoToString() = 0;
@@ -161,6 +162,8 @@ protected:
   ns3::AquaSimAddress _aquaSimAddr;
   ns3::MobilityHelper _mobh;
   uint32_t _nodeListIndex;
+
+  double _macMaxTransmitDistance;
 
   // ROSCommsDevicePtr _ownPtr;
 

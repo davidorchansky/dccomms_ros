@@ -443,6 +443,9 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
 
       double macDistance =
           req.macDistance != 0 ? req.macDistance : req.maxDistance;
+
+      dev->SetMacMaxTransmitDistance(macDistance);
+
       if (macProtocolName == "ns3::AquaSimSFama") {
       } else if (macProtocolName == "ns3::AquaSimFama") {
         factory.Set("RTSToNextHop", BooleanValue(true));

@@ -481,12 +481,10 @@ void CustomROSCommsDevice::DoStart() {
   auto aqmac = ns3::AquaSimAddress(static_cast<uint16_t>(_mac));
 
   _phy = ns3::CreateObject<NetsimPhy>(this);
+  _phy->SetTransRange(GetMaxDistance());
   _routingLayer = ns3::CreateObject<NetsimRouting>(this);
   _dev = ns3::CreateObject<NetsimDevice>(this);
 
-  //  _macProt->SetAttribute("MaxTransmitDistance", DoubleValue(3500));
-  //  _macProt->SetAttribute("BitRate", DoubleValue(_bitRate));
-  //  _macProt->SetAttribute("EncodingEfficiency", DoubleValue(1));
   if (_enableMacLayer) {
     _macLayer->SetDevice(_dev);
 
@@ -498,11 +496,13 @@ void CustomROSCommsDevice::DoStart() {
     _dev->SetRouting(_routingLayer);
     _dev->SetAddress(aqmac);
     _dev->MacEnabled(_enableMacLayer);
+    _phy->SetTransRange(_macMaxTransmitDistance);
     _node->AddDevice(_dev);
 
-    ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
-                             "/DeviceList/0/Mac/RoutingRx",
-                         MakeCallback(&CustomROSCommsDevice::_RoutingRxCb, this));
+    ns3::Config::Connect(
+        "/NodeList/" + std::to_string(_nodeListIndex) +
+            "/DeviceList/0/Mac/RoutingRx",
+        MakeCallback(&CustomROSCommsDevice::_RoutingRxCb, this));
 
     ns3::Config::Connect("/NodeList/" + std::to_string(_nodeListIndex) +
                              "/DeviceList/0/Mac/MacTx",
