@@ -12,6 +12,7 @@ class CommsChannel : public virtual cpplogging::Logger, public ns3::Object {
 public:
   virtual uint32_t GetId() = 0;
   virtual CHANNEL_TYPE GetType() = 0;
+  virtual double GetPropSpeed() = 0;
   /**
    * \brief Get the type ID.
    * \return the object TypeId

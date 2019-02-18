@@ -10,11 +10,15 @@ namespace dccomms_ros {
 NS_OBJECT_ENSURE_REGISTERED(NetsimDevice);
 
 ns3::TypeId NetsimDevice::GetTypeId(void) {
-  static ns3::TypeId tid = ns3::TypeId("dccomms_ros::NetsimDevice").SetParent<AquaSimNetDevice>();
+  static ns3::TypeId tid =
+      ns3::TypeId("dccomms_ros::NetsimDevice").SetParent<AquaSimNetDevice>();
   return tid;
 }
 
-NetsimDevice::NetsimDevice(ns3::Ptr<CustomROSCommsDevice> dev) { _dev = dev; }
+NetsimDevice::NetsimDevice(ns3::Ptr<CustomROSCommsDevice> dev) {
+  _propSpeed = 1500;
+  _dev = dev;
+}
 
 NetsimDevice::~NetsimDevice() {}
 
@@ -25,6 +29,9 @@ TransStatus NetsimDevice::GetTransmissionStatus() {
       res = TransStatus::RECV;
     else if (_dev->Transmitting())
       res = TransStatus::SEND;
+    else {
+      res = TransStatus::NIDLE;
+    }
   } else if (_dev->Transmitting()) {
     res = TransStatus::SEND;
   } else {
@@ -36,4 +43,8 @@ TransStatus NetsimDevice::GetTransmissionStatus() {
 void NetsimDevice::SetTransmissionStatus(TransStatus status) {
   // Nothing to do. The status is set by the custom comms device
 }
-} // namespace ns3
+
+void NetsimDevice::SetPropSpeed(const double &speed) { _propSpeed = speed; }
+
+double NetsimDevice::GetPropSpeed() { return _propSpeed; }
+} // namespace dccomms_ros

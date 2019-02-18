@@ -16,6 +16,7 @@ public:
   void SetPrTimeInc(double inc);
   void AddDevice(CustomROSCommsDeviceNs3Ptr dev);
   void SendPacket(CustomROSCommsDeviceNs3Ptr dev, ns3PacketPtr pkt);
+  virtual double GetPropSpeed() override;
   uint32_t GetId() { return _rosChannelId; }
   CHANNEL_TYPE GetType() { return CUSTOM_CHANNEL; }
 
@@ -27,7 +28,7 @@ public:
 
 private:
   uint32_t _rosChannelId;
-  uint64_t _prTimeIncPerMeter, _minPrTime; // nanoseconds
+  double _prTimeIncPerMeter, _minPrTime; // nanoseconds
   std::list<CustomROSCommsDeviceNs3Ptr> _devices;
 };
 

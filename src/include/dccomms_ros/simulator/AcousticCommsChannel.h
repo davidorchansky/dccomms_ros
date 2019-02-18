@@ -30,6 +30,7 @@ public:
   double GetTemperature();
   double GetSalinity();
   double GetNoiseLevel();
+  virtual double GetPropSpeed() override;
 
   /**
    * \brief Get the type ID.
@@ -47,6 +48,6 @@ private:
 };
 
 typedef ns3::Ptr<AcousticCommsChannel> AcousticCommsChannelNs3Ptr;
-}
+} // namespace dccomms_ros
 
 #endif // COMMSCHANNELPROPERTIES_H

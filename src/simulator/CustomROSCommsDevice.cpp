@@ -35,6 +35,13 @@ CustomROSCommsDevice::CustomROSCommsDevice(ROSCommsSimulatorPtr sim,
   _nextPacketReceptionTime = 0;
   _neg = false;
   _started = false;
+  _phy = ns3::CreateObject<NetsimPhy>(this);
+  _routingLayer = ns3::CreateObject<NetsimRouting>(this);
+  _dev = ns3::CreateObject<NetsimDevice>(this);
+  _dev->SetPhy(_phy);
+  _dev->SetRouting(_routingLayer);
+  _routingLayer->SetNetDevice(_dev);
+  _node->AddDevice(_dev);
 }
 
 DEV_TYPE CustomROSCommsDevice::GetDevType() { return DEV_TYPE::CUSTOM_DEV; }
@@ -446,21 +453,21 @@ void CustomROSCommsDevice::SchedulePacketTransmissionAfterJitter(
 
 void CustomROSCommsDevice::DoLinkToChannel(CommsChannelNs3Ptr channel,
                                            CHANNEL_LINK_TYPE linkType) {
-  //  if (!_ownPtr)
-  //    _ownPtr =
-  //        this; //
-  //        std::dynamic_pointer_cast<CustomROSCommsDevice>(ROSCommsDevice::shared_from_this());//https://stackoverflow.com/questions/16082785/use-of-enable-shared-from-this-with-multiple-inheritance
   if (channel->GetType() == CHANNEL_TYPE::CUSTOM_CHANNEL) {
     //_channel = static_pointer_cast<CustomCommsChannel>(channel);
-    if (linkType == CHANNEL_TX)
+    if (linkType == CHANNEL_TX) {
       _txChannel = channel;
-    else if (linkType == CHANNEL_RX) {
+      double propSpeed = _txChannel->GetPropSpeed();
+      _dev->SetPropSpeed(propSpeed);
+    } else if (linkType == CHANNEL_RX) {
       _rxChannel = channel;
       static_cast<CustomCommsChannel *>(ns3::PeekPointer(_rxChannel))
           ->AddDevice(this);
     } else if (linkType == CHANNEL_TXRX) {
       _txChannel = channel;
       _rxChannel = channel;
+      double propSpeed = _txChannel->GetPropSpeed();
+      _dev->SetPropSpeed(propSpeed);
       static_cast<CustomCommsChannel *>(ns3::PeekPointer(_rxChannel))
           ->AddDevice(this);
     }
@@ -473,6 +480,9 @@ void CustomROSCommsDevice::DoLinkToChannel(CommsChannelNs3Ptr channel,
 
 void CustomROSCommsDevice::SetMacLayer(ns3::Ptr<AquaSimMac> mac) {
   _macLayer = mac;
+  _macLayer->SetDevice(_dev);
+  _routingLayer->SetMac(_macLayer);
+  _dev->SetMac(_macLayer);
 }
 
 void CustomROSCommsDevice::EnableMac(bool v) { _enableMacLayer = v; }
@@ -480,24 +490,12 @@ void CustomROSCommsDevice::EnableMac(bool v) { _enableMacLayer = v; }
 void CustomROSCommsDevice::DoStart() {
   auto aqmac = ns3::AquaSimAddress(static_cast<uint16_t>(_mac));
 
-  _phy = ns3::CreateObject<NetsimPhy>(this);
   _phy->SetTransRange(GetMaxDistance());
-  _routingLayer = ns3::CreateObject<NetsimRouting>(this);
-  _dev = ns3::CreateObject<NetsimDevice>(this);
 
   if (_enableMacLayer) {
-    _macLayer->SetDevice(_dev);
-
-    _routingLayer->SetMac(_macLayer);
-    _routingLayer->SetNetDevice(_dev);
-
-    _dev->SetPhy(_phy);
-    _dev->SetMac(_macLayer);
-    _dev->SetRouting(_routingLayer);
     _dev->SetAddress(aqmac);
     _dev->MacEnabled(_enableMacLayer);
     _phy->SetTransRange(_macMaxTransmitDistance);
-    _node->AddDevice(_dev);
 
     ns3::Config::Connect(
         "/NodeList/" + std::to_string(_nodeListIndex) +

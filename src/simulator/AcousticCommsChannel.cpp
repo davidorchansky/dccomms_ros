@@ -9,8 +9,8 @@ namespace dccomms_ros {
 NS_OBJECT_ENSURE_REGISTERED(AcousticCommsChannel);
 
 ns3::TypeId AcousticCommsChannel::GetTypeId(void) {
-  static ns3::TypeId tid =
-      ns3::TypeId("dccomms_ros::AcousticCommsChannel").SetParent<CommsChannel>();
+  static ns3::TypeId tid = ns3::TypeId("dccomms_ros::AcousticCommsChannel")
+                               .SetParent<CommsChannel>();
   return tid;
 }
 
@@ -64,4 +64,7 @@ double AcousticCommsChannel::GetNoiseLevel() {
   _prop->GetAttribute("NoiseLvl", value);
   return value.Get();
 }
+double AcousticCommsChannel::GetPropSpeed() {
+  return ns3::SOUND_SPEED_IN_WATER;
 }
+} // namespace dccomms_ros

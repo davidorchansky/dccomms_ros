@@ -50,6 +50,7 @@ public:
     AquaSimHeader ash;
     pkt->PeekHeader(ash);
     auto seq = ash.GetSeqNum();
+    auto err = ash.GetErrorFlag();
     auto dst = ash.GetDAddr().GetAsInt();
     auto src = ash.GetSAddr().GetAsInt();
     auto pktSize = ash.GetSize();
@@ -60,6 +61,7 @@ public:
     header.SetDst(dst);
     header.SetSrc(src);
     header.SetPacketSize(pktSize);
+    header.SetPacketError(err);
     return header;
   }
 

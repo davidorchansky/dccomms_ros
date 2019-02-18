@@ -20,6 +20,8 @@ public:
   ~NetsimDevice();
   virtual TransStatus GetTransmissionStatus() override;
   virtual void SetTransmissionStatus(TransStatus status) override;
+  virtual double GetPropSpeed(void) override;
+  virtual void SetPropSpeed(const double &speed);
 
   /**
    * \brief Get the type ID.
@@ -29,6 +31,7 @@ public:
 
 private:
   ns3::Ptr<CustomROSCommsDevice> _dev;
+  double _propSpeed;
 protected:
 };
 } // namespace ns3

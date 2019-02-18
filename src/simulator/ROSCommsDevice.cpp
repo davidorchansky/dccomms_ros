@@ -93,7 +93,7 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
   LogComponentEnable("ROSCommsDevice",
                      LOG_LEVEL_ALL); // NS3 DOES NOT WORK (TODO: FIX IT)
   SetLogLevel(debug);
-  SetLogFormatter(make_shared<NetsimLogFormatter>("%v"));
+  SetLogFormatter(std::make_shared<spdlog::pattern_formatter>("[%T.%F] %v"));
   FlushLogOn(off);
   InitTracedValues();
 }

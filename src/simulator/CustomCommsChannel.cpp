@@ -17,6 +17,7 @@ ns3::TypeId CustomCommsChannel::GetTypeId(void) {
 CustomCommsChannel::CustomCommsChannel(uint32_t id) {
   _rosChannelId = id;
   SetLogLevel(debug);
+  SetLogFormatter(std::make_shared<spdlog::pattern_formatter>("[%T.%F] %v"));
 }
 
 void CustomCommsChannel::SetMinPrTime(double prTime) {
@@ -31,6 +32,10 @@ void CustomCommsChannel::AddDevice(CustomROSCommsDeviceNs3Ptr dev) {
   _devices.push_back(dev);
 }
 
+double CustomCommsChannel::GetPropSpeed() {
+  return (1. / _prTimeIncPerMeter) // meters/nano
+         * 1e9;                    // meters/second
+}
 void CustomCommsChannel::SendPacket(CustomROSCommsDeviceNs3Ptr dev,
                                     ns3PacketPtr pkt) {
   Debug("CustomCommsChannel: SendPacket");
@@ -48,10 +53,11 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDeviceNs3Ptr dev,
         auto delay = _minPrTime + _prTimeIncPerMeter * distance;
         auto totalTime = static_cast<uint64_t>(round(delay));
         // auto errRate = minErrRate + errRateInc * distance;
+        auto cpkt = pkt->Copy();
         NetsimHeader header;
-        pkt->RemoveHeader(header);
-        auto propagationError = dev->ErrOnPkt(distance, pkt);
-        pkt->AddHeader(header);
+        cpkt->RemoveHeader(header);
+        auto propagationError = dev->ErrOnPkt(distance, cpkt);
+        cpkt->AddHeader(header);
         //        if (error) {
         //          auto pBuffer = pkt->GetPayloadBuffer();
         //          *pBuffer = ~*pBuffer;
@@ -60,9 +66,9 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDeviceNs3Ptr dev,
               distance, totalTime / 1e9);
         ns3::Simulator::ScheduleWithContext(
             dev->GetMac(), NanoSeconds(totalTime),
-            &CustomROSCommsDevice::AddNewPacket, dst, pkt, propagationError);
+            &CustomROSCommsDevice::AddNewPacket, dst, cpkt, propagationError);
       }
     }
   }
 }
-}
+} // namespace dccomms_ros
