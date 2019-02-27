@@ -24,11 +24,12 @@ bool NetsimPhy::Recv(ns3::Ptr<ns3::Packet> pkt) {
   return true;
 }
 ns3::Time NetsimPhy::CalcTxTime(uint32_t pktSize, std::string *modName) {
-  ns3::Time res = ns3::NanoSeconds(pktSize * _dev->GetNanosPerByte());
+  ns3::Time res = ns3::NanoSeconds(pktSize * _dev->GetNanosPerByte() + _dev->GetIntrinsicDelay() * 1e6);
   return res;
 }
 
 double NetsimPhy::CalcPktSize(double txTime, std::string *modName) {
+    txTime = txTime - _dev->GetIntrinsicDelay() / 1000.;
     double res = (txTime * 1e9) / _dev->GetNanosPerByte();
     return res;
 }

@@ -288,10 +288,10 @@ void ROSCommsDevice::_TxWork() {
 }
 
 void ROSCommsDevice::Send(const PacketPtr &txdlf) {
+  txdlf->SetVirtualSrcAddr(GetMac());
   auto header = NetsimHeader::Build(txdlf);
   auto pkt =
       ns3::Create<ns3::Packet>(txdlf->GetBuffer(), txdlf->GetBufferSize());
-  auto seq = header.GetSeqNum();
   pkt->AddHeader(header);
   _txCbTrace(this, pkt);
   NS_LOG_DEBUG("Send packet");
