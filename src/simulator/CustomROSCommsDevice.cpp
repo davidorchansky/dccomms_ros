@@ -326,6 +326,7 @@ void CustomROSCommsDevice::Transmitting(bool transmitting) {
 void CustomROSCommsDevice::TransmitEnqueuedPacket() {
   Debug("Transmit next packet in fifo");
   auto pkt = PopTxPacket();
+  Transmitting(true);
   StartPacketTransmission(pkt);
 }
 
@@ -350,14 +351,7 @@ void CustomROSCommsDevice::TransmitPacket() {
   Debug("CustomROSCommsDevice: Transmit packet");
   auto opkt = _txJitteredPackets.front();
   _txJitteredPackets.pop_front();
-  if (!Transmitting() &&
-      (_rxChannel != _txChannel || _rxChannel == _txChannel && !Receiving())) {
-    StartPacketTransmission(opkt);
-
-  } else {
-    Debug("CustomROSCommsDevice({}): Enqueue packet", GetDccommsId());
-    EnqueueTxPacket(opkt);
-  }
+  StartPacketTransmission(opkt);
 }
 
 uint64_t CustomROSCommsDevice::GetNextTxJitter() {
@@ -389,7 +383,6 @@ void CustomROSCommsDevice::StartPacketTransmission(
 
   auto byteTrt = GetNanosPerByte();
   auto trTime = opkt->packetSize * byteTrt;
-  Transmitting(true);
   Debug("CustomROSCommsDevice({}): Transmitting packet: size({} bytes) ; "
         "trTime({} secs)",
         GetDccommsId(), opkt->packetSize, trTime / 1e9);
@@ -400,9 +393,24 @@ void CustomROSCommsDevice::StartPacketTransmission(
 }
 
 void CustomROSCommsDevice::PhySend(ns3PacketPtr dlf) {
-  ns3::Simulator::ScheduleWithContext(
-      GetMac(), ns3::NanoSeconds(_intrinsicDelay * 1e6),
-      &CustomROSCommsDevice::SchedulePacketTransmissionAfterJitter, this, dlf);
+  if (!Transmitting() &&
+      (_rxChannel != _txChannel || _rxChannel == _txChannel && !Receiving())) {
+    Transmitting(true);
+    ns3::Simulator::ScheduleWithContext(
+        GetMac(), ns3::NanoSeconds(_intrinsicDelay * 1e6),
+        &CustomROSCommsDevice::SchedulePacketTransmissionAfterJitter, this,
+        dlf);
+  } else {
+    Debug("CustomROSCommsDevice({}): Enqueue packet", GetDccommsId());
+    OutcomingPacketPtr opkt = dccomms::CreateObject<OutcomingPacket>();
+    NetsimHeader header;
+    dlf->RemoveHeader(header);
+    header.SetNanosPerByte(GetNanosPerByte());
+    dlf->AddHeader(header);
+    opkt->packet = dlf;
+    opkt->packetSize = header.GetPacketSize();
+    EnqueueTxPacket(opkt);
+  }
 }
 
 void CustomROSCommsDevice::DoSetMac(uint32_t mac) { _mac = mac; }
