@@ -115,7 +115,10 @@ void ROSCommsDevice::StartTracedValues() {
 
 void ROSCommsDevice::SetMacMaxTransmitDistance(double v) {
   _macMaxTransmitDistance = v;
+  DoSetMacMaxTransmitDistance(v);
 }
+
+void ROSCommsDevice::DoSetMacMaxTransmitDistance(double v) {}
 
 void ROSCommsDevice::_RoutingRxCb(string context, ns3ConstPacketPtr pkt) {
   _routingRxCbTrace(this, pkt);

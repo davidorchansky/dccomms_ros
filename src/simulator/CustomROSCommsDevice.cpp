@@ -495,6 +495,9 @@ void CustomROSCommsDevice::SetMacLayer(ns3::Ptr<AquaSimMac> mac) {
 
 void CustomROSCommsDevice::EnableMac(bool v) { _enableMacLayer = v; }
 
+void CustomROSCommsDevice::DoSetMacMaxTransmitDistance(double v) {
+  _phy->SetTransRange(v);
+}
 void CustomROSCommsDevice::DoStart() {
   auto aqmac = ns3::AquaSimAddress(static_cast<uint16_t>(_mac));
 

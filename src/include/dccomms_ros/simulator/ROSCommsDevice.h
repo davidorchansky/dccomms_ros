@@ -113,6 +113,7 @@ protected:
   virtual void DoSetPosition(const tf::Vector3 &position) = 0;
   virtual bool DoStarted() = 0;
   virtual void DoSetMaxTxFifoSize(uint32_t size) = 0;
+  virtual void DoSetMacMaxTransmitDistance(double v);
 
   ROSCommsSimulatorPtr _sim;
   PacketBuilderPtr _txpb, _rxpb;

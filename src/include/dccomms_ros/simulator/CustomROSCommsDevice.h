@@ -157,6 +157,7 @@ protected:
   virtual void DoSetPosition(const tf::Vector3 &position);
   virtual bool DoStarted();
   virtual void DoSetMaxTxFifoSize(uint32_t size);
+  virtual void DoSetMacMaxTransmitDistance(double v);
   std::string DoToString();
 
 private:
