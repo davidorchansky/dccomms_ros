@@ -140,10 +140,11 @@ void CustomROSCommsDevice::SetRateErrorModel(const std::string &expr,
   _mExprEval.CompileExpr(_eexpr, "m");
 }
 
-bool CustomROSCommsDevice::ErrOnPkt(double range, ns3PacketPtr pkt) {
+bool CustomROSCommsDevice::ErrOnPkt(double range, const uint32_t & size) {
   double rate = _GetErrorRate(range);
-  Debug("ErrOnPkt: range = {} meters --> rate = {}", range, rate);
   _rem->SetRate(rate);
+  auto pkt = ns3::Create<ns3::Packet>(size);
+  Debug("ErrOnPkt: {} ; {} --> {}", pkt->GetSize(), range, rate);
   return _rem->IsCorrupt(pkt);
 }
 
@@ -341,7 +342,7 @@ void CustomROSCommsDevice::Receiving(bool receiving) {
     TransmitEnqueuedPacket();
 }
 
-void CustomROSCommsDevice::PropagatePacket(ns3PacketPtr pkt) {
+void CustomROSCommsDevice::PropagatePacket(const OutcomingPacketPtr & pkt) {
   static_cast<CustomCommsChannel *>(ns3::PeekPointer(_txChannel))
       ->SendPacket(this, pkt);
 }
@@ -389,7 +390,7 @@ void CustomROSCommsDevice::StartPacketTransmission(
   ns3::Simulator::ScheduleWithContext(GetMac(), ns3::NanoSeconds(trTime),
                                       &CustomROSCommsDevice::SetTransmitting,
                                       this, false);
-  PropagatePacket(opkt->packet);
+  PropagatePacket(opkt);
 }
 
 void CustomROSCommsDevice::PhySend(ns3PacketPtr dlf) {

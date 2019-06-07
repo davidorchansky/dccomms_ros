@@ -37,7 +37,7 @@ double CustomCommsChannel::GetPropSpeed() {
          * 1e9;                    // meters/second
 }
 void CustomCommsChannel::SendPacket(CustomROSCommsDeviceNs3Ptr dev,
-                                    ns3PacketPtr pkt) {
+                                    const OutcomingPacketPtr & pkt) {
   Debug("CustomCommsChannel: SendPacket");
   auto txpos = dev->GetPosition();
   // auto minErrRate = dev->GetMinPktErrorRate();
@@ -53,15 +53,12 @@ void CustomCommsChannel::SendPacket(CustomROSCommsDeviceNs3Ptr dev,
         auto delay = _minPrTime + _prTimeIncPerMeter * distance;
         auto totalTime = static_cast<uint64_t>(round(delay));
         // auto errRate = minErrRate + errRateInc * distance;
-        auto cpkt = pkt->Copy();
+        auto cpkt = pkt->packet->Copy();
         NetsimHeader header;
         cpkt->RemoveHeader(header);
-        auto propagationError = dev->ErrOnPkt(distance, cpkt);
+        auto propagationError = dev->ErrOnPkt(distance, pkt->packetSize);
+
         cpkt->AddHeader(header);
-        //        if (error) {
-        //          auto pBuffer = pkt->GetPayloadBuffer();
-        //          *pBuffer = ~*pBuffer;
-        //        }
         Debug("CustomCommsChannel: distance({} m) ; totalTime({} secs)",
               distance, totalTime / 1e9);
         ns3::Simulator::ScheduleWithContext(

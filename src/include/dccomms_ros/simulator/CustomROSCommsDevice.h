@@ -99,7 +99,7 @@ public:
   void SetNextPacketReceptionTime(uint64_t nanos);
   uint64_t GetCurrentSimTime();
 
-  void PropagatePacket(ns3PacketPtr pkt);
+  void PropagatePacket(const OutcomingPacketPtr & pkt);
   void TransmitPacket();
   void TransmitEnqueuedPacket();
   void StartPacketTransmission(const OutcomingPacketPtr &opkt);
@@ -107,7 +107,7 @@ public:
   inline bool HalfDuplex() { return _txChannel == _rxChannel; }
 
   inline void SetTransmitting(bool v) { Transmitting(v); }
-  bool ErrOnPkt(double range, ns3PacketPtr pkt);
+  bool ErrOnPkt(double range, const uint32_t & size);
   uint64_t GetNextTxJitter();
   uint64_t GetNextRxJitter();
   uint64_t GetNextRxNormalJitter();

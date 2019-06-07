@@ -15,7 +15,7 @@ public:
   void SetMinPrTime(double prTime);
   void SetPrTimeInc(double inc);
   void AddDevice(CustomROSCommsDeviceNs3Ptr dev);
-  void SendPacket(CustomROSCommsDeviceNs3Ptr dev, ns3PacketPtr pkt);
+  void SendPacket(CustomROSCommsDeviceNs3Ptr dev, const OutcomingPacketPtr & pkt);
   virtual double GetPropSpeed() override;
   uint32_t GetId() { return _rosChannelId; }
   CHANNEL_TYPE GetType() { return CUSTOM_CHANNEL; }
