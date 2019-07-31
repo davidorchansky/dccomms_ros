@@ -254,7 +254,7 @@ void CustomROSCommsDevice::HandleNextIncomingPacket() {
   if (!_incomingPackets.empty()) {
     IncomingPacketPtr ptr = _incomingPackets.front();
     _incomingPackets.pop_front();
-    uint64_t jitter = GetNextRxNormalJitter();                   // nanos
+    uint64_t jitter = 0; //GetNextRxNormalJitter();                   // nanos
     uint64_t nextPacketReception = GetNextPacketReceptionTime(); // nanos
     uint64_t currentNanos = GetCurrentSimTime();                 // nanos
     uint64_t jitteredReception = currentNanos + jitter;
@@ -450,7 +450,7 @@ void CustomROSCommsDevice::SchedulePacketTransmissionAfterJitter(
   header.SetNanosPerByte(GetNanosPerByte());
   pkt->AddHeader(header);
   auto pktSize = header.GetPacketSize();
-  uint64_t jitter = GetNextTxJitter();
+  uint64_t jitter = 0; //GetNextTxJitter();
   OutcomingPacketPtr opkt = dccomms::CreateObject<OutcomingPacket>();
   opkt->packet = pkt;
   opkt->packetSize = pktSize;
