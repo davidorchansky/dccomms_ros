@@ -102,6 +102,7 @@ public:
   void PropagatePacket(const OutcomingPacketPtr & pkt);
   void TransmitPacket();
   void TransmitEnqueuedPacket();
+  void _TransmitEnqueuedPacket();
   void StartPacketTransmission(const OutcomingPacketPtr &opkt);
 
   inline bool HalfDuplex() { return _txChannel == _rxChannel; }
