@@ -272,9 +272,10 @@ void CustomROSCommsDevice::HandleNextIncomingPacket() {
     //    ns3::Simulator::ScheduleWithContext(
     //        GetMac(), ns3::NanoSeconds(static_cast<uint64_t>(jitter)), event);
 
-    ReceivePacketAfterJitter(ptr);
     if (_incomingPackets.empty())
       Receiving(false);
+
+    ReceivePacketAfterJitter(ptr);
   } else {
     Critical("internal error: incomming packets queue empty when "
              "HandleNextIncommingPacket!");

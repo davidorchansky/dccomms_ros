@@ -26,7 +26,7 @@ bool NetsimPhy::Recv(ns3::Ptr<ns3::Packet> pkt) {
 ns3::Time NetsimPhy::CalcTxTime(uint32_t pktSize, std::string *modName) {
   ns3::Time res = ns3::NanoSeconds(pktSize * _dev->GetNanosPerByte() +
                                    _dev->GetIntrinsicDelay() * 1e6 +
-                                   _dev->GetFixedIPGNanos() + 5000000);
+                                   _dev->GetFixedIPGNanos());
   return res;
 }
 
