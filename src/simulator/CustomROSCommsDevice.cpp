@@ -334,7 +334,7 @@ void CustomROSCommsDevice::_TransmitEnqueuedPacket() {
 void CustomROSCommsDevice::TransmitEnqueuedPacket() {
   Transmitting(true);
   ns3::Simulator::ScheduleWithContext(
-      GetMac(), ns3::MicroSeconds(100),
+      GetMac(), ns3::MicroSeconds(GetFixedIPGMicros()),
       &CustomROSCommsDevice::_TransmitEnqueuedPacket, this);
 }
 

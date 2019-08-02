@@ -149,6 +149,9 @@ public:
   void EnableMac(bool v);
   void SetMacLayer(ns3::Ptr<ns3::AquaSimMac> mac);
 
+  inline uint32_t GetFixedIPGMicros() { return _fixedIPGmicros; }
+  inline uint32_t GetFixedIPGNanos() { return _fixedIPGNanos; }
+
 protected:
   virtual void DoSetMac(uint32_t mac);
   virtual void DoSend(ns3PacketPtr dlf);
@@ -162,6 +165,8 @@ protected:
   std::string DoToString();
 
 private:
+  uint32_t _fixedIPGmicros = 100;
+  uint32_t _fixedIPGNanos = 100000;
   uint32_t _mac;
   double _minPktErrorRate, _pktErrorRateIncPerMeter;
   double _intrinsicDelay; // ms
