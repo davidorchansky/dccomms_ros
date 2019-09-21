@@ -444,9 +444,12 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
       double macDistance =
           req.macDistance != 0 ? req.macDistance : req.maxDistance;
 
+      uint maxBackoffSlots = req.maxBackoffSlots >= 4 ? req.maxBackoffSlots : 4;
+
       dev->SetMacMaxTransmitDistance(macDistance);
 
       if (macProtocolName == "ns3::AquaSimSFama") {
+        factory.Set("MaxBackoffSlots", IntegerValue(maxBackoffSlots));
       } else if (macProtocolName == "ns3::AquaSimFama") {
         factory.Set("RTSToNextHop", BooleanValue(true));
         factory.Set("DataPacketSize", IntegerValue(0));
