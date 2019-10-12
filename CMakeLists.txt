@@ -194,10 +194,9 @@ execute_process (
 #https://stackoverflow.com/questions/15972898/cmake-how-to-run-a-add-custom-command-before-everything-else
 #./waf configure --build-profile=debug --enable-examples --enable-tests --enable-sudo
 #./waf build
-#SET(WAF_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/waf)
+SET(WAF_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/waf)
 if("${ns3configured}" STREQUAL "true")
     message(STATUS "Build NS3.")
-    SET(WAF_EXECUTABLE ./waf)
     add_custom_target(
       ns3
       COMMAND ${WAF_EXECUTABLE} build
@@ -205,7 +204,6 @@ if("${ns3configured}" STREQUAL "true")
     )
 else()
     message(STATUS "Configure and build NS3.")
-    SET(WAF_EXECUTABLE ./waf)
     add_custom_target(
       ns3
       COMMAND ${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests #--enable-sudo
