@@ -19,7 +19,6 @@ find_package(catkin REQUIRED COMPONENTS
 		std_msgs
 		actionlib
 		actionlib_msgs
-		roslaunch
 		message_generation
                 std_srvs
                 tf
@@ -161,8 +160,6 @@ catkin_package(
         dccomms_ros_msgs
 #  DEPENDS system_lib
 )
-
-roslaunch_add_file_check(launch)
 
 SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/ROSCommsDevice.cpp
