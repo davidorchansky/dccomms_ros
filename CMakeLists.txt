@@ -139,59 +139,6 @@ SET(${PROJECT_NAME}_INCLUDE_DIRS
 SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++14 ")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 
-
-#CHECK IF NS3 HAS ALREADY BEEN BUILT
-message(STATUS "Check NS3 libraries...")
-execute_process (
-    COMMAND bash -c "./ns3configured.sh"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    OUTPUT_VARIABLE ns3configured
-    ERROR_QUIET
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-)
-
-#https://stackoverflow.com/questions/15972898/cmake-how-to-run-a-add-custom-command-before-everything-else
-#./waf configure --build-profile=debug --enable-examples --enable-tests --enable-sudo
-#./waf build
-SET(WAF_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/waf)
-if("${ns3configured}" STREQUAL "true")
-    message(STATUS "Build NS3.")
-    #    add_custom_target(
-    #      ns3
-    #      COMMAND ${WAF_EXECUTABLE} build
-    #      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
-    #    )
-    execute_process (
-	COMMAND bash -c "${WAF_EXECUTABLE} build"
-    	WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev"
-    	OUTPUT_VARIABLE wafoutput
-    	OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-else()
-    message(STATUS "Configure and build NS3.")
-    #    add_custom_target(
-    #      ns3
-    #      COMMAND ${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests #--enable-sudo
-    #      COMMAND ${WAF_EXECUTABLE} build
-    #      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
-    #    )
-    execute_process (
-	COMMAND bash -c "${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests"
-    	WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev"
-    	OUTPUT_VARIABLE wafoutput
-    	OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-    execute_process (
-	COMMAND bash -c "${WAF_EXECUTABLE} build"
-    	WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev"
-    	OUTPUT_VARIABLE wafoutput
-    	OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-
-endif()
-
-message(STATUS "~~~~~~~~~~~~~~~~~~~~ ${wafoutput}")
-
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -234,11 +181,43 @@ SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/NetsimRouting.cpp
 )
 
+#CHECK IF NS3 HAS ALREADY BEEN BUILT
+message(STATUS "Check NS3 libraries...")
+execute_process (
+    COMMAND bash -c "./ns3configured.sh"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    OUTPUT_VARIABLE ns3configured
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+
+#https://stackoverflow.com/questions/15972898/cmake-how-to-run-a-add-custom-command-before-everything-else
+#./waf configure --build-profile=debug --enable-examples --enable-tests --enable-sudo
+#./waf build
+#SET(WAF_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/waf)
+if("${ns3configured}" STREQUAL "true")
+    message(STATUS "Build NS3.")
+    SET(WAF_EXECUTABLE ./waf)
+    add_custom_target(
+      ns3
+      COMMAND ${WAF_EXECUTABLE} build
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
+    )
+else()
+    message(STATUS "Configure and build NS3.")
+    SET(WAF_EXECUTABLE ./waf)
+    add_custom_target(
+      ns3
+      COMMAND ${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests #--enable-sudo
+      COMMAND ${WAF_EXECUTABLE} build
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
+    )
+endif()
 
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME}  ${ns3liblist} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
-add_dependencies(${PROJECT_NAME} dccomms_ros_msgs_generate_messages_cpp)
+add_dependencies(${PROJECT_NAME} dccomms_ros_msgs_generate_messages_cpp ns3)
 
 #target_compile_options(pruebas PUBLIC "")
 #https://cmake.org/cmake/help/v3.4/command/find_library.html
