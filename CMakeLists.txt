@@ -84,7 +84,10 @@ else()
 endif()
 ENDFOREACH()
 
-SET(NS3_BUILD ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/build/)
+
+SET(NS3_BUILD ${PROJECT_BINARY_DIR}/ns3)
+SET(NS3_INCLUDE_PATH ${NS3_BUILD})
+SET(NS3_HEADERS_DIR ${NS3_BUILD}/ns3)
 execute_process(
   COMMAND mkdir -p ${NS3_BUILD}
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
@@ -129,7 +132,7 @@ ENDFOREACH()
 
 SET(${PROJECT_NAME}_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/build
+    ${NS3_INCLUDE_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}/modules/exprtk
     ${${DCCOMMS_UTILS_GIT}_INCLUDE_DIRS}
     ${catkin_INCLUDE_DIRS}
@@ -201,11 +204,11 @@ if("${ns3configured}" STREQUAL "true")
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
     )
 else()
-    message(STATUS "Configure and build NS3.")
+    message(STATUS "Configure and build NS3 in ${NS3_BUILD}")
     SET(WAF_EXECUTABLE ./waf)
     add_custom_target(
       ns3
-      COMMAND ${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests #--enable-sudo
+      COMMAND ${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests -o ${NS3_BUILD}#--enable-sudo
       COMMAND ${WAF_EXECUTABLE} build
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
     )
@@ -247,7 +250,6 @@ target_include_directories(aqua-sim-mac PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 ############ END netsim BUILD #################
 ###############################################
 
-SET(NS3_HEADERS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/build/ns3)
 set(EXPRTK_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/modules/exprtk/exprtk.hpp)
 
 install(DIRECTORY 
