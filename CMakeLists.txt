@@ -165,7 +165,8 @@ catkin_package(
         actionlib_msgs
         message_runtime
         dccomms_ros_msgs
-#  DEPENDS system_lib
+  DEPENDS 
+  	Git
 )
 
 SET(${PROJECT_NAME}_CPP_FILES
