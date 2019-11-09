@@ -31,6 +31,7 @@
   <run_depend>actionlib_msgs</run_depend>
   <run_depend>tf</run_depend>
   <run_depend>dccomms_ros_msgs</run_depend>
+  <run_depend>git</run_depend>
 
   <export>
   </export>
