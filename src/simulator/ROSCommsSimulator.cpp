@@ -1,5 +1,4 @@
 #include <dccomms/CommsDeviceService.h>
-#include <dccomms/TransportPDU.h>
 #include <dccomms/Utils.h>
 #include <dccomms_ros/simulator/AcousticCommsChannel.h>
 #include <dccomms_ros/simulator/AcousticROSCommsDevice.h>
