@@ -186,7 +186,7 @@ catkin_package(
         message_runtime
         dccomms_ros_msgs
   DEPENDS 
-  	Git
+  #  	Git
 	)
 
 ####### HANDLE DEPENDENCIES ######
