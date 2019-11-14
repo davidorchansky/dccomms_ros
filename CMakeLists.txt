@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 2.8.3)
+cmake_minimum_required(VERSION 3.5.1)
 project(dccomms_ros CXX)
 
 #It seams that from Ubuntu 17.10 the linker flag --disable-new-dtags is needed
 #for the executable to be able to find absolute linked shared libraries with rpath.
 #https://stackoverflow.com/questions/47117443/dynamic-linking-with-rpath-not-working-under-ubuntu-17-10
-SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+#SET(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
 
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
@@ -56,36 +56,8 @@ endif()
 string(TIMESTAMP _time_stamp)
 #END RESOLVE GIT REVISION
 
-####### HANDLE DEPENDENCIES ######
-SET(DEPS_DIR ${MODULES_DIR})
-SET(TMP0 ${CMAKE_CURRENT_SOURCE_DIR}/${DEPS_DIR})
-GETPROJECTS(DEPS ${TMP0})
-message(STATUS "Dependencies found in ${TMP0}: ${DEPS}")
-FOREACH(subdir ${DEPS})
-if(GIT_FOUND)
-  SET(SUBPROJECT_PATH ${DEPS_DIR}/${subdir})
-  SET(SUBPROJECT_FULL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${SUBPROJECT_PATH})
-  execute_process(
-    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
-    WORKING_DIRECTORY ${SUBPROJECT_FULL_PATH}
-    OUTPUT_VARIABLE _sub_build_version
-    ERROR_QUIET
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  SET(SUBPROJECT_GIT_NAME ${subdir}_${_sub_build_version})
-  message(STATUS "Subproject generated git name: " ${SUBPROJECT_GIT_NAME})
-  if (TARGET ${subdir})
-      message(WARNING "Subproject ${SUBPROJECT_GIT_NAME} (${subdir}) has already been built!")
-  else()
-      add_subdirectory(${SUBPROJECT_PATH})
-  endif()
-else()
-  message(STATUS "GIT not found")
-endif()
-ENDFOREACH()
 
-
-SET(NS3_BUILD ${CATKIN_DEVEL_PREFIX}/${CATKIN_PACKAGE_BIN_DESTINATION}/ns3)
+SET(NS3_BUILD ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/build)
 SET(NS3_INCLUDE_PATH ${NS3_BUILD})
 SET(NS3_HEADERS_DIR ${NS3_BUILD}/ns3)
 
@@ -138,12 +110,15 @@ SET(${PROJECT_NAME}_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/include
     ${NS3_INCLUDE_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}/modules/exprtk
-    ${${DCCOMMS_UTILS_GIT}_INCLUDE_DIRS}
-    ${catkin_INCLUDE_DIRS}
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/src/lib/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/dccomms_packets/src/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/cxxopts/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/dccomms_packets/modules/dccomms/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/dccomms_packets/modules/dccomms/deps/cpplogging/includes
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/dccomms_packets/modules/dccomms/deps/cpplogging/spdlog/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/dccomms_packets/modules/dccomms/deps/cpputils/src/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/dccomms_packets/modules/dccomms/deps/class_loader/include
     )
-
-SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++14 ")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 
 ###################################
 ## catkin specific configuration ##
@@ -157,7 +132,15 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS ${${PROJECT_NAME}_INCLUDE_DIRS}
-  LIBRARIES ${PROJECT_NAME} ${${DCCOMMS_UTILS_GIT}_LIBRARIES} ${ns3liblist}
+  LIBRARIES 
+  	${PROJECT_NAME}
+	${ns3liblist}
+	dccomms_utils_d255343
+	dccomms_packets_223e7cd
+	dccomms_022d142
+	cpputils_9e54c35
+	cpplogging_41e5cf4
+	class_loader_67df743
   CATKIN_DEPENDS
         roscpp
         rospy
@@ -167,7 +150,40 @@ catkin_package(
         dccomms_ros_msgs
   DEPENDS 
   	Git
-)
+	)
+
+####### HANDLE DEPENDENCIES ######
+SET(DEPS_DIR ${MODULES_DIR})
+SET(TMP0 ${CMAKE_CURRENT_SOURCE_DIR}/${DEPS_DIR})
+GETPROJECTS(DEPS ${TMP0})
+message(STATUS "Dependencies found in ${TMP0}: ${DEPS}")
+FOREACH(subdir ${DEPS})
+if(GIT_FOUND)
+  SET(SUBPROJECT_PATH ${DEPS_DIR}/${subdir})
+  SET(SUBPROJECT_FULL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${SUBPROJECT_PATH})
+  execute_process(
+    COMMAND ${GIT_EXECUTABLE} rev-parse --short HEAD
+    WORKING_DIRECTORY ${SUBPROJECT_FULL_PATH}
+    OUTPUT_VARIABLE _sub_build_version
+    ERROR_QUIET
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  SET(SUBPROJECT_GIT_NAME ${subdir}_${_sub_build_version})
+  message(STATUS "Subproject generated git name: " ${SUBPROJECT_GIT_NAME})
+  if (TARGET ${subdir})
+      message(WARNING "Subproject ${SUBPROJECT_GIT_NAME} (${subdir}) has already been built!")
+  else()
+      add_subdirectory(${SUBPROJECT_PATH})
+  endif()
+else()
+  message(STATUS "GIT not found")
+endif()
+ENDFOREACH()
+
+
+SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++14 ")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
+
 
 SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/ROSCommsDevice.cpp
@@ -220,36 +236,9 @@ else()
 endif()
 
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME}  ${ns3liblist} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
+target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${ns3liblist} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
 add_dependencies(${PROJECT_NAME} dccomms_ros_msgs_generate_messages_cpp ns3)
-
-#target_compile_options(pruebas PUBLIC "")
-#https://cmake.org/cmake/help/v3.4/command/find_library.html
-#https://stackoverflow.com/questions/31438916/cmake-cannot-find-library-using-link-directories
-add_executable (example-0 ns3-scripts/example-0.cpp)
-target_link_libraries(example-0 ${PROJECT_NAME})
-target_include_directories(example-0 PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-add_executable (BMac ns3-scripts/BMac.cpp)
-target_link_libraries(BMac ${PROJECT_NAME})
-target_include_directories(BMac PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-add_executable (VBF ns3-scripts/VBF.cpp)
-target_link_libraries(VBF ${PROJECT_NAME})
-target_include_directories(VBF PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-add_executable (dccomms-csma ns3-scripts/dccomms-csma.cpp)
-target_link_libraries(dccomms-csma ${PROJECT_NAME})
-target_include_directories(dccomms-csma PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-add_executable (dccomms-wifi ns3-scripts/dccomms-wifi.cpp)
-target_link_libraries(dccomms-wifi ${PROJECT_NAME})
-target_include_directories(dccomms-wifi PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-add_executable (aqua-sim-mac ns3-scripts/aqua-sim-mac.cpp)
-target_link_libraries(aqua-sim-mac ${PROJECT_NAME})
-target_include_directories(aqua-sim-mac PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 ###############################################
 ############ END netsim BUILD #################
