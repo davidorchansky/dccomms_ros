@@ -246,7 +246,10 @@ FOREACH(lib ${NS3_LIBS})
 	set(ns3target ${lib})
 	message(STATUS "############# NS3 LIBRARY ${NS3LIB_${lib}} ----> ${ns3target}")
 	add_library(${ns3target} EXCLUDE_FROM_ALL ${NS3LIB_${lib}})
-	add_custom_command(TARGET ${ns3target} POST_BUILD COMMAND cp ${NS3LIB_${lib}} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ )
+	#add_custom_command(TARGET ${ns3target} POST_BUILD COMMAND cp ${NS3LIB_${lib}} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ )
+
+	add_custom_command(TARGET ${ns3target} POST_BUILD COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/ns3-postbuild.sh" ${NS3LIB_${lib}} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+
 	set_target_properties(${ns3target} PROPERTIES LINKER_LANGUAGE CXX )
 	install(
 		FILES ${NS3LIB_${lib}}
