@@ -84,16 +84,19 @@ execute_process(
 #SET(WAF_EXECUTABLE ${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/waf)
 if("${ns3configured}" STREQUAL "true")
     message(STATUS "Build NS3.")
-    SET(WAF_EXECUTABLE waf)
+    SET(WAF_EXECUTABLE ./waf)
     execute_process(
       COMMAND ${WAF_EXECUTABLE} build
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
     )
 else()
     message(STATUS "Configure and build NS3 in ${NS3_BUILD}")
-    SET(WAF_EXECUTABLE waf)
+    SET(WAF_EXECUTABLE ./waf)
     execute_process(
       COMMAND ${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests -o ${NS3_BUILD}#--enable-sudo
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
+    )
+    execute_process(
       COMMAND ${WAF_EXECUTABLE} build
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
     )
