@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(dccomms_ros CXX)
 
+SET(DISABLE_GIT_HASH ON CACHE BOOL "Disables git hash suffix on libraries")
+SET(class_loader_NAME_OVERRIDE "dccomms_class_loader" CACHE STRING "Override class_loader project name")
+
 #It seams that from Ubuntu 17.10 the linker flag --disable-new-dtags is needed
 #for the executable to be able to find absolute linked shared libraries with rpath.
 #https://stackoverflow.com/questions/47117443/dynamic-linking-with-rpath-not-working-under-ubuntu-17-10
@@ -172,12 +175,12 @@ catkin_package(
   LIBRARIES 
   	${PROJECT_NAME}
 	"${NS3_LIBS}"
-	dccomms_utils_d255343
-	dccomms_packets_223e7cd
-	dccomms_022d142
-	cpputils_9e54c35
-	cpplogging_41e5cf4
-	class_loader_67df743
+	dccomms_utils
+	dccomms_packets
+	dccomms
+	cpputils
+	cpplogging
+	dccomms_class_loader
   CATKIN_DEPENDS
         roscpp
         rospy
