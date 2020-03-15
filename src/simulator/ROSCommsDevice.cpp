@@ -271,7 +271,7 @@ void ROSCommsDevice::_TxWork() {
       _device >> _txdlf;
       txFifoSize = _device->GetRxFifoSize();
       PacketPtr txdlf = _txpb->CreateFromBuffer(_txdlf->GetBuffer());
-      if (txdlf->PacketIsOk()) {
+      if (txdlf->IsOk()) {
         ns3::Simulator::ScheduleWithContext(GetMac(), ns3::Seconds(0),
                                             &ROSCommsDevice::Send, this, txdlf);
       } else {

@@ -38,11 +38,11 @@ public:
   static NetsimHeader Build(dccomms::PacketPtr pkt) {
     NetsimHeader header;
     header.SetNanosPerByte(0);
-    header.SetDst(pkt->GetDestAddr());
-    header.SetSrc(pkt->GetSrcAddr());
+    header.SetDst(pkt->GetDst());
+    header.SetSrc(pkt->GetSrc());
     header.SetSeqNum(pkt->GetSeq());
     header.SetPacketSize(pkt->GetPacketSize());
-    header.SetPacketError(pkt->PacketIsOk());
+    header.SetPacketError(pkt->IsOk());
     return header;
   }
 
