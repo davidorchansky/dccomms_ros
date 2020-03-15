@@ -139,6 +139,7 @@ void ROSCommsSimulator::_Init() {
   SetTransmitPDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
   SetReceivePDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
   SetPositionUpdatedCb([](ROSCommsDeviceNs3Ptr dev, tf::Vector3 pos) {}, 1000);
+  _started = false;
   _publish_rate = 10;
   GlobalValue::Bind("SimulatorImplementationType",
                     StringValue("ns3::RealtimeSimulatorImpl"));
