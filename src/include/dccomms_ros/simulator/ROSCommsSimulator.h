@@ -98,6 +98,7 @@ public:
   ROSCommsSimulator();
   ~ROSCommsSimulator();
   void StartROSInterface();
+  void StartROSInterface(std::shared_ptr<rclcpp::Node> node);
 
   void SetTransmitPDUCb(
       std::function<void(ROSCommsDevice *txdev, dccomms::PacketPtr)> cb);

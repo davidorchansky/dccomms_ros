@@ -517,13 +517,18 @@ void ROSCommsSimulator::Stop() {
   Log->set_level(level);
 }
 void ROSCommsSimulator::StartROSInterface() {
+  _rosNode = rclcpp::Node::make_shared("ros_comms_simulator");
+
+  StartROSInterface(_rosNode);
+}
+void ROSCommsSimulator::StartROSInterface(std::shared_ptr<rclcpp::Node> node) {
   using std::placeholders::_1;
   using std::placeholders::_2;
 
   /*
    * http://www.boost.org/doc/libs/1_63_0/libs/bind/doc/html/bind.html#bind.purpose.using_bind_with_functions_and_fu
    */
-  _rosNode = rclcpp::Node::make_shared("ros_comms_simulator");
+  _rosNode = node;
 
   buffer.reset(new tf2_ros::Buffer(_rosNode->get_clock()));
   listener.reset(new tf2_ros::TransformListener(*buffer, _rosNode, false));
