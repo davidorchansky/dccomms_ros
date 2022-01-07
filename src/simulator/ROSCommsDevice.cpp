@@ -333,6 +333,8 @@ void ROSCommsDevice::FlushLogOn(cpplogging::LogLevel level) {
 
 void ROSCommsDevice::SetTfFrameId(const string &id) { _tfFrameId = id; }
 
+void ROSCommsDevice::SetRefFrame(const string &id) { _refFrame = id; }
+
 void ROSCommsDevice::_SetPosition(const tf2::Vector3 &position) {
   _position = position;
   _courseChangesCbTrace(this, _position);
@@ -346,6 +348,8 @@ void ROSCommsDevice::SetPosition(const tf2::Vector3 &position) {
 tf2::Vector3 ROSCommsDevice::GetPosition() { return _position; }
 
 std::string ROSCommsDevice::GetTfFrameId() { return _tfFrameId; }
+
+std::string ROSCommsDevice::GetRefFrame() { return _refFrame; }
 
 std::string ROSCommsDevice::ToString() { return DoToString(); }
 } // namespace dccomms_ros

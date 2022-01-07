@@ -63,9 +63,11 @@ public:
 
   void SetMac(uint32_t mac);
   void SetTfFrameId(const std::string &);
+  void SetRefFrame(const std::string &);
 
   uint32_t GetMac();
   std::string GetTfFrameId();
+  std::string GetRefFrame();
 
   std::string ToString();
 
@@ -145,7 +147,7 @@ protected:
   CommsChannelNs3Ptr _txChannel, _rxChannel;
   ServiceThread<ROSCommsDevice> _txserv;
   PacketPtr _txdlf;
-  std::string _name, _tfFrameId;
+  std::string _name, _tfFrameId, _refFrame;
   uint32_t _mac;
   uint32_t _bitRate;
   uint64_t _nanosPerByte;

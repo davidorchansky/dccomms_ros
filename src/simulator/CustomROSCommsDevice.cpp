@@ -563,6 +563,7 @@ std::string CustomROSCommsDevice::DoToString() {
                "\tMAC ....................... %d\n"
                "\tDevice type ............... %s\n"
                "\tFrame ID: ................. '%s'\n"
+               "\tRef Frame: ................ '%s'\n"
                "\tTX channel: ............... '%s'\n"
                "\tRX channel: ............... '%s'\n"
                "\tMax. distance: ............ %.2f m\n"
@@ -576,7 +577,7 @@ std::string CustomROSCommsDevice::DoToString() {
                "\tError Expression: ......... %s\n"
                "\tError Unit: ............... %s",
                _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
-               _tfFrameId.c_str(), txChannelLinked.c_str(),
+               _tfFrameId.c_str(), _refFrame.c_str(), txChannelLinked.c_str(),
                rxChannelLinked.c_str(), _maxDistance, _minDistance, bitrate,
                _intrinsicDelay, _txJitter, _rxJitter, GetMaxTxFifoSize(),
                expr.c_str(), eunit.c_str());

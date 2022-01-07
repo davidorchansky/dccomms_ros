@@ -321,6 +321,7 @@ std::string AcousticROSCommsDevice::DoToString() {
                                  "\tMAC ....................... %d\n"
                                  "\tDevice type ............... %s\n"
                                  "\tFrame ID: ................. '%s'\n"
+                                 "\tRef Frame: ................ '%s'\n"
                                  "\tChannel: .................. %s\n"
                                  "\tTx Fifo Size: ............. %d bytes\n"
                                  "\tMAC protocol: ............. %s\n"
@@ -340,7 +341,7 @@ std::string AcousticROSCommsDevice::DoToString() {
                                  "\tBit error rate: ........... %.2f\n"
                                  "\tCoding efficiency: ........ %.1f\n",
                _name.c_str(), _mac, DevType2String(GetDevType()).c_str(),
-               _tfFrameId.c_str(), txChannelLinked, GetMaxTxFifoSize(),
+               _tfFrameId.c_str(), _refFrame.c_str(), txChannelLinked, GetMaxTxFifoSize(),
                _macP.c_str(), _range, _pT, _freq, _L, _K, _initialEnergy,
                _turnOnEnergy, _turnOffEnergy, _preamble, _pTConsume, _pRConsume,
                _pIdle, _symbPerSec, _bitErrorRate, _codingEff);

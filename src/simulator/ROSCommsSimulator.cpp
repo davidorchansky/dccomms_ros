@@ -213,6 +213,7 @@ bool ROSCommsSimulator::_AddAcousticDevice(const dccomms_ros_msgs::srv::AddAcous
   DEV_TYPE deviceType = static_cast<DEV_TYPE>(req->type);
   auto mac = req->mac;
   auto frameId = req->frame_id;
+  auto refFrame = req->ref_frame;
   // auto energyModel = req->energy_model;
 
   Log->info("Add device request received");
@@ -231,6 +232,7 @@ bool ROSCommsSimulator::_AddAcousticDevice(const dccomms_ros_msgs::srv::AddAcous
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
+    dev->SetRefFrame(refFrame);
     dev->SetCodingEff(req->coding_eff);
     dev->SetInitialEnergy(req->battery_energy);
     dev->SetSymbolsPerSecond(req->symbols_per_second);
@@ -408,6 +410,7 @@ bool ROSCommsSimulator::_AddCustomDevice(const dccomms_ros_msgs::srv::AddCustomD
   auto dccommsId = req->dccomms_id;
   auto mac = req->mac;
   auto frameId = req->frame_id;
+  auto refFrame = req->ref_frame;
   DEV_TYPE deviceType = DEV_TYPE::CUSTOM_DEV;
 
   bool exists = _CommonPreAddDev(dccommsId, deviceType, mac);
@@ -426,6 +429,7 @@ bool ROSCommsSimulator::_AddCustomDevice(const dccomms_ros_msgs::srv::AddCustomD
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
+    dev->SetRefFrame(refFrame);
     dev->SetBitRate(req->bitrate);
     dev->SetMaxDistance(req->max_distance);
     dev->SetMinDistance(req->min_distance);
@@ -647,8 +651,9 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
     for (std::pair<const uint32_t, ROSCommsDevicePtr> mac2Dev : *mac2DevMap) {
       ROSCommsDevicePtr dev = mac2Dev.second;
       std::string tfFrameId = dev->GetTfFrameId();
+      std::string refFrame = dev->GetRefFrame();
       try {
-        transform = buffer->lookupTransform("world", tfFrameId, rclcpp::Time(0));
+        transform = buffer->lookupTransform(refFrame, tfFrameId, rclcpp::Time(0));
 
         tf2::Vector3 position(transform.transform.translation.x,
                               transform.transform.translation.y,
