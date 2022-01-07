@@ -158,7 +158,7 @@ protected:
   virtual void DoLinkToChannel(CommsChannelNs3Ptr channel,
                                CHANNEL_LINK_TYPE linkType);
   virtual void DoStart();
-  virtual void DoSetPosition(const tf::Vector3 &position);
+  virtual void DoSetPosition(const tf2::Vector3 &position);
   virtual bool DoStarted();
   virtual void DoSetMaxTxFifoSize(uint32_t size);
   virtual void DoSetMacMaxTransmitDistance(double v);
@@ -172,7 +172,7 @@ private:
   double _intrinsicDelay; // ms
 
   double _maxDistance, _minDistance; // in meters
-  tf::Vector3 _position;
+  tf2::Vector3 _position;
   // CustomROSCommsDevicePtr _ownPtr;
 
   NormalRealDist _ttDist;

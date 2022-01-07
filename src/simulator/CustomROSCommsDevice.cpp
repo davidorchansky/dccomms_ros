@@ -7,6 +7,7 @@
 #include <ns3/aqua-sim-mac-aloha.h>
 #include <ns3/core-module.h>
 #include <ns3/simulator.h>
+#include <ns3/random-variable-stream.h>
 
 using namespace ns3;
 
@@ -117,11 +118,11 @@ void CustomROSCommsDevice::GetRateErrorModel(std::string &expr,
 
 void CustomROSCommsDevice::SetRateErrorModel(const std::string &expr,
                                              const std::string &unit) {
-  ns3::Ptr<UniformRandomVariable> uv = CreateObject<UniformRandomVariable>();
+  ns3::Ptr<UniformRandomVariable> uv = ns3::CreateObject<UniformRandomVariable>();
   // Set this variable to a specific stream
   uv->SetStream(50);
 
-  _rem = CreateObject<RateErrorModel>();
+  _rem = ns3::CreateObject<RateErrorModel>();
   _rem->SetRandomVariable(uv);
   if (unit == "bit")
     _rem->SetUnit(RateErrorModel::ERROR_UNIT_BIT);
@@ -529,7 +530,7 @@ void CustomROSCommsDevice::DoStart() {
   _started = true;
 }
 bool CustomROSCommsDevice::DoStarted() { return _started; }
-void CustomROSCommsDevice::DoSetPosition(const tf::Vector3 &position) {
+void CustomROSCommsDevice::DoSetPosition(const tf2::Vector3 &position) {
   _position = position;
 }
 

@@ -57,7 +57,7 @@ protected:
   void DoSend(ns3PacketPtr dlf);
   void DoLinkToChannel(CommsChannelNs3Ptr channel, CHANNEL_LINK_TYPE linkTyp);
   void DoStart();
-  void DoSetPosition(const tf::Vector3 &position);
+  void DoSetPosition(const tf2::Vector3 &position);
   bool DoStarted();
   void DoSetMaxTxFifoSize(uint32_t size);
   std::string DoToString();

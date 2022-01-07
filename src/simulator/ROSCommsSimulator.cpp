@@ -7,14 +7,15 @@
 #include <dccomms_ros/simulator/NetsimTime.h>
 #include <dccomms_ros/simulator/PacketBuilderLoader.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
-#include <dccomms_ros_msgs/CheckDevice.h>
+#include <dccomms_ros_msgs/srv/check_device.hpp>
 #include <dccomms_ros_msgs/types.h>
 #include <iostream>
 #include <list>
 #include <ns3/core-module.h>
 #include <ns3/simulator.h>
 #include <regex>
-#include <tf/transform_listener.h>
+#include <tf2_ros/transform_listener.h>
+#include <tf2_ros/create_timer_ros.h>
 
 using namespace ns3;
 using namespace dccomms;
@@ -68,7 +69,8 @@ TypeId ROSCommsSimulator::GetTypeId(void) {
 }
 
 ROSCommsSimulator::ROSCommsSimulator()
-    : _linkUpdaterWorker(this), _linkUpdaterLoopRate(10) {
+    : _linkUpdaterWorker(this) {
+  _linkUpdaterLoopRate.reset(new rclcpp::Rate(std::chrono::milliseconds(10)));
   SetLogName("CommsSimulator");
   LogToConsole(true);
   // FlushLogOn(cpplogging::LogLevel::info);
@@ -128,7 +130,7 @@ void ROSCommsSimulator::SetReceivePDUCb(
 }
 
 void ROSCommsSimulator::SetPositionUpdatedCb(
-    std::function<void(ROSCommsDeviceNs3Ptr dev, tf::Vector3)> cb,
+    std::function<void(ROSCommsDeviceNs3Ptr dev, tf2::Vector3)> cb,
     double cbMinPeriod, uint32_t positionUpdateRate) {
   PositionUpdatedCb = cb;
   _positionUpdatedCbMinPeriod = cbMinPeriod;
@@ -138,7 +140,7 @@ void ROSCommsSimulator::SetPositionUpdatedCb(
 void ROSCommsSimulator::_Init() {
   SetTransmitPDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
   SetReceivePDUCb([](ROSCommsDevice *dev, PacketPtr pdu) {});
-  SetPositionUpdatedCb([](ROSCommsDeviceNs3Ptr dev, tf::Vector3 pos) {}, 1000);
+  SetPositionUpdatedCb([](ROSCommsDeviceNs3Ptr dev, tf2::Vector3 pos) {}, 1000);
   _started = false;
   _publish_rate = 10;
   GlobalValue::Bind("SimulatorImplementationType",
@@ -168,10 +170,10 @@ void ROSCommsSimulator::_RemoveDeviceFromSet(std::string iddev) {
   _idDevMapMutex.unlock();
 }
 
-bool ROSCommsSimulator::_CheckDevice(CheckDevice::Request &req,
-                                     CheckDevice::Response &res) {
-  auto iddev = req.iddev;
-  res.exists = _DeviceExists(iddev);
+bool ROSCommsSimulator::_CheckDevice(const dccomms_ros_msgs::srv::CheckDevice::Request::SharedPtr req,
+                                    dccomms_ros_msgs::srv::CheckDevice::Response::SharedPtr res) {
+  auto iddev = req->iddev;
+  res->exists = _DeviceExists(iddev);
   return true;
 }
 
@@ -184,10 +186,10 @@ bool ROSCommsSimulator::_DeviceExists(std::string iddev) {
   return exists;
 }
 
-bool ROSCommsSimulator::_CheckChannel(CheckChannel::Request &req,
-                                      CheckChannel::Response &res) {
-  auto id = req.id;
-  res.exists = _ChannelExists(id);
+bool ROSCommsSimulator::_CheckChannel(const dccomms_ros_msgs::srv::CheckChannel::Request::SharedPtr req,
+                                     dccomms_ros_msgs::srv::CheckChannel::Response::SharedPtr res) {
+  auto id = req->id;
+  res->exists = _ChannelExists(id);
   return true;
 }
 
@@ -200,18 +202,18 @@ ROSCommsDeviceNs3Ptr ROSCommsSimulator::_GetDevice(std::string iddev) {
   return dev;
 }
 
-bool ROSCommsSimulator::_RemoveDevice(RemoveDevice::Request &req,
-                                      RemoveDevice::Response &res) {
+bool ROSCommsSimulator::_RemoveDevice(const dccomms_ros_msgs::srv::RemoveDevice::Request::SharedPtr req,
+                                     dccomms_ros_msgs::srv::RemoveDevice::Response::SharedPtr res) {
   return true;
 }
 
-bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
-                                           AddAcousticDevice::Response &res) {
-  auto dccommsId = req.dccommsId;
-  DEV_TYPE deviceType = static_cast<DEV_TYPE>(req.type);
-  auto mac = req.mac;
-  auto frameId = req.frameId;
-  // auto energyModel = req.energyModel;
+bool ROSCommsSimulator::_AddAcousticDevice(const dccomms_ros_msgs::srv::AddAcousticDevice::Request::SharedPtr req,
+                                          dccomms_ros_msgs::srv::AddAcousticDevice::Response::SharedPtr res) {
+  auto dccommsId = req->dccomms_id;
+  DEV_TYPE deviceType = static_cast<DEV_TYPE>(req->type);
+  auto mac = req->mac;
+  auto frameId = req->frame_id;
+  // auto energyModel = req->energy_model;
 
   Log->info("Add device request received");
 
@@ -229,25 +231,25 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
-    dev->SetCodingEff(req.codingEff);
-    dev->SetInitialEnergy(req.batteryEnergy);
-    dev->SetSymbolsPerSecond(req.symbolsPerSecond);
-    dev->SetBitErrorRate(req.bitErrorRate);
-    dev->SetBitRate(req.symbolsPerSecond / req.codingEff);
-    dev->SetMaxTxFifoSize(req.maxTxFifoSize);
-    dev->SetMACProtocol(req.macProtocol);
-    dev->SetRange(req.range);
-    dev->SetPT(req.PT);
-    dev->SetFreq(req.frequency);
-    dev->SetL(req.L);
-    dev->SetK(req.K);
-    dev->SetTurnOnEnergy(req.turnOnEnergy);
-    dev->SetTurnOffEnergy(req.turnOffEnergy);
-    dev->SetPreamble(req.preamble);
-    dev->SetTxPower(req.PTConsume);
-    dev->SetRxPower(req.PRConsume);
-    dev->SetIdlePower(req.PIdle);
-    auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
+    dev->SetCodingEff(req->coding_eff);
+    dev->SetInitialEnergy(req->battery_energy);
+    dev->SetSymbolsPerSecond(req->symbols_per_second);
+    dev->SetBitErrorRate(req->bit_error_rate);
+    dev->SetBitRate(req->symbols_per_second / req->coding_eff);
+    dev->SetMaxTxFifoSize(req->max_tx_fifo_size);
+    dev->SetMACProtocol(req->mac_protocol);
+    dev->SetRange(req->range);
+    dev->SetPT(req->pt);
+    dev->SetFreq(req->frequency);
+    dev->SetL(req->l);
+    dev->SetK(req->k);
+    dev->SetTurnOnEnergy(req->turn_on_energy);
+    dev->SetTurnOffEnergy(req->turn_off_energy);
+    dev->SetPreamble(req->preamble);
+    dev->SetTxPower(req->pt_consume);
+    dev->SetRxPower(req->pr_consume);
+    dev->SetIdlePower(req->p_idle);
+    auto errorLevel = cpplogging::GetLevelFromString(req->log_level);
     dev->SetLogLevel(errorLevel);
 
     _InsertDeviceAsc<AcousticROSCommsDeviceNs3Ptr>(_acousticDevices, dev);
@@ -259,13 +261,13 @@ bool ROSCommsSimulator::_AddAcousticDevice(AddAcousticDevice::Request &req,
     Log->info("\nAdding device:\n{}", dev->ToString());
     Simulator::Schedule(Seconds(0 + 0.01 * mac),
                         MakeEvent(&ROSCommsDevice::Start, dev));
-    res.res = true;
+    res->res = true;
 
   } else {
-    res.res = false;
+    res->res = false;
   }
 
-  return res.res;
+  return res->res;
 }
 
 bool ROSCommsSimulator::_ChannelExists(uint32_t id) {
@@ -280,19 +282,19 @@ CommsChannelNs3Ptr ROSCommsSimulator::_GetChannel(int id) {
   }
   return channel;
 }
-bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
-                                          LinkDeviceToChannel::Response &res) {
-  ROSCommsDeviceNs3Ptr dev = _GetDevice(req.dccommsId);
-  CommsChannelNs3Ptr channel = _GetChannel(req.channelId);
+bool ROSCommsSimulator::_LinkDevToChannel(const dccomms_ros_msgs::srv::LinkDeviceToChannel::Request::SharedPtr req,
+                                        dccomms_ros_msgs::srv::LinkDeviceToChannel::Response::SharedPtr res) {
+  ROSCommsDeviceNs3Ptr dev = _GetDevice(req->dccomms_id);
+  CommsChannelNs3Ptr channel = _GetChannel(req->channel_id);
   if (!dev) {
-    res.res = false;
-    return res.res;
+    res->res = false;
+    return res->res;
   }
   DEV_TYPE devType = dev->GetDevType();
-  res.res = true;
+  res->res = true;
   if (!channel) {
-    res.res = false;
-    return res.res;
+    res->res = false;
+    return res->res;
   }
 
   CHANNEL_TYPE chnType = channel->GetType();
@@ -300,73 +302,73 @@ bool ROSCommsSimulator::_LinkDevToChannel(LinkDeviceToChannel::Request &req,
   case ACOUSTIC_UNDERWATER_DEV: {
     if (chnType == ACOUSTIC_UNDERWATER_CHANNEL) {
     } else {
-      res.res = false;
+      res->res = false;
     }
     break;
   }
   case CUSTOM_DEV: {
     break;
   }
-  default: { res.res = false; }
+  default: { res->res = false; }
   }
-  if (res.res) {
-    dev->LinkToChannel(channel, (CHANNEL_LINK_TYPE)req.linkType);
+  if (res->res) {
+    dev->LinkToChannel(channel, (CHANNEL_LINK_TYPE)req->link_type);
     Log->info("dev {} linked to channel {}:\n{}", dev->GetDccommsId(),
               channel->GetId(), dev->ToString());
   } else {
     Log->error("error linking dev {} to channel {}", dev->GetDccommsId(),
                channel->GetId());
   }
-  return res.res;
+  return res->res;
 }
 
-bool ROSCommsSimulator::_AddAcousticChannel(AddAcousticChannel::Request &req,
-                                            AddAcousticChannel::Response &res) {
+bool ROSCommsSimulator::_AddAcousticChannel(const dccomms_ros_msgs::srv::AddAcousticChannel::Request::SharedPtr req,
+                                          dccomms_ros_msgs::srv::AddAcousticChannel::Response::SharedPtr res) {
 
-  uint32_t id = req.id;
-  res.res = false;
+  uint32_t id = req->id;
+  res->res = false;
   if (!_channelMap[id]) {
     auto acousticChannel =
         ns3::CreateObject<dccomms_ros::AcousticCommsChannel>(id);
 
-    acousticChannel->SetBandwidth(req.bandwidth);
-    acousticChannel->SetNoiseLevel(req.noiseLvl);
-    acousticChannel->SetSalinity(req.salinity);
-    acousticChannel->SetTemperature(req.temperature);
+    acousticChannel->SetBandwidth(req->bandwidth);
+    acousticChannel->SetNoiseLevel(req->noise_lvl);
+    acousticChannel->SetSalinity(req->salinity);
+    acousticChannel->SetTemperature(req->temperature);
     // TODO: implement acoustic channel logging
-    // auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
+    // auto errorLevel = cpplogging::GetLevelFromString(req->logLevel);
     // acousticChannel->SetLogLevel(errorLevel);
 
     _channelMap[id] = PeekPointer(acousticChannel);
     _InsertChannelAsc<CommsChannelNs3Ptr>(_channels, acousticChannel);
     _InsertChannelAsc<AcousticCommsChannelNs3Ptr>(_acousticChannels,
                                                   acousticChannel);
-    res.res = true;
+    res->res = true;
     Log->info("acoustic channel {} added", id);
   }
-  return res.res;
+  return res->res;
 }
 
-bool ROSCommsSimulator::_AddCustomChannel(AddCustomChannel::Request &req,
-                                          AddCustomChannel::Response &res) {
-  uint32_t id = req.id;
+bool ROSCommsSimulator::_AddCustomChannel(const dccomms_ros_msgs::srv::AddCustomChannel::Request::SharedPtr req,
+                                        dccomms_ros_msgs::srv::AddCustomChannel::Response::SharedPtr res) {
+  uint32_t id = req->id;
   if (!_channelMap[id]) {
     CustomCommsChannelNs3Ptr channel =
         ns3::CreateObject<CustomCommsChannel>(id);
-    channel->SetMinPrTime(req.minPrTime);
-    channel->SetPrTimeInc(req.prTimeIncPerMeter);
-    auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
+    channel->SetMinPrTime(req->min_pr_time);
+    channel->SetPrTimeInc(req->pr_time_inc_per_meter);
+    auto errorLevel = cpplogging::GetLevelFromString(req->log_level);
     channel->SetLogLevel(errorLevel);
     _InsertChannelAsc<CommsChannelNs3Ptr>(_channels, channel);
     _InsertChannelAsc<CustomCommsChannelNs3Ptr>(_customChannels, channel);
     _channelMap[id] = PeekPointer(channel);
-    res.res = true;
+    res->res = true;
     Log->info("custom channel {} added", id);
   } else {
     Log->error("error adding custom channel {}", id);
-    res.res = false;
+    res->res = false;
   }
-  return res.res;
+  return res->res;
 }
 
 bool ROSCommsSimulator::_CommonPreAddDev(const std::string &dccommsId,
@@ -400,12 +402,12 @@ bool ROSCommsSimulator::_CommonPreAddDev(const std::string &dccommsId,
   return exists;
 }
 
-bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
-                                         AddCustomDevice::Response &res) {
+bool ROSCommsSimulator::_AddCustomDevice(const dccomms_ros_msgs::srv::AddCustomDevice::Request::SharedPtr req,
+                                        dccomms_ros_msgs::srv::AddCustomDevice::Response::SharedPtr res) {
 
-  auto dccommsId = req.dccommsId;
-  auto mac = req.mac;
-  auto frameId = req.frameId;
+  auto dccommsId = req->dccomms_id;
+  auto mac = req->mac;
+  auto frameId = req->frame_id;
   DEV_TYPE deviceType = DEV_TYPE::CUSTOM_DEV;
 
   bool exists = _CommonPreAddDev(dccommsId, deviceType, mac);
@@ -424,27 +426,27 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     dev->SetDccommsId(dccommsId);
     dev->SetMac(mac);
     dev->SetTfFrameId(frameId);
-    dev->SetBitRate(req.bitrate);
-    dev->SetMaxDistance(req.maxDistance);
-    dev->SetMinDistance(req.minDistance);
-    dev->SetMinPktErrorRate(req.minPktErrorRate);
-    dev->SetPktErrorRateInc(req.pktErrorRateIncPerMeter);
-    dev->SetJitter(req.txJitter, req.rxJitter);
-    dev->SetMaxTxFifoSize(req.maxTxFifoSize);
-    dev->SetRateErrorModel(req.errorRateExpr, req.errorUnit);
-    dev->SetIntrinsicDelay(req.intrinsicDelay);
+    dev->SetBitRate(req->bitrate);
+    dev->SetMaxDistance(req->max_distance);
+    dev->SetMinDistance(req->min_distance);
+    dev->SetMinPktErrorRate(req->min_pkt_error_rate);
+    dev->SetPktErrorRateInc(req->pkt_error_rate_inc_per_meter);
+    dev->SetJitter(req->tx_jitter, req->rx_jitter);
+    dev->SetMaxTxFifoSize(req->max_tx_fifo_size);
+    dev->SetRateErrorModel(req->error_rate_expr, req->error_unit);
+    dev->SetIntrinsicDelay(req->intrinsic_delay);
 
-    if (req.macProtocol != "") {
+    if (req->mac_protocol != "") {
       ObjectFactory factory;
-      std::string macProtocolName = GetMACPType(req.macProtocol);
+      std::string macProtocolName = GetMACPType(req->mac_protocol);
       factory.SetTypeId(macProtocolName);
-      factory.Set("BitRate", DoubleValue(req.bitrate));
+      factory.Set("BitRate", DoubleValue(req->bitrate));
       factory.Set("EncodingEfficiency", DoubleValue(1));
 
       double macDistance =
-          req.macDistance != 0 ? req.macDistance : req.maxDistance;
+          req->max_distance != 0 ? req->max_distance : req->max_distance;
 
-      uint maxBackoffSlots = req.maxBackoffSlots >= 4 ? req.maxBackoffSlots : 4;
+      uint maxBackoffSlots = req->max_backoff_slots >= 4 ? req->max_backoff_slots : 4;
 
       dev->SetMacMaxTransmitDistance(macDistance);
 
@@ -463,7 +465,7 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
       dev->EnableMac(true);
     } else
       dev->EnableMac(false);
-    auto errorLevel = cpplogging::GetLevelFromString(req.logLevel);
+    auto errorLevel = cpplogging::GetLevelFromString(req->log_level);
     dev->SetLogLevel(errorLevel);
     // dev->LogToFile(dccommsId);
 
@@ -476,12 +478,12 @@ bool ROSCommsSimulator::_AddCustomDevice(AddCustomDevice::Request &req,
     Log->info("\nAdding device:\n{}", dev->ToString());
     Simulator::Schedule(Seconds(0 + 0.01 * mac),
                         MakeEvent(&ROSCommsDevice::Start, dev));
-    res.res = true;
+    res->res = true;
   } else {
-    res.res = false;
+    res->res = false;
   }
 
-  return res.res;
+  return res->res;
 }
 
 void ROSCommsSimulator::Stop() {
@@ -511,41 +513,63 @@ void ROSCommsSimulator::Stop() {
   Log->set_level(level);
 }
 void ROSCommsSimulator::StartROSInterface() {
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+
   /*
    * http://www.boost.org/doc/libs/1_63_0/libs/bind/doc/html/bind.html#bind.purpose.using_bind_with_functions_and_fu
    */
-  _rosNode = ros::NodeHandle("~");
-  _addDevService = _rosNode.advertiseService(
-      "add_acoustic_net_device", &ROSCommsSimulator::_AddAcousticDevice, this);
-  _addChannelService = _rosNode.advertiseService(
-      "add_acoustic_channel", &ROSCommsSimulator::_AddAcousticChannel, this);
-  _checkDevService = _rosNode.advertiseService(
-      "check_net_device", &ROSCommsSimulator::_CheckDevice, this);
-  _checkChannelService = _rosNode.advertiseService(
-      "check_channel", &ROSCommsSimulator::_CheckChannel, this);
-  _removeDevService = _rosNode.advertiseService(
-      "remove_net_device", &ROSCommsSimulator::_RemoveDevice, this);
-  _linkDeviceToChannelService = _rosNode.advertiseService(
-      "link_dev_to_channel", &ROSCommsSimulator::_LinkDevToChannel, this);
-  _startSimulationService = _rosNode.advertiseService(
-      "start_simulation", &ROSCommsSimulator::_StartSimulation, this);
-  _addCustomChannelService = _rosNode.advertiseService(
-      "add_custom_channel", &ROSCommsSimulator::_AddCustomChannel, this);
-  _addCustomDeviceService = _rosNode.advertiseService(
-      "add_custom_net_device", &ROSCommsSimulator::_AddCustomDevice, this);
+  _rosNode = rclcpp::Node::make_shared("ros_comms_simulator");
+
+  buffer.reset(new tf2_ros::Buffer(_rosNode->get_clock()));
+  listener.reset(new tf2_ros::TransformListener(*buffer, _rosNode, false));
+
+  auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
+    _rosNode->get_node_base_interface(),
+    _rosNode->get_node_timers_interface()
+  );
+  buffer->setCreateTimerInterface(timer_interface);
+  buffer->setUsingDedicatedThread(true);
+
+  _addDevService = _rosNode->create_service<dccomms_ros_msgs::srv::AddAcousticDevice>(
+      "add_acoustic_net_device",
+      std::bind(&ROSCommsSimulator::_AddAcousticDevice, this, _1, _2));
+  _addChannelService = _rosNode->create_service<dccomms_ros_msgs::srv::AddAcousticChannel>(
+      "add_acoustic_channel",
+      std::bind(&ROSCommsSimulator::_AddAcousticChannel, this, _1, _2));
+  _checkDevService = _rosNode->create_service<dccomms_ros_msgs::srv::CheckDevice>(
+      "check_net_device",
+      std::bind(&ROSCommsSimulator::_CheckDevice, this, _1, _2));
+  _checkChannelService = _rosNode->create_service<dccomms_ros_msgs::srv::CheckChannel>(
+      "check_channel",
+      std::bind(&ROSCommsSimulator::_CheckChannel, this, _1, _2));
+  _removeDevService = _rosNode->create_service<dccomms_ros_msgs::srv::RemoveDevice>(
+      "remove_net_device",
+      std::bind(&ROSCommsSimulator::_RemoveDevice, this, _1, _2));
+  _linkDeviceToChannelService = _rosNode->create_service<dccomms_ros_msgs::srv::LinkDeviceToChannel>(
+      "link_dev_to_channel",
+      std::bind(&ROSCommsSimulator::_LinkDevToChannel, this, _1, _2));
+  _startSimulationService = _rosNode->create_service<dccomms_ros_msgs::srv::StartSimulation>(
+      "start_simulation",
+      std::bind(&ROSCommsSimulator::_StartSimulation, this, _1, _2));
+  _addCustomChannelService = _rosNode->create_service<dccomms_ros_msgs::srv::AddCustomChannel>(
+      "add_custom_channel",
+      std::bind(&ROSCommsSimulator::_AddCustomChannel, this, _1, _2));
+  _addCustomDeviceService = _rosNode->create_service<dccomms_ros_msgs::srv::AddCustomDevice>(
+      "add_custom_net_device",
+      std::bind(&ROSCommsSimulator::_AddCustomDevice, this, _1, _2));
   _StartLinkUpdaterWork();
 }
 
-bool ROSCommsSimulator::_StartSimulation(
-    dccomms_ros_msgs::StartSimulation::Request &req,
-    dccomms_ros_msgs::StartSimulation::Response &res) {
+bool ROSCommsSimulator::_StartSimulation(const dccomms_ros_msgs::srv::StartSimulation::Request::SharedPtr req,
+                                        dccomms_ros_msgs::srv::StartSimulation::Response::SharedPtr res) {
   if (!_started) {
     _Run();
-    res.res = true;
+    res->res = true;
     _started = true;
   } else
-    res.res = false;
-  return res.res;
+    res->res = false;
+  return res->res;
 }
 
 void ROSCommsSimulator::_SetSimulationStartDateTime() {
@@ -608,7 +632,7 @@ void ROSCommsSimulator::_Run() {
 void ROSCommsSimulator::_StartLinkUpdaterWork() {
   _callPositionUpdatedCb = false;
   _showLinkUpdaterLogTimer.Reset();
-  _linkUpdaterLoopRate = ros::Rate(_updatePositionRate);
+  _linkUpdaterLoopRate.reset(new rclcpp::Rate(std::chrono::milliseconds(_updatePositionRate)));
   _linkUpdaterWorker.Start();
 }
 
@@ -617,16 +641,18 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
     _callPositionUpdatedCb = true;
   }
   _devLinksMutex.lock();
-  tf::StampedTransform transform;
+  geometry_msgs::msg::TransformStamped transform;
   for (std::pair<const uint32_t, Mac2DevMapPtr> type2Devs : _type2DevMap) {
     Mac2DevMapPtr mac2DevMap = type2Devs.second;
     for (std::pair<const uint32_t, ROSCommsDevicePtr> mac2Dev : *mac2DevMap) {
       ROSCommsDevicePtr dev = mac2Dev.second;
       std::string tfFrameId = dev->GetTfFrameId();
       try {
-        // ros::Time now = ros::Time::now();
-        listener.lookupTransform("/world", tfFrameId, ros::Time(0), transform);
-        tf::Vector3 position = transform.getOrigin();
+        transform = buffer->lookupTransform("world", tfFrameId, rclcpp::Time(0));
+
+        tf2::Vector3 position(transform.transform.translation.x,
+                              transform.transform.translation.y,
+                              transform.transform.translation.z); 
         dev->SetPosition(position);
         if (_callPositionUpdatedCb)
           PositionUpdatedCb(dev, position);
@@ -638,7 +664,7 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
     }
   }
   _devLinksMutex.unlock();
-  _linkUpdaterLoopRate.sleep();
+  _linkUpdaterLoopRate->sleep();
 
   if (_callPositionUpdatedCb) {
     _callPositionUpdatedCb = false;
@@ -646,34 +672,29 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
   }
 }
 
-bool ROSCommsSimulator::AddAcousticDevice(
-    dccomms_ros_msgs::AddAcousticDevice::Request &req) {
-  dccomms_ros_msgs::AddAcousticDevice::Response res;
+bool ROSCommsSimulator::AddAcousticDevice(const dccomms_ros_msgs::srv::AddAcousticDevice::Request::SharedPtr req) {
+  dccomms_ros_msgs::srv::AddAcousticDevice::Response::SharedPtr res(new dccomms_ros_msgs::srv::AddAcousticDevice::Response);
   return _AddAcousticDevice(req, res);
 }
-bool ROSCommsSimulator::LinkDevToChannel(
-    dccomms_ros_msgs::LinkDeviceToChannel::Request &req) {
-  dccomms_ros_msgs::LinkDeviceToChannel::Response res;
+bool ROSCommsSimulator::LinkDevToChannel(const dccomms_ros_msgs::srv::LinkDeviceToChannel::Request::SharedPtr req) {
+  dccomms_ros_msgs::srv::LinkDeviceToChannel::Response::SharedPtr res(new dccomms_ros_msgs::srv::LinkDeviceToChannel::Response);
   return _LinkDevToChannel(req, res);
 }
-bool ROSCommsSimulator::AddAcousticChannel(
-    dccomms_ros_msgs::AddAcousticChannel::Request &req) {
-  dccomms_ros_msgs::AddAcousticChannel::Response res;
+bool ROSCommsSimulator::AddAcousticChannel(const dccomms_ros_msgs::srv::AddAcousticChannel::Request::SharedPtr req) {
+  dccomms_ros_msgs::srv::AddAcousticChannel::Response::SharedPtr res(new dccomms_ros_msgs::srv::AddAcousticChannel::Response);
   return _AddAcousticChannel(req, res);
 }
-bool ROSCommsSimulator::AddCustomChannel(
-    dccomms_ros_msgs::AddCustomChannel::Request &req) {
-  dccomms_ros_msgs::AddCustomChannel::Response res;
+bool ROSCommsSimulator::AddCustomChannel(const dccomms_ros_msgs::srv::AddCustomChannel::Request::SharedPtr req) {
+  dccomms_ros_msgs::srv::AddCustomChannel::Response::SharedPtr res(new dccomms_ros_msgs::srv::AddCustomChannel::Response);
   return _AddCustomChannel(req, res);
 }
-bool ROSCommsSimulator::AddCustomDevice(
-    dccomms_ros_msgs::AddCustomDevice::Request &req) {
-  dccomms_ros_msgs::AddCustomDevice::Response res;
+bool ROSCommsSimulator::AddCustomDevice(const dccomms_ros_msgs::srv::AddCustomDevice::Request::SharedPtr req) {
+  dccomms_ros_msgs::srv::AddCustomDevice::Response::SharedPtr res(new dccomms_ros_msgs::srv::AddCustomDevice::Response);
   return _AddCustomDevice(req, res);
 }
 bool ROSCommsSimulator::StartSimulation() {
-  dccomms_ros_msgs::StartSimulation::Request req;
-  dccomms_ros_msgs::StartSimulation::Response res;
+  dccomms_ros_msgs::srv::StartSimulation::Request::SharedPtr req(new dccomms_ros_msgs::srv::StartSimulation::Request);
+  dccomms_ros_msgs::srv::StartSimulation::Response::SharedPtr res(new dccomms_ros_msgs::srv::StartSimulation::Response);
   return _StartSimulation(req, res);
 }
 } // namespace dccomms_ros

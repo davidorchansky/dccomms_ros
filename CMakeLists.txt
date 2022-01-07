@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.5.1)
 project(dccomms_ros CXX)
 
 SET(DISABLE_GIT_HASH ON CACHE BOOL "Disables git hash suffix on libraries")
-SET(class_loader_NAME_OVERRIDE "dccomms_class_loader" CACHE STRING "Override class_loader project name")
 
 #It seams that from Ubuntu 17.10 the linker flag --disable-new-dtags is needed
 #for the executable to be able to find absolute linked shared libraries with rpath.
@@ -13,20 +12,12 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 SET(MODULES_DIR "modules" )
 
-## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
-find_package(catkin REQUIRED COMPONENTS
-		roscpp
-		rospy
-		std_msgs
-		actionlib
-		actionlib_msgs
-		message_generation
-                std_srvs
-                tf
-                dccomms_ros_msgs
-)
+## Find libraries
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(dccomms_ros_msgs REQUIRED)
+find_package(tf2_ros REQUIRED)
+find_package(class_loader REQUIRED)
 
 #http://stackoverflow.com/questions/7787823/cmake-how-to-get-the-name-of-all-subdirectories-of-a-directory
 function(GETPROJECTS result curdir)
@@ -96,7 +87,7 @@ else()
     message(STATUS "Configure and build NS3 in ${NS3_BUILD}")
     SET(WAF_EXECUTABLE ./waf)
     execute_process(
-      COMMAND ${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests -o ${NS3_BUILD}#--enable-sudo
+      COMMAND ${WAF_EXECUTABLE} configure --build-profile=debug --enable-examples --enable-tests --disable-python -o ${NS3_BUILD}#--enable-sudo
       WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/modules/ns-3-dev/"
     )
     execute_process(
@@ -119,7 +110,9 @@ SET(NS3_LIBS
     ns3-dev-buildings-test-debug         ns3-dev-mesh-test-debug              ns3-dev-test-test-debug
     ns3-dev-config-store-debug           ns3-dev-mobility-debug               ns3-dev-topology-read-debug
     ns3-dev-core-debug                   ns3-dev-mobility-test-debug          ns3-dev-topology-read-test-debug
-    ns3-dev-core-test-debug              ns3-dev-mpi-debug                    ns3-dev-traffic-control-debug
+    ns3-dev-core-test-debug
+    #ns3-dev-mpi-debug
+    ns3-dev-traffic-control-debug
     ns3-dev-csma-debug                   ns3-dev-netanim-debug                ns3-dev-traffic-control-test-debug
     ns3-dev-csma-layout-debug            ns3-dev-netanim-test-debug           ns3-dev-uan-debug
     ns3-dev-dsdv-debug                   ns3-dev-network-debug                ns3-dev-uan-test-debug
@@ -137,7 +130,7 @@ SET(NS3_LIBS
 #So it's better to specify the full path to each .so if the the *.so are not in the common directories (see ldconfig)
 message("NS3 modules: ${NS3_LIBS}")
 FOREACH(lib ${NS3_LIBS})
-	find_library(NS3LIB_${lib} NAMES "${lib}" PATHS "${NS3_BUILD}")
+	find_library(NS3LIB_${lib} NAMES "${lib}" PATHS "${NS3_BUILD}/lib")
 	if(NOT NS3LIB_${lib})
 		message(FATAL_ERROR "NS3 LIBRARY ${lib} NOT FOUND")
 	else()
@@ -155,42 +148,9 @@ SET(${PROJECT_NAME}_INCLUDE_DIRS
     ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/cxxopts/include
     ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/dccomms_packets/modules/dccomms/include
     ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/dccomms_packets/modules/dccomms/deps/cpplogging/includes
-    ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/dccomms_packets/modules/dccomms/deps/cpplogging/spdlog/include
     ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/dccomms_packets/modules/dccomms/deps/cpputils/src/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/modules/dccomms_utils/modules/dccomms_packets/modules/dccomms/deps/class_loader/include
     )
 
-###################################
-## catkin specific configuration ##
-###################################
-
-## The catkin_package macro generates cmake config files for your package
-## Declare things to be passed to dependent projects
-## INCLUDE_DIRS: uncomment this if you package contains header files
-## LIBRARIES: libraries you create in this project that dependent projects also need
-## CATKIN_DEPENDS: catkin_packages dependent projects also need
-## DEPENDS: system dependencies of this project that dependent projects also need
-catkin_package(
-  INCLUDE_DIRS ${${PROJECT_NAME}_INCLUDE_DIRS}
-  LIBRARIES 
-  	${PROJECT_NAME}
-	"${NS3_LIBS}"
-	dccomms_utils
-	dccomms_packets
-	dccomms
-	cpputils
-	cpplogging
-	dccomms_class_loader
-  CATKIN_DEPENDS
-        roscpp
-        rospy
-        std_msgs
-        actionlib_msgs
-        message_runtime
-        dccomms_ros_msgs
-  DEPENDS 
-  #  	Git
-	)
 
 ####### HANDLE DEPENDENCIES ######
 SET(DEPS_DIR ${MODULES_DIR})
@@ -221,7 +181,8 @@ endif()
 ENDFOREACH()
 
 
-SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++14 ")
+add_compile_options(-std=c++17)
+SET(${PROJECT_NAME}_CXX_COMPILE_FLAGS "-fPIC -std=c++17 ")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${${PROJECT_NAME}_CXX_COMPILE_FLAGS}")
 
 
@@ -235,7 +196,7 @@ SET(${PROJECT_NAME}_CPP_FILES
         src/simulator/PacketBuilderLoader.cpp
         src/simulator/NetsimPacket.cpp
         src/simulator/CommsChannel.cpp
-        src/simulator/NetsimLogFormatter.cpp
+        # src/simulator/NetsimLogFormatter.cpp
         src/simulator/NetsimTime.cpp
         src/simulator/NetsimDevice.cpp
         src/simulator/NetsimPhy.cpp
@@ -248,23 +209,35 @@ SET(${PROJECT_NAME}_CPP_FILES
 FOREACH(lib ${NS3_LIBS})
 	set(ns3target ${lib})
 	message(STATUS "############# NS3 LIBRARY ${NS3LIB_${lib}} ----> ${ns3target}")
-	add_library(${ns3target} EXCLUDE_FROM_ALL ${NS3LIB_${lib}})
+	add_library(${ns3target} SHARED EXCLUDE_FROM_ALL ${NS3LIB_${lib}})
 	#add_custom_command(TARGET ${ns3target} POST_BUILD COMMAND cp ${NS3LIB_${lib}} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/ )
-
-	add_custom_command(TARGET ${ns3target} POST_BUILD COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/ns3-postbuild.sh" ${NS3LIB_${lib}} ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 	set_target_properties(${ns3target} PROPERTIES LINKER_LANGUAGE CXX )
 	install(
 		FILES ${NS3LIB_${lib}}
-   		DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   		DESTINATION lib
 	)
 ENDFOREACH()
 
 
+
+include_directories( 
+  ${${PROJECT_NAME}_INCLUDE_DIRS}
+  ${dccomms_ros_msgs_INCLUDE_DIRS}
+  ${rclcpp_INCLUDE_DIRS}
+  ${tf2_ros_INCLUDE_DIRS}
+  )
+
 add_library(${PROJECT_NAME} SHARED ${${PROJECT_NAME}_CPP_FILES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS} ${catkin_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PUBLIC ${NS3_LIBS} ${DCCOMMS_UTILS_GIT} ${catkin_LIBRARIES})
-add_dependencies(${PROJECT_NAME} dccomms_ros_msgs_generate_messages_cpp)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${NS3_LIBS} ${DCCOMMS_UTILS_GIT}  
+  ${rclcpp_LIBRARIES}
+  ${tf2_ros_LIBRARIES}
+  ${class_loader_LIBRARIES}
+  ${dccomms_ros_msgs_LIBRARIES}
+)
+
+ament_export_include_directories(include ${${PROJECT_NAME}_INCLUDE_DIRS})
+ament_export_dependencies(dccomms_ros_msgs)
 
 ###############################################
 ############ END netsim BUILD #################
@@ -275,20 +248,26 @@ set(EXPRTK_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/modules/exprtk/exprtk.hpp)
 install(DIRECTORY 
   src/include/${PROJECT_NAME}
   ${NS3_HEADERS_DIR}
-  DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
+  DESTINATION include/${PROJECT_NAME}
 )
 install(FILES
   ${EXPRTK_HEADERS}
-  DESTINATION ${CATKIN_GLOBAL_INCLUDE_DESTINATION}
+  DESTINATION include/${PROJECT_NAME}
 )
-#install(FILES
-# ${ns3liblist}
-# DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#)
 
 install(TARGETS ${PROJECT_NAME}
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  ARCHIVE DESTINATION lib
+  LIBRARY DESTINATION lib
+  RUNTIME DESTINATION bin
 )
-message("End ${PROJECT_NAME}")
+
+ament_export_libraries(${PROJECT_NAME} 
+    ${NS3_LIBS}
+    ${DCCOMMS_UTILS_GIT} 
+    cpputils 
+    cpplogging 
+    dccomms
+    dccomms_packets
+)
+
+ament_package()

@@ -169,7 +169,7 @@ void AcousticROSCommsDevice::DoLinkToChannel(CommsChannelNs3Ptr channel,
   }
 }
 
-void AcousticROSCommsDevice::DoSetPosition(const tf::Vector3 &position) {
+void AcousticROSCommsDevice::DoSetPosition(const tf2::Vector3 &position) {
   if (_started) {
     double x = position.getX(), y = position.getY(), z = position.getZ();
     ns3::Simulator::ScheduleWithContext(GetMac(), Seconds(0),

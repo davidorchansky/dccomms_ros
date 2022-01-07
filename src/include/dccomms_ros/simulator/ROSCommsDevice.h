@@ -9,7 +9,7 @@
 #include <ns3/config-store-module.h>
 #include <ns3/core-module.h>
 #include <ns3/packet.h>
-#include <tf/transform_listener.h>
+#include <tf2_ros/transform_listener.h>
 #include <ns3/aqua-sim-helper.h>
 #include <ns3/aqua-sim-net-device.h>
 #include <ns3/mobility-helper.h>
@@ -50,7 +50,7 @@ public:
   void SetBitRate(uint32_t bps);
   uint64_t GetNanosPerByte() { return _nanosPerByte; }
 
-  void SetPosition(const tf::Vector3 &position);
+  void SetPosition(const tf2::Vector3 &position);
   void SetMaxTxFifoSize(uint32_t size);
   uint32_t GetMaxTxFifoSize();
 
@@ -76,7 +76,7 @@ public:
   CommsChannelNs3Ptr GetLinkedTxChannel();
   CommsChannelNs3Ptr GetLinkedRxChannel();
 
-  tf::Vector3 GetPosition();
+  tf2::Vector3 GetPosition();
 
   virtual DEV_TYPE GetDevType() = 0;
   bool Started();
@@ -95,7 +95,7 @@ public:
   typedef void (*PacketErrorCallback)(std::string path, ROSCommsDevice *,
                                       ns3::Ptr<const ns3::Packet>, bool, bool);
   typedef void (*CourseChangeCallback)(std::string path, ROSCommsDevice *,
-                                       const tf::Vector3 &);
+                                       const tf2::Vector3 &);
 
   void InitTracedValues();
   void StartTracedValues();
@@ -110,7 +110,7 @@ protected:
   virtual void DoLinkToChannel(CommsChannelNs3Ptr channel,
                                CHANNEL_LINK_TYPE linkType = CHANNEL_TXRX) = 0;
   virtual void DoStart() = 0;
-  virtual void DoSetPosition(const tf::Vector3 &position) = 0;
+  virtual void DoSetPosition(const tf2::Vector3 &position) = 0;
   virtual bool DoStarted() = 0;
   virtual void DoSetMaxTxFifoSize(uint32_t size) = 0;
   virtual void DoSetMacMaxTransmitDistance(double v);
@@ -123,7 +123,7 @@ protected:
   ns3::TracedCallback<ROSCommsDevice *, ns3ConstPacketPtr> _txCbTrace;
   ns3::TracedCallback<ROSCommsDevice *, ns3ConstPacketPtr, bool, bool>
       _pktErrorCbTrace;
-  ns3::TracedCallback<ROSCommsDevice *, const tf::Vector3 &>
+  ns3::TracedCallback<ROSCommsDevice *, const tf2::Vector3 &>
       _courseChangesCbTrace;
   ns3::TracedCallback<ROSCommsDevice *, ns3ConstPacketPtr> _routingTxCbTrace, _routingRxCbTrace,
       _macTxCbTrace, _macRxCbTrace;
@@ -137,7 +137,7 @@ private:
   void _StartDeviceService();
   void _StartNodeWorker();
   void _TxWork();
-  void _SetPosition(const tf::Vector3 &position);
+  void _SetPosition(const tf2::Vector3 &position);
 
 protected:
   std::mutex _receiveFrameMutex;
@@ -149,7 +149,7 @@ protected:
   uint32_t _mac;
   uint32_t _bitRate;
   uint64_t _nanosPerByte;
-  tf::Vector3 _position;
+  tf2::Vector3 _position;
   macToCurrentSeqMap _macToSeq;
   uint32_t _maxTxFifoSize;
   TracedValue<uint32_t> _currentTxFifoSize, _txPacketDrops;

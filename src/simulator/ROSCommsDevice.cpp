@@ -1,5 +1,4 @@
 #include <cstdio>
-#include <dccomms_ros/simulator/NetsimLogFormatter.h>
 #include <dccomms_ros/simulator/ROSCommsDevice.h>
 #include <dccomms_ros/simulator/ROSCommsSimulator.h>
 #include <dccomms_ros_msgs/types.h>
@@ -89,7 +88,7 @@ ROSCommsDevice::ROSCommsDevice(ROSCommsSimulatorPtr s, PacketBuilderPtr txpb,
   SetLogLevel(cpplogging::info);
   _txserv.SetWork(&ROSCommsDevice::_TxWork);
   _commonStarted = false;
-  _position = tf::Vector3(0, 0, 0);
+  _position = tf2::Vector3(0, 0, 0);
   LogComponentEnable("ROSCommsDevice",
                      LOG_LEVEL_ALL); // NS3 DOES NOT WORK (TODO: FIX IT)
   SetLogLevel(debug);
@@ -334,17 +333,17 @@ void ROSCommsDevice::FlushLogOn(cpplogging::LogLevel level) {
 
 void ROSCommsDevice::SetTfFrameId(const string &id) { _tfFrameId = id; }
 
-void ROSCommsDevice::_SetPosition(const tf::Vector3 &position) {
+void ROSCommsDevice::_SetPosition(const tf2::Vector3 &position) {
   _position = position;
   _courseChangesCbTrace(this, _position);
   DoSetPosition(position);
 }
-void ROSCommsDevice::SetPosition(const tf::Vector3 &position) {
+void ROSCommsDevice::SetPosition(const tf2::Vector3 &position) {
   ns3::Simulator::ScheduleWithContext(
       GetMac(), ns3::Seconds(0), &ROSCommsDevice::_SetPosition, this, position);
 }
 
-tf::Vector3 ROSCommsDevice::GetPosition() { return _position; }
+tf2::Vector3 ROSCommsDevice::GetPosition() { return _position; }
 
 std::string ROSCommsDevice::GetTfFrameId() { return _tfFrameId; }
 

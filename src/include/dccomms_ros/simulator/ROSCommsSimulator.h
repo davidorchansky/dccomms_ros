@@ -12,19 +12,23 @@
 #include <memory>
 #include <random>
 #include <unordered_map>
+#include <chrono>
 
 // ROS
 #include <cctype>
-#include <dccomms_ros_msgs/AddAcousticChannel.h>
-#include <dccomms_ros_msgs/AddAcousticDevice.h>
-#include <dccomms_ros_msgs/AddCustomChannel.h>
-#include <dccomms_ros_msgs/AddCustomDevice.h>
-#include <dccomms_ros_msgs/CheckChannel.h>
-#include <dccomms_ros_msgs/CheckDevice.h>
-#include <dccomms_ros_msgs/LinkDeviceToChannel.h>
-#include <dccomms_ros_msgs/RemoveDevice.h>
-#include <dccomms_ros_msgs/StartSimulation.h>
-#include <ros/ros.h>
+#include <dccomms_ros_msgs/srv/add_acoustic_channel.hpp>
+#include <dccomms_ros_msgs/srv/add_acoustic_device.hpp>
+#include <dccomms_ros_msgs/srv/add_custom_channel.hpp>
+#include <dccomms_ros_msgs/srv/add_custom_device.hpp>
+#include <dccomms_ros_msgs/srv/check_channel.hpp>
+#include <dccomms_ros_msgs/srv/check_device.hpp>
+#include <dccomms_ros_msgs/srv/link_device_to_channel.hpp>
+#include <dccomms_ros_msgs/srv/remove_device.hpp>
+#include <dccomms_ros_msgs/srv/start_simulation.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <rclcpp/rate.hpp>
+#include <rclcpp/rclcpp.hpp>
 // end ROS
 
 // ns3
@@ -100,7 +104,7 @@ public:
   void SetReceivePDUCb(
       std::function<void(ROSCommsDevice *rxdev, dccomms::PacketPtr)> cb);
   void SetPositionUpdatedCb(
-      std::function<void(ROSCommsDeviceNs3Ptr dev, tf::Vector3)> cb,
+      std::function<void(ROSCommsDeviceNs3Ptr dev, tf2::Vector3)> cb,
       double cbMinPeriod,
       uint32_t positionUpdateRate =
           10); // callback period = ms ; update rate = Hz
@@ -122,11 +126,11 @@ public:
   PacketBuilderPtr GetDefaultPacketBuilder() { return _defaultPacketBuilder; }
   bool Ready(DEV_TYPE);
 
-  bool AddAcousticDevice(dccomms_ros_msgs::AddAcousticDevice::Request &req);
-  bool LinkDevToChannel(dccomms_ros_msgs::LinkDeviceToChannel::Request &req);
-  bool AddAcousticChannel(dccomms_ros_msgs::AddAcousticChannel::Request &req);
-  bool AddCustomChannel(dccomms_ros_msgs::AddCustomChannel::Request &req);
-  bool AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req);
+  bool AddAcousticDevice(const dccomms_ros_msgs::srv::AddAcousticDevice::Request::SharedPtr req);
+  bool LinkDevToChannel(const dccomms_ros_msgs::srv::LinkDeviceToChannel::Request::SharedPtr req);
+  bool AddAcousticChannel(const dccomms_ros_msgs::srv::AddAcousticChannel::Request::SharedPtr req);
+  bool AddCustomChannel(const dccomms_ros_msgs::srv::AddCustomChannel::Request::SharedPtr req);
+  bool AddCustomDevice(const dccomms_ros_msgs::srv::AddCustomDevice::Request::SharedPtr req);
   bool StartSimulation();
   void _StartLinkUpdaterWork();
 
@@ -148,32 +152,32 @@ private:
 
   std::function<void(ROSCommsDevice *dev, dccomms::PacketPtr)> TransmitPDUCb,
       ReceivePDUCb;
-  std::function<void(ROSCommsDeviceNs3Ptr dev, tf::Vector3)> PositionUpdatedCb;
+  std::function<void(ROSCommsDeviceNs3Ptr dev, tf2::Vector3)> PositionUpdatedCb;
 
-  bool _AddAcousticDevice(dccomms_ros_msgs::AddAcousticDevice::Request &req,
-                          dccomms_ros_msgs::AddAcousticDevice::Response &res);
-  bool _CheckDevice(dccomms_ros_msgs::CheckDevice::Request &req,
-                    dccomms_ros_msgs::CheckDevice::Response &res);
-  bool _CheckChannel(dccomms_ros_msgs::CheckChannel::Request &req,
-                     dccomms_ros_msgs::CheckChannel::Response &res);
-  bool _RemoveDevice(dccomms_ros_msgs::RemoveDevice::Request &req,
-                     dccomms_ros_msgs::RemoveDevice::Response &res);
-  bool _LinkDevToChannel(dccomms_ros_msgs::LinkDeviceToChannel::Request &req,
-                         dccomms_ros_msgs::LinkDeviceToChannel::Response &res);
-  bool _AddAcousticChannel(dccomms_ros_msgs::AddAcousticChannel::Request &req,
-                           dccomms_ros_msgs::AddAcousticChannel::Response &res);
-  bool _AddCustomChannel(dccomms_ros_msgs::AddCustomChannel::Request &req,
-                         dccomms_ros_msgs::AddCustomChannel::Response &res);
-  bool _AddCustomDevice(dccomms_ros_msgs::AddCustomDevice::Request &req,
-                        dccomms_ros_msgs::AddCustomDevice::Response &res);
+  bool _AddAcousticDevice(const dccomms_ros_msgs::srv::AddAcousticDevice::Request::SharedPtr req,
+                          dccomms_ros_msgs::srv::AddAcousticDevice::Response::SharedPtr res);
+  bool _CheckDevice(const dccomms_ros_msgs::srv::CheckDevice::Request::SharedPtr req,
+                    dccomms_ros_msgs::srv::CheckDevice::Response::SharedPtr res);
+  bool _CheckChannel(const dccomms_ros_msgs::srv::CheckChannel::Request::SharedPtr req,
+                     dccomms_ros_msgs::srv::CheckChannel::Response::SharedPtr res);
+  bool _RemoveDevice(const dccomms_ros_msgs::srv::RemoveDevice::Request::SharedPtr req,
+                     dccomms_ros_msgs::srv::RemoveDevice::Response::SharedPtr res);
+  bool _LinkDevToChannel(const dccomms_ros_msgs::srv::LinkDeviceToChannel::Request::SharedPtr req,
+                         dccomms_ros_msgs::srv::LinkDeviceToChannel::Response::SharedPtr res);
+  bool _AddAcousticChannel(const dccomms_ros_msgs::srv::AddAcousticChannel::Request::SharedPtr req,
+                           dccomms_ros_msgs::srv::AddAcousticChannel::Response::SharedPtr res);
+  bool _AddCustomChannel(const dccomms_ros_msgs::srv::AddCustomChannel::Request::SharedPtr req,
+                         dccomms_ros_msgs::srv::AddCustomChannel::Response::SharedPtr res);
+  bool _AddCustomDevice(const dccomms_ros_msgs::srv::AddCustomDevice::Request::SharedPtr req,
+                        dccomms_ros_msgs::srv::AddCustomDevice::Response::SharedPtr res);
 
   void _AddDeviceToSet(std::string iddev, ROSCommsDeviceNs3Ptr dev);
   bool _DeviceExists(std::string iddev);
   bool _ChannelExists(uint32_t id);
   void _RemoveDeviceFromSet(std::string iddev);
 
-  bool _StartSimulation(dccomms_ros_msgs::StartSimulation::Request &req,
-                        dccomms_ros_msgs::StartSimulation::Response &res);
+  bool _StartSimulation(const dccomms_ros_msgs::srv::StartSimulation::Request::SharedPtr req,
+                        dccomms_ros_msgs::srv::StartSimulation::Response::SharedPtr res);
 
   bool _CommonPreAddDev(const std::string &dccommsId, DEV_TYPE deviceType,
                         uint32_t mac);
@@ -181,10 +185,17 @@ private:
 
   CommsChannelNs3Ptr _GetChannel(int id);
 
-  ros::ServiceServer _addDevService, _checkDevService, _addChannelService,
-      _removeDevService, _linkDeviceToChannelService, _startSimulationService,
-      _addCustomDeviceService, _addCustomChannelService, _checkChannelService;
-  ros::NodeHandle _rosNode;
+  rclcpp::Service<dccomms_ros_msgs::srv::AddAcousticDevice>::SharedPtr _addDevService;
+  rclcpp::Service<dccomms_ros_msgs::srv::CheckDevice>::SharedPtr _checkDevService;
+  rclcpp::Service<dccomms_ros_msgs::srv::AddAcousticChannel>::SharedPtr _addChannelService;
+  rclcpp::Service<dccomms_ros_msgs::srv::RemoveDevice>::SharedPtr _removeDevService;
+  rclcpp::Service<dccomms_ros_msgs::srv::LinkDeviceToChannel>::SharedPtr _linkDeviceToChannelService;
+  rclcpp::Service<dccomms_ros_msgs::srv::StartSimulation>::SharedPtr _startSimulationService;
+  rclcpp::Service<dccomms_ros_msgs::srv::AddCustomDevice>::SharedPtr _addCustomDeviceService;
+  rclcpp::Service<dccomms_ros_msgs::srv::AddCustomChannel>::SharedPtr _addCustomChannelService;
+  rclcpp::Service<dccomms_ros_msgs::srv::CheckChannel>::SharedPtr _checkChannelService;
+
+  std::shared_ptr<rclcpp::Node> _rosNode;
 
   std::mutex _devLinksMutex, _idDevMapMutex, _channelsMutex;
 
@@ -200,12 +211,13 @@ private:
   Id2ChannelMap _channelMap;
   //////////
   ROSCommsSimulatorPtr _this;
-  tf::TransformListener listener;
+  std::unique_ptr<tf2_ros::TransformListener> listener;
+  std::unique_ptr<tf2_ros::Buffer> buffer;
   dccomms::Timer _showLinkUpdaterLogTimer;
   bool _started, _callPositionUpdatedCb;
   double _positionUpdatedCbMinPeriod;
   uint32_t _updatePositionRate;
-  ros::Rate _linkUpdaterLoopRate;
+  std::unique_ptr<rclcpp::Rate> _linkUpdaterLoopRate;
 
   PacketBuilderMap _packetBuilderMap;
   std::vector<ROSCommsDeviceNs3Ptr> _devices;
