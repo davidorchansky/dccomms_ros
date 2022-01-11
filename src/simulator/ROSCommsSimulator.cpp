@@ -213,7 +213,7 @@ bool ROSCommsSimulator::_AddAcousticDevice(const dccomms_ros_msgs::srv::AddAcous
   DEV_TYPE deviceType = static_cast<DEV_TYPE>(req->type);
   auto mac = req->mac;
   auto frameId = req->frame_id;
-  auto refFrame = req->ref_frame;
+  auto refFrame = req->relative_tf_id;
   // auto energyModel = req->energy_model;
 
   Log->info("Add device request received");
@@ -410,7 +410,7 @@ bool ROSCommsSimulator::_AddCustomDevice(const dccomms_ros_msgs::srv::AddCustomD
   auto dccommsId = req->dccomms_id;
   auto mac = req->mac;
   auto frameId = req->frame_id;
-  auto refFrame = req->ref_frame;
+  auto refFrame = req->relative_tf_id;
   DEV_TYPE deviceType = DEV_TYPE::CUSTOM_DEV;
 
   bool exists = _CommonPreAddDev(dccommsId, deviceType, mac);
