@@ -658,14 +658,20 @@ void ROSCommsSimulator::_LinkUpdaterWork() {
       std::string tfFrameId = dev->GetTfFrameId();
       std::string refFrame = dev->GetRefFrame();
       try {
-        transform = buffer->lookupTransform(refFrame, tfFrameId, rclcpp::Time(0));
+        std::string warning_msg;
 
-        tf2::Vector3 position(transform.transform.translation.x,
-                              transform.transform.translation.y,
-                              transform.transform.translation.z); 
-        dev->SetPosition(position);
-        if (_callPositionUpdatedCb)
-          PositionUpdatedCb(dev, position);
+        if (!buffer->canTransform(refFrame, tfFrameId, tf2::TimePoint(), &warning_msg)) {
+          Log->warn("Waiting for transform {} -> {}: {}", refFrame, tfFrameId, warning_msg);
+        } else {
+          transform = buffer->lookupTransform(refFrame, tfFrameId, rclcpp::Time(0));
+
+          tf2::Vector3 position(transform.transform.translation.x,
+                                transform.transform.translation.y,
+                                transform.transform.translation.z); 
+          dev->SetPosition(position);
+          if (_callPositionUpdatedCb)
+            PositionUpdatedCb(dev, position);
+        }
       } catch (std::exception &e) {
         if (_callPositionUpdatedCb)
           Log->warn("An exception has ocurred in the link updater work: {}",
